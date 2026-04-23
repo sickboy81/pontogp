@@ -1322,7 +1322,7 @@ export default function DashboardPerfilForm() {
         )}
 
         {profile && activeTab === 'stats' && (() => {
-          const plan = (profile.plan ?? 'gratis').toLowerCase()
+          const plan = (profile.plan_slug ?? profile.plan ?? 'gratis').toLowerCase()
           const hasAdvancedStatsAccess = plan === 'prata' || plan === 'ouro'
           const views = profile.views ?? 0
           const clicks = profile.clicks ?? 0

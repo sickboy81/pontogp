@@ -44,6 +44,17 @@ export function mapProfile(record: Record<string, unknown> & { expand?: Record<s
   const isOnline =
     record.is_online === true && (!onlineUntil || new Date(onlineUntil) > new Date())
 
+  const planEx = expand.plan
+  let plan_slug: string | undefined
+  if (planEx && typeof planEx === 'object' && !Array.isArray(planEx) && 'slug' in planEx) {
+    plan_slug = String((planEx as { slug?: string }).slug || '')
+  } else {
+    const rawPlan = record.plan as string | undefined
+    if (rawPlan && !/^[a-z0-9]{15}$/i.test(rawPlan)) {
+      plan_slug = rawPlan
+    }
+  }
+
   return {
     ...record,
     id: record.id as string,
@@ -96,6 +107,7 @@ export function mapProfile(record: Record<string, unknown> & { expand?: Record<s
     bio_button_color: record.bio_button_color as string | undefined,
     bio_links: Array.isArray(record.bio_links) ? (record.bio_links as Array<{ label: string; url: string }>) : undefined,
     bio_avatar_index: record.bio_avatar_index != null ? Number(record.bio_avatar_index) : undefined,
+    plan_slug,
   } as Profile
 }
 
@@ -137,7 +149,7 @@ export async function getProfiles(options: {
   const sort = SORT_MAP[sortKey] || SORT_MAP.default
   const page = Math.floor(offset / limit) + 1
   const res = await fetch(
-    `${PB_URL}/api/collections/profiles/records?page=${page}&perPage=${limit}&filter=${encodeURIComponent(filterStr)}&expand=photos,videos,audio&sort=${encodeURIComponent(sort)}`,
+    `${PB_URL}/api/collections/profiles/records?page=${page}&perPage=${limit}&filter=${encodeURIComponent(filterStr)}&expand=photos,videos,audio,plan&sort=${encodeURIComponent(sort)}`,
     { cache: 'no-store' }
   )
   if (!res.ok) return []
@@ -153,7 +165,7 @@ export async function getProfileByUserId(
   try {
     const filter = `user = "${userId}"`
     const res = await fetch(
-      `${PB_URL}/api/collections/profiles/records?filter=${encodeURIComponent(filter)}&perPage=1&expand=photos,videos,audio`,
+      `${PB_URL}/api/collections/profiles/records?filter=${encodeURIComponent(filter)}&perPage=1&expand=photos,videos,audio,plan`,
       { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' }
     )
     if (!res.ok) return null
@@ -169,7 +181,7 @@ export async function getProfileByUserId(
 export async function getProfile(id: string): Promise<Profile | null> {
   try {
     const res = await fetch(
-      `${PB_URL}/api/collections/profiles/records/${id}?expand=photos,videos,audio`,
+      `${PB_URL}/api/collections/profiles/records/${id}?expand=photos,videos,audio,plan`,
       { next: { revalidate: 60 } }
     )
     if (!res.ok) return null
@@ -185,7 +197,7 @@ export async function getProfileBySlug(slug: string): Promise<Profile | null> {
   try {
     const filter = `slug = "${slug}"`
     const res = await fetch(
-      `${PB_URL}/api/collections/profiles/records?filter=${encodeURIComponent(filter)}&perPage=1&expand=photos,videos,audio`,
+      `${PB_URL}/api/collections/profiles/records?filter=${encodeURIComponent(filter)}&perPage=1&expand=photos,videos,audio,plan`,
       { next: { revalidate: 60 } }
     )
     if (!res.ok) return null

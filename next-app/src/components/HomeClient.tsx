@@ -267,7 +267,7 @@ export default function HomeClient() {
                 key={profile.id}
                 profile={profile}
                 index={index}
-                planColor={planColorMap[profile.plan] ?? '#dc2626'}
+                planColor={planColorMap[profile.plan_slug ?? profile.plan] ?? '#dc2626'}
                 priority={index < 4}
               />
             ))}

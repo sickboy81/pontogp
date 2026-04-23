@@ -53,12 +53,20 @@ export default function DashboardClient() {
     if (!profile) return
     fetch('/api/plans?enabledOnly=true', { cache: 'no-store' })
       .then((r) => r.json())
-      .then((plans: { slug: string; name?: string; daily_bumps?: number }[]) => {
-        const planSlug = (profile?.plan ?? 'gratis').toLowerCase()
-        const plan = plans.find((p) => p.slug?.toLowerCase() === planSlug)
-        setDailyBumps(plan?.daily_bumps ?? 0)
-        setCurrentPlanName(plan?.name ?? (planSlug === 'gratis' ? 'Grátis' : planSlug))
-      })
+      .then(
+        (plans: { id?: string; slug: string; name?: string; daily_bumps?: number }[]) => {
+          const ref = (profile?.plan ?? 'gratis').toLowerCase()
+          const byId = profile?.plan
+            ? plans.find((p) => p.id === profile.plan)
+            : undefined
+          const bySlug = plans.find((p) => p.slug?.toLowerCase() === ref)
+          const plan = byId ?? bySlug
+          setDailyBumps(plan?.daily_bumps ?? 0)
+          setCurrentPlanName(
+            plan?.name ?? (ref === 'gratis' || ref === 'free' ? 'Grátis' : profile?.plan || ref)
+          )
+        }
+      )
       .catch(() => {})
   }, [profile])
 

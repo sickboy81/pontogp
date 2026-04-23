@@ -35,7 +35,10 @@ export interface Profile {
   is_online: boolean
   online_until?: string
   verified: boolean
-  plan: 'gratis' | 'bronze' | 'prata' | 'ouro'
+  /** id do registro `plans` (relação) ou slug em dados antigos */
+  plan: string
+  /** Preenchido quando a API expande a relação `plan` (ex.: ouro, prata). */
+  plan_slug?: string
   status: 'active' | 'inactive' | 'suspended' | 'muted' | 'archived'
   views: number
   clicks: number

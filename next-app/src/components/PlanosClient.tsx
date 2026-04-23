@@ -224,14 +224,15 @@ export default function PlanosClient() {
 
       {isAuthenticated && profiles.length > 0 && (() => {
         const currentProfile = profiles[0]
-        const currentPlanSlug = (currentProfile?.plan ?? '').toLowerCase()
-        const currentPlan = plans.find((p) => p.slug.toLowerCase() === currentPlanSlug)
+        const currentPlan = plans.find(
+          (p) => p.id === currentProfile?.plan || p.slug.toLowerCase() === (currentProfile?.plan ?? '').toLowerCase()
+        )
         const currentPlanExpired = hasExpired(currentProfile?.search_expires_at) || hasExpired(currentProfile?.contact_expires_at)
         return (
           <div className={`mb-6 rounded-xl p-4 ${currentPlanExpired ? 'border border-amber-500/50 bg-amber-500/10' : 'border border-primary-500/40 bg-primary-500/10'}`}>
             <p className="text-sm text-slate-400">Seu plano atual</p>
             <p className="text-lg font-semibold text-white">
-              {currentPlan ? currentPlan.name : (currentPlanSlug || 'Grátis')}
+              {currentPlan?.name ?? (currentProfile?.plan_slug || 'Grátis')}
             </p>
             <p className="mt-1 text-sm text-slate-300">
               {currentPlanExpired
@@ -299,8 +300,8 @@ export default function PlanosClient() {
         {plans.map((plan) => {
           const price = getPrice(plan)
           const currentProfile = profiles[0]
-          const currentPlanSlug = (currentProfile?.plan ?? '').toLowerCase()
-          const isCurrentPlan = plan.slug.toLowerCase() === currentPlanSlug
+          const isCurrentPlan =
+            plan.id === currentProfile?.plan || plan.slug.toLowerCase() === (currentProfile?.plan ?? '').toLowerCase()
           const currentPlanExpired = hasExpired(currentProfile?.search_expires_at) || hasExpired(currentProfile?.contact_expires_at)
           const canRenewCurrentPlan = isCurrentPlan && currentPlanExpired
           const disablePlanButton = isCurrentPlan && !canRenewCurrentPlan

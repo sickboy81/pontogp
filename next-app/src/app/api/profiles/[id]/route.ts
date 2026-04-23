@@ -1,5 +1,7 @@
 import { NextRequest } from 'next/server'
 import { getAuthCookieFromHeader, getUserIdFromToken } from '@/lib/auth-cookie'
+import { getAdminToken } from '@/lib/pocketbase-admin'
+import { buildProfilePlanRenewalFromPlanRef } from '@/lib/plan-renewal-dates'
 import type { Profile } from '@/lib/types'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
@@ -71,11 +73,31 @@ export async function PATCH(
       return Response.json({ error: 'Nenhum campo válido para atualizar' }, { status: 400 })
     }
 
+    let authForPatch = token
+    if (update.plan != null) {
+      const planRef = String(update.plan)
+      const adminToken = await getAdminToken()
+      if (!adminToken) {
+        return Response.json(
+          { error: 'Não foi possível aplicar a vigência do plano. Tente de novo em instantes.' },
+          { status: 503 }
+        )
+      }
+      const renewal = await buildProfilePlanRenewalFromPlanRef(planRef, adminToken)
+      if (!renewal) {
+        return Response.json({ error: 'Plano inválido ou inexistente' }, { status: 400 })
+      }
+      update.plan = renewal.plan
+      update.search_expires_at = renewal.search_expires_at
+      update.contact_expires_at = renewal.contact_expires_at
+      authForPatch = adminToken
+    }
+
     const patchRes = await fetch(`${PB_URL}/api/collections/profiles/records/${id}`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${authForPatch}`,
       },
       body: JSON.stringify(update),
     })
