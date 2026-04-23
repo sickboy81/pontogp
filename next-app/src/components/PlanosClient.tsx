@@ -332,20 +332,29 @@ export default function PlanosClient() {
                 {billingPeriod === 'weekly' ? 'por semana' : 'por mês'}
               </p>
               <ul className="mb-6 flex-1 space-y-2 text-sm text-slate-300">
-                <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 shrink-0 text-green-500" />
-                  {formatLimit(plan.max_photos)} fotos
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 shrink-0 text-green-500" />
-                  {plan.daily_bumps || 0} bumps/dia
-                </li>
-                {plan.features.slice(0, 3).map((f) => (
-                  <li key={f} className="flex items-center gap-2">
-                    <Check className="h-4 w-4 shrink-0 text-green-500" />
-                    {f}
-                  </li>
-                ))}
+                {(() => {
+                  const custom = (plan.features || []).map((f) => String(f).trim()).filter(Boolean)
+                  if (custom.length > 0) {
+                    return custom.map((f, i) => (
+                      <li key={`${i}-${f.slice(0, 40)}`} className="flex items-center gap-2">
+                        <Check className="h-4 w-4 shrink-0 text-green-500" />
+                        {f}
+                      </li>
+                    ))
+                  }
+                  return (
+                    <>
+                      <li className="flex items-center gap-2">
+                        <Check className="h-4 w-4 shrink-0 text-green-500" />
+                        {formatLimit(plan.max_photos)} fotos
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <Check className="h-4 w-4 shrink-0 text-green-500" />
+                        {plan.daily_bumps || 0} bumps/dia
+                      </li>
+                    </>
+                  )
+                })()}
               </ul>
               <button
                 type="button"

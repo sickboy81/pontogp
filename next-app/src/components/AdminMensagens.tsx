@@ -1,103 +1,192 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Loader2, MessageSquare, Eye, X } from 'lucide-react'
+import { ArrowLeft, Loader2, MessageCircle, CheckCheck } from 'lucide-react'
 import type { Message } from '@/lib/types'
 
-function senderLabel(m: Message) {
+function senderName(m: Message) {
   return m.expand?.sender?.name || m.expand?.sender?.email || m.sender
 }
 
-function recipientLabel(m: Message) {
+function recipientName(m: Message) {
   return m.expand?.recipient?.name || m.expand?.recipient?.email || m.recipient
 }
 
+function threadKey(a: string, b: string) {
+  return a < b ? `${a}::${b}` : `${b}::${a}`
+}
+
+type Thread = {
+  key: string
+  userA: string
+  userB: string
+  nameA: string
+  nameB: string
+  lastMessage: Message
+  unreadInThread: number
+  /** ids ordenados alfabeticamente (para alinhar bolhas) */
+  leftId: string
+  rightId: string
+}
+
+function displayNameForUser(messages: Message[], userId: string) {
+  for (const m of messages) {
+    if ((m.sender_id ?? m.sender) === userId) {
+      const n = senderName(m)
+      if (n && n !== userId) return n
+    }
+    if ((m.recipient_id ?? m.recipient) === userId) {
+      const n = recipientName(m)
+      if (n && n !== userId) return n
+    }
+  }
+  return `Id ${userId.slice(0, 8)}…`
+}
+
+function buildThreadsFromMessages(rows: Message[]): Thread[] {
+  const map = new Map<string, { messages: Message[] }>()
+  for (const m of rows) {
+    const s = m.sender_id ?? m.sender
+    const r = m.recipient_id ?? m.recipient
+    if (!s || !r) continue
+    const k = threadKey(s, r)
+    const g = map.get(k) || { messages: [] }
+    g.messages.push(m)
+    map.set(k, g)
+  }
+  const out: Thread[] = []
+  for (const [, g] of map) {
+    const ms = g.messages
+    if (ms.length === 0) continue
+    const a = (ms[0].sender_id ?? ms[0].sender) as string
+    const b = (ms[0].recipient_id ?? ms[0].recipient) as string
+    const last = ms.reduce(
+      (p, c) => (new Date(c.created_at) > new Date(p.created_at) ? c : p),
+      ms[0]
+    )
+    const unreadInThread = ms.filter((m) => !m.read).length
+    const nameA = displayNameForUser(ms, a)
+    const nameB = displayNameForUser(ms, b)
+    const leftId = a < b ? a : b
+    const rightId = a < b ? b : a
+    out.push({
+      key: threadKey(a, b),
+      userA: a,
+      userB: b,
+      nameA,
+      nameB,
+      lastMessage: last,
+      unreadInThread,
+      leftId,
+      rightId,
+    })
+  }
+  return out.sort(
+    (x, y) => new Date(y.lastMessage.created_at).getTime() - new Date(x.lastMessage.created_at).getTime()
+  )
+}
+
+function formatListTime(d: string) {
+  if (!d) return '-'
+  try {
+    const date = new Date(d)
+    const now = new Date()
+    if (now.getTime() - date.getTime() < 24 * 60 * 60 * 1000) {
+      return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    }
+    return date.toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  } catch {
+    return d
+  }
+}
+
+function formatMsgTime(d: string) {
+  return new Date(d).toLocaleString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+const THREAD_FETCH = 500
+
 export default function AdminMensagens() {
-  const [messages, setMessages] = useState<Message[]>([])
+  const [rawMessages, setRawMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState<'all' | 'unread' | 'read'>('all')
-  const [page, setPage] = useState(1)
-  const [totalItems, setTotalItems] = useState(0)
-  const [openMessage, setOpenMessage] = useState<Message | null>(null)
-  const perPage = 30
+  const [filter, setFilter] = useState<'all' | 'unread_thread'>('all')
+  const [selected, setSelected] = useState<Thread | null>(null)
+  const [threadMsgs, setThreadMsgs] = useState<Message[]>([])
+  const [threadLoading, setThreadLoading] = useState(false)
+  const endRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    loadMessages()
-  }, [filter, page])
-
-  const loadMessages = async () => {
+  const loadRaw = useCallback(async () => {
     setLoading(true)
     try {
-      const readParam =
-        filter === 'unread' ? 'false' : filter === 'read' ? 'true' : 'all'
       const res = await fetch(
-        `/api/admin/messages?page=${page}&perPage=${perPage}&read=${readParam}`,
+        `/api/admin/messages?page=1&perPage=${THREAD_FETCH}&read=all`,
         { credentials: 'include' }
       )
-      if (!res.ok) throw new Error('Erro ao carregar mensagens')
+      if (!res.ok) throw new Error('load')
       const data = await res.json()
-      setMessages(data.items || [])
-      setTotalItems(data.totalItems ?? 0)
+      setRawMessages(data.items || [])
     } catch {
-      setMessages([])
-      setTotalItems(0)
+      setRawMessages([])
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
-  const formatDate = (d: string) => {
-    if (!d) return '-'
-    try {
-      const date = new Date(d)
-      const now = new Date()
-      const diff = now.getTime() - date.getTime()
-      if (diff < 24 * 60 * 60 * 1000) {
-        return date.toLocaleTimeString('pt-BR', {
-          hour: '2-digit',
-          minute: '2-digit',
-        })
-      }
-      return date.toLocaleDateString('pt-BR', {
-        day: '2-digit',
-        month: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-      })
-    } catch {
-      return d
+  useEffect(() => {
+    void loadRaw()
+  }, [loadRaw])
+
+  const threads = useMemo(() => {
+    return buildThreadsFromMessages(rawMessages)
+  }, [rawMessages])
+
+  const visibleThreads = useMemo(() => {
+    if (filter === 'unread_thread') {
+      return threads.filter((t) => t.unreadInThread > 0)
     }
-  }
+    return threads
+  }, [threads, filter])
 
-  const totalPages = Math.ceil(totalItems / perPage) || 1
-
-  const openDetails = useCallback(
-    async (m: Message) => {
-      setOpenMessage(m)
-      if (m.read) return
+  const openThread = useCallback(
+    async (t: Thread) => {
+      setSelected(t)
+      setThreadLoading(true)
+      setThreadMsgs([])
       try {
-        const res = await fetch(`/api/admin/messages/${m.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ read: true }),
-        })
-        if (!res.ok) return
-        const updated = (await res.json()) as Message
-        setOpenMessage(updated)
-        if (filter === 'unread') {
-          setMessages((prev) => prev.filter((x) => x.id !== m.id))
-          setTotalItems((n) => Math.max(0, n - 1))
-        } else {
-          setMessages((prev) => prev.map((x) => (x.id === m.id ? { ...x, ...updated, read: true } : x)))
-        }
+        const res = await fetch(
+          `/api/admin/messages/conversation?userA=${encodeURIComponent(t.userA)}&userB=${encodeURIComponent(
+            t.userB
+          )}`,
+          { credentials: 'include' }
+        )
+        if (!res.ok) throw new Error('conv')
+        const data = (await res.json()) as { items: Message[] }
+        setThreadMsgs(data.items || [])
       } catch {
-        // mantém modal aberto para leitura
+        setThreadMsgs([])
+      } finally {
+        setThreadLoading(false)
       }
     },
-    [filter]
+    []
   )
+
+  useEffect(() => {
+    if (threadMsgs.length > 0 && endRef.current) {
+      endRef.current.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [threadMsgs, selected?.key])
 
   return (
     <div>
@@ -108,14 +197,16 @@ export default function AdminMensagens() {
         <ArrowLeft className="h-4 w-4" />
         Voltar ao painel
       </Link>
-      <h1 className="mb-2 text-2xl font-bold text-white">Mensagens do sistema</h1>
-      <p className="mb-6 text-sm text-slate-500">
-        Clique em <strong className="text-slate-400">Abrir</strong> (ou na linha) para ver a mensagem completa. Ao abrir, mensagens
-        não lidas são marcadas como lidas.
+      <h1 className="mb-1 text-2xl font-bold text-white">Chat interno</h1>
+      <p className="mb-4 text-sm text-slate-500">
+        Mensagens trocadas entre utilizadores (moderação invisível). O que o admin vê aqui{' '}
+        <strong className="text-slate-300">não marca nada como lida</strong> no PocketBase: quem
+        recebe só vê &quot;lida&quot; quando abre a conversa no site. As APIs de admin usam só GET.
       </p>
 
       <div className="mb-6 flex flex-wrap gap-2">
         <button
+          type="button"
           onClick={() => setFilter('all')}
           className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
             filter === 'all'
@@ -123,184 +214,142 @@ export default function AdminMensagens() {
               : 'bg-slate-700 text-slate-400 hover:bg-slate-600 hover:text-white'
           }`}
         >
-          Todas
+          Todas as conversas
         </button>
         <button
-          onClick={() => setFilter('unread')}
+          type="button"
+          onClick={() => setFilter('unread_thread')}
           className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
-            filter === 'unread'
+            filter === 'unread_thread'
               ? 'bg-primary-500 text-white'
               : 'bg-slate-700 text-slate-400 hover:bg-slate-600 hover:text-white'
           }`}
         >
-          Não lidas
+          Com mensagens não lidas
         </button>
         <button
-          onClick={() => setFilter('read')}
-          className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
-            filter === 'read'
-              ? 'bg-primary-500 text-white'
-              : 'bg-slate-700 text-slate-400 hover:bg-slate-600 hover:text-white'
-          }`}
+          type="button"
+          onClick={() => void loadRaw()}
+          className="ml-auto rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-300 hover:bg-slate-700"
         >
-          Lidas
+          Atualizar
         </button>
       </div>
 
       {loading ? (
         <div className="flex items-center justify-center gap-2 py-12 text-slate-400">
           <Loader2 className="h-6 w-6 animate-spin" />
-          <span>Carregando mensagens...</span>
-        </div>
-      ) : messages.length === 0 ? (
-        <div className="flex flex-col items-center justify-center gap-4 py-16 text-slate-400">
-          <MessageSquare className="h-16 w-16 opacity-50" />
-          <p>Nenhuma mensagem encontrada</p>
+          <span>Carregando conversas…</span>
         </div>
       ) : (
-        <>
-          <div className="overflow-x-auto rounded-xl border border-slate-700 bg-slate-800/50">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="border-b border-slate-700">
-                  <th className="px-4 py-3 text-sm font-medium text-slate-400">Ação</th>
-                  <th className="px-4 py-3 text-sm font-medium text-slate-400">De</th>
-                  <th className="px-4 py-3 text-sm font-medium text-slate-400">Para</th>
-                  <th className="px-4 py-3 text-sm font-medium text-slate-400">Conteúdo</th>
-                  <th className="px-4 py-3 text-sm font-medium text-slate-400">Data</th>
-                  <th className="px-4 py-3 text-sm font-medium text-slate-400">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {messages.map((m) => (
-                  <tr
-                    key={m.id}
-                    className="cursor-pointer border-b border-slate-700/50 last:border-0 transition hover:bg-slate-800/50"
-                    onClick={() => openDetails(m)}
+        <div className="grid min-h-[480px] gap-4 lg:grid-cols-[minmax(280px,340px)_1fr]">
+          <div className="overflow-hidden rounded-xl border border-slate-700 bg-slate-800/50">
+            <div className="border-b border-slate-700 px-3 py-2 text-xs text-slate-500">
+              {threads.length} conversa{threads.length !== 1 ? 's' : ''} (últimas {THREAD_FETCH} mensagens)
+            </div>
+            <div className="max-h-[min(70vh,720px)] overflow-y-auto">
+              {visibleThreads.length === 0 ? (
+                <div className="flex flex-col items-center gap-2 py-12 text-slate-500">
+                  <MessageCircle className="h-10 w-10 opacity-50" />
+                  <p className="text-sm">Nenhuma conversa neste filtro</p>
+                </div>
+              ) : (
+                visibleThreads.map((t) => (
+                  <button
+                    key={t.key}
+                    type="button"
+                    onClick={() => void openThread(t)}
+                    className={`flex w-full flex-col gap-0.5 border-b border-slate-700/50 px-3 py-3 text-left text-sm transition hover:bg-slate-700/40 ${
+                      selected?.key === t.key ? 'bg-primary-500/10' : ''
+                    }`}
                   >
-                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          openDetails(m)
-                        }}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-slate-600 bg-slate-800 px-3 py-1.5 text-sm text-primary-400 transition hover:border-primary-500/50 hover:bg-slate-700"
-                      >
-                        <Eye className="h-4 w-4" />
-                        Abrir
-                      </button>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="text-white">{senderLabel(m)}</span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="text-white">{recipientLabel(m)}</span>
-                    </td>
-                    <td className="max-w-xs truncate px-4 py-3 text-slate-300">{m.content}</td>
-                    <td className="px-4 py-3 text-slate-500">{formatDate(m.created_at)}</td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`inline-block rounded px-2 py-0.5 text-xs ${
-                          m.read ? 'bg-green-500/20 text-green-300' : 'bg-amber-500/20 text-amber-300'
-                        }`}
-                      >
-                        {m.read ? 'Lida' : 'Não lida'}
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="line-clamp-1 font-medium text-white">
+                        {t.nameA} <span className="text-slate-500">↔</span> {t.nameB}
                       </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {totalPages > 1 && (
-            <div className="mt-6 flex items-center justify-center gap-2">
-              <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page <= 1}
-                className="rounded-lg bg-slate-700 px-4 py-2 text-sm text-white disabled:opacity-50 hover:bg-slate-600"
-              >
-                Anterior
-              </button>
-              <span className="text-sm text-slate-400">
-                Página {page} de {totalPages} ({totalItems} mensagens)
-              </span>
-              <button
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page >= totalPages}
-                className="rounded-lg bg-slate-700 px-4 py-2 text-sm text-white disabled:opacity-50 hover:bg-slate-600"
-              >
-                Próxima
-              </button>
-            </div>
-          )}
-        </>
-      )}
-
-      {openMessage && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="admin-msg-title"
-          onClick={() => setOpenMessage(null)}
-        >
-          <div
-            className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-slate-600 bg-slate-900 shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between border-b border-slate-700 p-4">
-              <h2 id="admin-msg-title" className="text-lg font-semibold text-white">
-                Mensagem
-              </h2>
-              <button
-                type="button"
-                onClick={() => setOpenMessage(null)}
-                className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-800 hover:text-white"
-                aria-label="Fechar"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="space-y-4 p-4 text-sm">
-              <div>
-                <p className="text-xs font-medium uppercase tracking-wider text-slate-500">De</p>
-                <p className="text-white">{senderLabel(openMessage)}</p>
-                {openMessage.expand?.sender?.email && (
-                  <p className="text-slate-500">{openMessage.expand.sender.email}</p>
-                )}
-              </div>
-              <div>
-                <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Para</p>
-                <p className="text-white">{recipientLabel(openMessage)}</p>
-                {openMessage.expand?.recipient?.email && (
-                  <p className="text-slate-500">{openMessage.expand.recipient.email}</p>
-                )}
-              </div>
-              <div>
-                <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Data</p>
-                <p className="text-slate-300">
-                  {new Date(openMessage.created_at).toLocaleString('pt-BR', {
-                    day: '2-digit',
-                    month: '2-digit',
-                    year: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Conteúdo</p>
-                <p className="whitespace-pre-wrap break-words text-slate-200">{openMessage.content || '—'}</p>
-              </div>
-              {openMessage.read && (
-                <p className="text-xs text-emerald-400/90">Mensagem marcada como lida no sistema.</p>
+                      <span className="shrink-0 text-xs text-slate-500">
+                        {formatListTime(t.lastMessage.created_at)}
+                      </span>
+                    </div>
+                    <p className="line-clamp-1 text-slate-400">
+                      {senderName(t.lastMessage)}: {t.lastMessage.content}
+                    </p>
+                    {t.unreadInThread > 0 && (
+                      <span className="mt-1 w-fit rounded bg-amber-500/20 px-1.5 py-0.5 text-xs text-amber-300">
+                        {t.unreadInThread} não lida{t.unreadInThread > 1 ? 's' : ''} (no dest.)
+                      </span>
+                    )}
+                  </button>
+                ))
               )}
             </div>
           </div>
+
+          <div className="flex min-h-[480px] flex-col overflow-hidden rounded-xl border border-slate-700 bg-slate-800/50">
+            {!selected ? (
+              <div className="flex flex-1 flex-col items-center justify-center gap-2 p-8 text-slate-500">
+                <MessageCircle className="h-12 w-12 opacity-40" />
+                <p>Escolha uma conversa à esquerda</p>
+              </div>
+            ) : (
+              <>
+                <div className="border-b border-slate-700 px-4 py-3">
+                  <h2 className="text-sm font-semibold text-white">
+                    {selected.nameA} <span className="font-normal text-slate-500">e</span> {selected.nameB}
+                  </h2>
+                  <p className="mt-0.5 text-xs text-slate-500">
+                    Utilizador A: {selected.userA.slice(0, 12)}… · Utilizador B: {selected.userB.slice(0, 12)}…
+                  </p>
+                </div>
+                {threadLoading ? (
+                  <div className="flex flex-1 items-center justify-center gap-2 text-slate-400">
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                    A carregar mensagens…
+                  </div>
+                ) : (
+                  <div className="flex-1 space-y-3 overflow-y-auto p-4">
+                    {threadMsgs.length === 0 ? (
+                      <p className="text-center text-slate-500">Sem mensagens</p>
+                    ) : (
+                      threadMsgs.map((msg) => {
+                        const sid = msg.sender_id ?? msg.sender
+                        const isLeft = sid === selected.leftId
+                        return (
+                          <div key={msg.id} className={`flex ${isLeft ? 'justify-start' : 'justify-end'}`}>
+                            <div
+                              className={`max-w-[88%] rounded-2xl px-4 py-2 ${
+                                isLeft
+                                  ? 'bg-slate-700 text-slate-100'
+                                  : 'bg-primary-600/90 text-white'
+                              }`}
+                            >
+                              <p className="text-xs font-medium opacity-80">{senderName(msg)}</p>
+                              <p className="whitespace-pre-wrap break-words text-sm">{msg.content}</p>
+                              <div className="mt-1 flex flex-wrap items-center justify-end gap-x-1.5 text-xs opacity-80">
+                                <span>{formatMsgTime(msg.created_at)}</span>
+                                {msg.read ? (
+                                  <span className="inline-flex items-center gap-0.5" title="Destinatário abriu a mensagem">
+                                    <CheckCheck className="h-3.5 w-3.5" />
+                                    Lida
+                                  </span>
+                                ) : (
+                                  <span className="text-amber-200/90">Pendente (dest.)</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })
+                    )}
+                    <div ref={endRef} />
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         </div>
       )}
+
     </div>
   )
 }

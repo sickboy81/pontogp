@@ -16,7 +16,7 @@ function getToken(request: NextRequest): string | null {
 const ALLOWED_KEYS = new Set([
   'name', 'age', 'city', 'state', 'bio_title', 'bio', 'category', 'gender', 'ethnicity',
   'services', 'payment_methods', 'neighborhoods', 'location_approximate', 'location_lat', 'location_lng', 'schedule',
-  'service_locations', 'service_to', 'special_services', 'onlyfans',
+  'service_locations', 'service_to', 'special_services', 'onlyfans', 'privacy',
   'massage_types', 'online_services', 'other_services', 'for_sale', 'virtual_fantasies', 'certified', 'offers_happy_ending',
   'weight', 'height_exact', 'breast_type', 'pubis_type', 'piercings', 'tattoos', 'smoker',
   'whatsapp', 'telegram', 'phone', 'instagram', 'twitter',

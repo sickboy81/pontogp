@@ -99,6 +99,7 @@ export function mapProfile(record: Record<string, unknown> & { expand?: Record<s
     certified: record.certified as boolean | undefined,
     offers_happy_ending: record.offers_happy_ending as boolean | undefined,
     onlyfans: record.onlyfans as string | undefined,
+    privacy: record.privacy as string | undefined,
     piercings: record.piercings as boolean | undefined,
     tattoos: record.tattoos as boolean | undefined,
     smoker: record.smoker as string | undefined,
@@ -121,29 +122,76 @@ const SORT_MAP: Record<string, string> = {
   views: '-views',
 }
 
+/** Campos JSON (array de strings) nos quais se pode filtrar por uma opção exata do perfil. */
+export const PROFILE_JSON_TAG_FIELDS = [
+  'services',
+  'payment_methods',
+  'neighborhoods',
+  'service_locations',
+  'service_to',
+  'special_services',
+  'massage_types',
+  'online_services',
+  'other_services',
+  'for_sale',
+  'virtual_fantasies',
+] as const
+
+export type ProfileJsonTagField = (typeof PROFILE_JSON_TAG_FIELDS)[number]
+
+export function isProfileJsonTagField(s: string): s is ProfileJsonTagField {
+  return (PROFILE_JSON_TAG_FIELDS as readonly string[]).includes(s)
+}
+
+/** Remove metacaracteres de LIKE e aspas para evitar injeção no filtro PocketBase. */
+export function sanitizeProfileTagValue(raw: string): string {
+  return raw.replace(/["\\%_]/g, '').trim().slice(0, 160)
+}
+
+function escapeDoubleQuotes(s: string): string {
+  return s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+}
+
 /** Lista perfis (servidor). Filtros: equality + min_age, max_age, min_price, max_price, online, verified, search. sort: default | recent | price_asc | price_desc | views */
 export async function getProfiles(options: {
   filters?: Record<string, string | number | boolean>
   limit?: number
   offset?: number
   sort?: string
+  /** Corresponde a um elemento do array JSON (substring no texto serializado). */
+  jsonTag?: { field: ProfileJsonTagField; value: string }
+  excludeProfileId?: string
 }): Promise<Profile[]> {
-  const { filters = {}, limit = 21, offset = 0, sort: sortKey = 'default' } = options
+  const {
+    filters = {},
+    limit = 21,
+    offset = 0,
+    sort: sortKey = 'default',
+    jsonTag,
+    excludeProfileId,
+  } = options
   const parts: string[] = []
   Object.entries(filters).forEach(([key, val]) => {
     if (key === 'min_age' || key === 'max_age' || key === 'search' || key === 'min_price' || key === 'max_price') return
     const k = key === 'user_id' ? 'user' : key
     if (val === null || val === undefined) return
     if (typeof val === 'boolean') parts.push(`${k} = ${val}`)
-    else parts.push(`${k} = "${val}"`)
+    else parts.push(`${k} = "${escapeDoubleQuotes(String(val))}"`)
   })
   if (filters.min_age != null) parts.push(`age >= ${Number(filters.min_age)}`)
   if (filters.max_age != null) parts.push(`age <= ${Number(filters.max_age)}`)
   if (filters.min_price != null) parts.push(`price_1h >= ${Number(filters.min_price)}`)
   if (filters.max_price != null) parts.push(`price_1h <= ${Number(filters.max_price)}`)
   if (filters.search) {
-    const q = String(filters.search).replace(/"/g, '\\"')
+    const q = escapeDoubleQuotes(String(filters.search))
     parts.push(`(name ~ "${q}" || bio ~ "${q}" || search_normalized ~ "${q}")`)
+  }
+  if (jsonTag?.value) {
+    const v = escapeDoubleQuotes(jsonTag.value)
+    parts.push(`${jsonTag.field} ~ "%${v}%"`)
+  }
+  if (excludeProfileId) {
+    parts.push(`id != "${escapeDoubleQuotes(excludeProfileId)}"`)
   }
   let filterStr = parts.length ? `(${parts.join(' && ')}) && (${LIFECYCLE})` : LIFECYCLE
   const sort = SORT_MAP[sortKey] || SORT_MAP.default

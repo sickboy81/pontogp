@@ -11,6 +11,8 @@ import StoryViewer, { type StoryItem } from '@/components/StoryViewer'
 import ProfileMap from '@/components/ProfileMap'
 import ProfileImageWithWatermark from '@/components/ProfileImageWithWatermark'
 import toast from 'react-hot-toast'
+import { socialProfileHref } from '@/lib/social-links'
+import { profileTagSearchPath } from '@/lib/profile-tag-search'
 
 interface ProfileViewProps {
   profile: Profile
@@ -32,6 +34,9 @@ export default function ProfileView({ profile, profileUrl, openStories = false }
   const [reportSubmitting, setReportSubmitting] = useState(false)
   const photos = profile.photos?.length ? profile.photos : (profile.thumbnail ? [profile.thumbnail] : [])
 
+  const tagChipClass =
+    'inline-block rounded-lg border border-transparent bg-slate-700/50 px-3 py-1.5 text-sm text-slate-200 transition hover:border-primary-500/40 hover:bg-slate-600/80 hover:text-white'
+
   useEffect(() => {
     if (!openStories || !profile.id) return
     fetch(`/api/stories?profileId=${encodeURIComponent(profile.id)}`)
@@ -50,7 +55,18 @@ export default function ProfileView({ profile, profileUrl, openStories = false }
     fetch(`/api/profiles/${profile.id}/view`, { method: 'POST' }).catch(() => {})
   }, [profile.id])
 
-  const trackClick = useCallback((contactType: 'whatsapp' | 'telegram' | 'phone' | 'message') => {
+  const trackClick = useCallback(
+    (
+      contactType:
+        | 'whatsapp'
+        | 'telegram'
+        | 'phone'
+        | 'message'
+        | 'instagram'
+        | 'twitter'
+        | 'privacy'
+        | 'onlyfans'
+    ) => {
     if (!profile.id) return
     fetch(`/api/profiles/${profile.id}/click`, {
       method: 'POST',
@@ -218,12 +234,20 @@ export default function ProfileView({ profile, profileUrl, openStories = false }
                   {profile.category === 'massagista' ? 'Tipos de massagens' : profile.category === 'online' ? 'Serviços online' : 'Serviços oferecidos'}
                 </h3>
                 <div className="flex flex-wrap gap-2">
-                  {[
-                    ...(profile.services ?? []),
-                    ...(profile.massage_types ?? []),
-                    ...(profile.online_services ?? []),
-                  ].map((s, i) => (
-                    <span key={i} className="rounded-lg bg-slate-700/50 px-3 py-1.5 text-sm text-slate-200">{s}</span>
+                  {(profile.services ?? []).map((s) => (
+                    <Link key={`svc-${s}`} href={profileTagSearchPath(profile, 'services', s)} className={tagChipClass}>
+                      {s}
+                    </Link>
+                  ))}
+                  {(profile.massage_types ?? []).map((s) => (
+                    <Link key={`mass-${s}`} href={profileTagSearchPath(profile, 'massage_types', s)} className={tagChipClass}>
+                      {s}
+                    </Link>
+                  ))}
+                  {(profile.online_services ?? []).map((s) => (
+                    <Link key={`onl-${s}`} href={profileTagSearchPath(profile, 'online_services', s)} className={tagChipClass}>
+                      {s}
+                    </Link>
                   ))}
                 </div>
               </div>
@@ -233,8 +257,10 @@ export default function ProfileView({ profile, profileUrl, openStories = false }
               <div className="mt-6">
                 <h3 className="mb-2 text-sm font-bold uppercase tracking-wider text-slate-500">Formas de pagamento</h3>
                 <div className="flex flex-wrap gap-2">
-                  {profile.payment_methods!.map((pm, i) => (
-                    <span key={i} className="rounded-lg bg-slate-700/50 px-3 py-1.5 text-sm text-slate-200">{pm}</span>
+                  {profile.payment_methods!.map((pm) => (
+                    <Link key={pm} href={profileTagSearchPath(profile, 'payment_methods', pm)} className={tagChipClass}>
+                      {pm}
+                    </Link>
                   ))}
                 </div>
               </div>
@@ -244,8 +270,10 @@ export default function ProfileView({ profile, profileUrl, openStories = false }
               <div className="mt-6">
                 <h3 className="mb-2 text-sm font-bold uppercase tracking-wider text-slate-500">Bairros / regiões</h3>
                 <div className="flex flex-wrap gap-2">
-                  {profile.neighborhoods!.map((n, i) => (
-                    <span key={i} className="rounded-lg bg-slate-700/50 px-3 py-1.5 text-sm text-slate-200">{n}</span>
+                  {profile.neighborhoods!.map((n) => (
+                    <Link key={n} href={profileTagSearchPath(profile, 'neighborhoods', n)} className={tagChipClass}>
+                      {n}
+                    </Link>
                   ))}
                 </div>
               </div>
@@ -255,8 +283,10 @@ export default function ProfileView({ profile, profileUrl, openStories = false }
               <div className="mt-6">
                 <h3 className="mb-2 text-sm font-bold uppercase tracking-wider text-slate-500">Locais de atendimento</h3>
                 <div className="flex flex-wrap gap-2">
-                  {profile.service_locations!.map((loc, i) => (
-                    <span key={i} className="rounded-lg bg-slate-700/50 px-3 py-1.5 text-sm text-slate-200">{loc}</span>
+                  {profile.service_locations!.map((loc) => (
+                    <Link key={loc} href={profileTagSearchPath(profile, 'service_locations', loc)} className={tagChipClass}>
+                      {loc}
+                    </Link>
                   ))}
                 </div>
               </div>
@@ -266,8 +296,10 @@ export default function ProfileView({ profile, profileUrl, openStories = false }
               <div className="mt-6">
                 <h3 className="mb-2 text-sm font-bold uppercase tracking-wider text-slate-500">Atende a</h3>
                 <div className="flex flex-wrap gap-2">
-                  {profile.service_to!.map((s, i) => (
-                    <span key={i} className="rounded-lg bg-slate-700/50 px-3 py-1.5 text-sm text-slate-200">{s}</span>
+                  {profile.service_to!.map((s) => (
+                    <Link key={s} href={profileTagSearchPath(profile, 'service_to', s)} className={tagChipClass}>
+                      {s}
+                    </Link>
                   ))}
                 </div>
               </div>
@@ -279,8 +311,10 @@ export default function ProfileView({ profile, profileUrl, openStories = false }
                   {profile.category === 'massagista' ? 'Final feliz' : 'Serviços especiais'}
                 </h3>
                 <div className="flex flex-wrap gap-2">
-                  {profile.special_services!.map((s, i) => (
-                    <span key={i} className="rounded-lg bg-slate-700/50 px-3 py-1.5 text-sm text-slate-200">{s}</span>
+                  {profile.special_services!.map((s) => (
+                    <Link key={s} href={profileTagSearchPath(profile, 'special_services', s)} className={tagChipClass}>
+                      {s}
+                    </Link>
                   ))}
                 </div>
               </div>
@@ -290,8 +324,10 @@ export default function ProfileView({ profile, profileUrl, openStories = false }
               <div className="mt-6">
                 <h3 className="mb-2 text-sm font-bold uppercase tracking-wider text-slate-500">Outros serviços</h3>
                 <div className="flex flex-wrap gap-2">
-                  {profile.other_services!.map((s, i) => (
-                    <span key={i} className="rounded-lg bg-slate-700/50 px-3 py-1.5 text-sm text-slate-200">{s}</span>
+                  {profile.other_services!.map((s) => (
+                    <Link key={s} href={profileTagSearchPath(profile, 'other_services', s)} className={tagChipClass}>
+                      {s}
+                    </Link>
                   ))}
                 </div>
               </div>
@@ -301,8 +337,10 @@ export default function ProfileView({ profile, profileUrl, openStories = false }
               <div className="mt-6">
                 <h3 className="mb-2 text-sm font-bold uppercase tracking-wider text-slate-500">Para vender</h3>
                 <div className="flex flex-wrap gap-2">
-                  {profile.for_sale!.map((s, i) => (
-                    <span key={i} className="rounded-lg bg-slate-700/50 px-3 py-1.5 text-sm text-slate-200">{s}</span>
+                  {profile.for_sale!.map((s) => (
+                    <Link key={s} href={profileTagSearchPath(profile, 'for_sale', s)} className={tagChipClass}>
+                      {s}
+                    </Link>
                   ))}
                 </div>
               </div>
@@ -312,8 +350,10 @@ export default function ProfileView({ profile, profileUrl, openStories = false }
               <div className="mt-6">
                 <h3 className="mb-2 text-sm font-bold uppercase tracking-wider text-slate-500">Fantasias virtuais</h3>
                 <div className="flex flex-wrap gap-2">
-                  {profile.virtual_fantasies!.map((s, i) => (
-                    <span key={i} className="rounded-lg bg-slate-700/50 px-3 py-1.5 text-sm text-slate-200">{s}</span>
+                  {profile.virtual_fantasies!.map((s) => (
+                    <Link key={s} href={profileTagSearchPath(profile, 'virtual_fantasies', s)} className={tagChipClass}>
+                      {s}
+                    </Link>
                   ))}
                 </div>
               </div>
@@ -431,19 +471,64 @@ export default function ProfileView({ profile, profileUrl, openStories = false }
                       Ligar
                     </a>
                   )}
-                  {profile.onlyfans && (
-                    <a
-                      href={profile.onlyfans.startsWith('http') ? profile.onlyfans : `https://${profile.onlyfans}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2 rounded-lg bg-pink-600 px-4 py-2 text-sm font-medium text-white hover:bg-pink-500"
-                    >
-                      OnlyFans
-                    </a>
-                  )}
                 </>
               )}
             </div>
+            {!contactExpired &&
+              (socialProfileHref(profile.instagram, 'instagram') ||
+                socialProfileHref(profile.twitter, 'twitter') ||
+                socialProfileHref(profile.privacy, 'privacy') ||
+                socialProfileHref(profile.onlyfans, 'onlyfans')) && (
+                <div className="mt-4 w-full max-w-xl">
+                  <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">Redes sociais</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {socialProfileHref(profile.instagram, 'instagram') && (
+                      <a
+                        href={socialProfileHref(profile.instagram, 'instagram')!}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => trackClick('instagram')}
+                        className="flex items-center gap-2 rounded-lg border border-pink-500/40 bg-pink-500/10 px-4 py-2 text-sm font-medium text-pink-200 hover:bg-pink-500/20"
+                      >
+                        Instagram
+                      </a>
+                    )}
+                    {socialProfileHref(profile.twitter, 'twitter') && (
+                      <a
+                        href={socialProfileHref(profile.twitter, 'twitter')!}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => trackClick('twitter')}
+                        className="flex items-center gap-2 rounded-lg border border-slate-500/50 bg-slate-700/80 px-4 py-2 text-sm font-medium text-slate-100 hover:bg-slate-600"
+                      >
+                        X (Twitter)
+                      </a>
+                    )}
+                    {socialProfileHref(profile.privacy, 'privacy') && (
+                      <a
+                        href={socialProfileHref(profile.privacy, 'privacy')!}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => trackClick('privacy')}
+                        className="flex items-center gap-2 rounded-lg border border-violet-500/40 bg-violet-500/10 px-4 py-2 text-sm font-medium text-violet-200 hover:bg-violet-500/20"
+                      >
+                        Privacy
+                      </a>
+                    )}
+                    {socialProfileHref(profile.onlyfans, 'onlyfans') && (
+                      <a
+                        href={socialProfileHref(profile.onlyfans, 'onlyfans')!}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => trackClick('onlyfans')}
+                        className="flex items-center gap-2 rounded-lg bg-pink-600 px-4 py-2 text-sm font-medium text-white hover:bg-pink-500"
+                      >
+                        OnlyFans
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )}
           </div>
         </div>
 

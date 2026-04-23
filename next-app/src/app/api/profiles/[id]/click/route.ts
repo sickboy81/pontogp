@@ -6,7 +6,16 @@ const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cer
 /** Schema: coleção profile_clicks (profile, contact_type, viewer_ip). Ver pocketbase-schema.json */
 export const dynamic = 'force-dynamic'
 
-const VALID_TYPES = ['whatsapp', 'telegram', 'phone', 'message']
+const VALID_TYPES = [
+  'whatsapp',
+  'telegram',
+  'phone',
+  'message',
+  'instagram',
+  'twitter',
+  'privacy',
+  'onlyfans',
+]
 
 /** POST: registra clique em contato. Cria registro na coleção profile_clicks. Body: { contactType }. */
 export async function POST(

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Search, Filter, X } from 'lucide-react'
 import ProfileCard from '@/components/ProfileCard'
 import StoriesSection from '@/components/StoriesSection'
@@ -36,7 +36,24 @@ const SEO_QUICK_LINKS = [
   { href: '/?verified=true', label: 'Perfis verificados' },
 ]
 
-function buildQuery(filters: FilterOptions, page: number, search: string) {
+type TagMatchScope = 'city' | 'state' | 'brasil'
+
+function parseTagScope(s: string | null): TagMatchScope | null {
+  if (s === 'city' || s === 'state' || s === 'brasil') return s
+  return null
+}
+
+function buildQuery(
+  filters: FilterOptions,
+  page: number,
+  search: string,
+  tagBlock: {
+    tag?: string
+    tagField?: string
+    excludeProfile?: string
+    tagScope?: TagMatchScope | null
+  }
+) {
   const params = new URLSearchParams()
   params.set('limit', String(LIMIT))
   params.set('offset', String((page - 1) * LIMIT))
@@ -54,11 +71,28 @@ function buildQuery(filters: FilterOptions, page: number, search: string) {
   if (filters.verified) params.set('verified', 'true')
   if (filters.online) params.set('online', 'true')
   if (search.trim()) params.set('search', search.trim())
+  if (tagBlock.tag) params.set('tag', tagBlock.tag)
+  if (tagBlock.tagField) params.set('tag_field', tagBlock.tagField)
+  if (tagBlock.excludeProfile) params.set('exclude_profile', tagBlock.excludeProfile)
+  if (tagBlock.tag && tagBlock.tagField && tagBlock.tagScope) params.set('tag_scope', tagBlock.tagScope)
   return params.toString()
 }
 
 export default function HomeClient() {
   const searchParams = useSearchParams()
+  const router = useRouter()
+  const tagFromUrl = searchParams.get('tag')?.trim() ?? ''
+  const tagFieldFromUrl = searchParams.get('tag_field') ?? ''
+  const excludeFromUrl = searchParams.get('exclude_profile') ?? ''
+  const tagSearchKeyRef = useRef<string>('')
+  const listGeoInitializedRef = useRef(false)
+  const prevListGeoRef = useRef<{ state: string; city: string; category: string; gender: string }>({
+    state: '',
+    city: '',
+    category: '',
+    gender: '',
+  })
+
   const [filters, setFilters] = useState<FilterOptions>(() => {
     const c = searchParams.get('category')
     const g = searchParams.get('gender')
@@ -86,8 +120,42 @@ export default function HomeClient() {
   const planColorMap: Record<string, string> = { gratis: '#64748b', bronze: '#b45309', prata: '#737373', ouro: '#ca8a04' }
 
   const [debouncedSearch, setDebouncedSearch] = useState(searchQuery)
+  const [tagMatchScope, setTagMatchScope] = useState<TagMatchScope | null>(() =>
+    parseTagScope(searchParams.get('tag_scope'))
+  )
+  const [tagSearchBanner, setTagSearchBanner] = useState<string | null>(null)
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const fetchFavorites = useFavoritesStore((s) => s.fetchFavorites)
+
+  const tagScopeFromUrl = parseTagScope(searchParams.get('tag_scope'))
+  const effectiveTagScope = tagScopeFromUrl ?? tagMatchScope
+  const tagBlock = {
+    tag: tagFromUrl || undefined,
+    tagField: tagFieldFromUrl || undefined,
+    excludeProfile: excludeFromUrl || undefined,
+    tagScope: effectiveTagScope,
+  }
+  const tagScopeUrlKey = searchParams.get('tag_scope') ?? ''
+
+  useEffect(() => {
+    const t = searchParams.get('tag')?.trim() ?? ''
+    const tf = searchParams.get('tag_field') ?? ''
+    const ex = searchParams.get('exclude_profile') ?? ''
+    const key = `${t}|${tf}|${ex}`
+    if (!t || !tf) {
+      setTagMatchScope(null)
+      tagSearchKeyRef.current = ''
+      setTagSearchBanner(null)
+      return
+    }
+    const ts = parseTagScope(searchParams.get('tag_scope'))
+    if (ts) {
+      setTagMatchScope(ts)
+    } else if (tagSearchKeyRef.current !== key) {
+      setTagMatchScope(null)
+    }
+    tagSearchKeyRef.current = key
+  }, [searchParams])
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(searchQuery), 500)
@@ -101,15 +169,28 @@ export default function HomeClient() {
   useEffect(() => {
     const c = searchParams.get('category')
     const g = searchParams.get('gender')
-    const s = searchParams.get('state')
-    const city = searchParams.get('city')
+    const s = searchParams.get('state') ?? ''
+    const city = searchParams.get('city') ?? ''
+    const catResolved: NonNullable<FilterOptions['category']> =
+      c && ['acompanhante', 'massagista', 'online'].includes(c) ? (c as NonNullable<FilterOptions['category']>) : 'acompanhante'
+    const genResolved: NonNullable<FilterOptions['gender']> =
+      g && ['mulher', 'homem', 'trans', 'casal'].includes(g) ? (g as NonNullable<FilterOptions['gender']>) : 'mulher'
+    const geoChanged =
+      listGeoInitializedRef.current &&
+      (prevListGeoRef.current.state !== s ||
+        prevListGeoRef.current.city !== city ||
+        prevListGeoRef.current.category !== catResolved ||
+        prevListGeoRef.current.gender !== genResolved)
+    prevListGeoRef.current = { state: s, city, category: catResolved, gender: genResolved }
+    listGeoInitializedRef.current = true
     setFilters((prev) => ({
       ...prev,
-      category: (c && ['acompanhante', 'massagista', 'online'].includes(c)) ? c as FilterOptions['category'] : 'acompanhante',
-      gender: (g && ['mulher', 'homem', 'trans', 'casal'].includes(g)) ? g as FilterOptions['gender'] : 'mulher',
+      category: catResolved,
+      gender: genResolved,
       ...(s ? { state: s } : { state: undefined }),
       ...(city ? { city } : { city: undefined }),
     }))
+    if (geoChanged) setTagMatchScope(null)
   }, [searchParams])
 
   useEffect(() => {
@@ -117,13 +198,40 @@ export default function HomeClient() {
     requestIdRef.current += 1
     const id = requestIdRef.current
     setLoading(true)
-    const qs = buildQuery(filters, 1, debouncedSearch)
+    const qs = buildQuery(filters, 1, debouncedSearch, tagBlock)
     fetch(`/api/profiles?${qs}`)
-      .then((res) => res.json())
-      .then((data: Profile[]) => {
+      .then(async (res) => {
+        const data = await res.json()
         if (requestIdRef.current !== id) return
-        setProfiles(data)
-        setHasMore(data.length === LIMIT)
+        if (!res.ok) {
+          setProfiles([])
+          setHasMore(false)
+          setTagSearchBanner(null)
+          return
+        }
+        if (Array.isArray(data)) {
+          setProfiles(data)
+          setHasMore(data.length === LIMIT)
+          setTagMatchScope(null)
+          setTagSearchBanner(null)
+        } else {
+          const list = (data as { profiles?: Profile[]; tag_match_scope?: TagMatchScope }).profiles ?? []
+          setProfiles(list)
+          setHasMore(list.length === LIMIT)
+          const scope = (data as { tag_match_scope?: TagMatchScope }).tag_match_scope
+          if (scope && tagFromUrl && tagFieldFromUrl) {
+            setTagMatchScope(scope)
+            const label =
+              scope === 'city'
+                ? 'na mesma cidade'
+                : scope === 'state'
+                  ? 'no mesmo estado (ampliado)'
+                  : 'em todo o Brasil (ampliado)'
+            setTagSearchBanner(`Opção “${tagFromUrl}”: anunciantes ${label}.`)
+          } else {
+            setTagSearchBanner(null)
+          }
+        }
       })
       .catch(() => {
         if (requestIdRef.current === id) setProfiles([])
@@ -131,21 +239,33 @@ export default function HomeClient() {
       .finally(() => {
         if (requestIdRef.current === id) setLoading(false)
       })
-  }, [filters, debouncedSearch])
+  }, [filters, debouncedSearch, tagFromUrl, tagFieldFromUrl, excludeFromUrl, tagScopeUrlKey])
 
   const loadMore = useCallback(() => {
     const nextPage = page + 1
-    const qs = buildQuery(filters, nextPage, debouncedSearch)
+    const scopeForPage = parseTagScope(searchParams.get('tag_scope')) ?? tagMatchScope
+    const moreTagBlock = {
+      tag: tagFromUrl || undefined,
+      tagField: tagFieldFromUrl || undefined,
+      excludeProfile: excludeFromUrl || undefined,
+      tagScope: scopeForPage,
+    }
+    const qs = buildQuery(filters, nextPage, debouncedSearch, moreTagBlock)
     setLoading(true)
     fetch(`/api/profiles?${qs}`)
-      .then((res) => res.json())
-      .then((data: Profile[]) => {
-        setProfiles((prev) => [...prev, ...data])
-        setHasMore(data.length === LIMIT)
+      .then(async (res) => {
+        const data = await res.json()
+        if (!res.ok) {
+          setHasMore(false)
+          return
+        }
+        const chunk = Array.isArray(data) ? data : ((data as { profiles?: Profile[] }).profiles ?? [])
+        setProfiles((prev) => [...prev, ...chunk])
+        setHasMore(chunk.length === LIMIT)
         setPage(nextPage)
       })
       .finally(() => setLoading(false))
-  }, [filters, debouncedSearch, page])
+  }, [filters, debouncedSearch, page, tagFromUrl, tagFieldFromUrl, excludeFromUrl, tagMatchScope, tagScopeUrlKey])
 
   useEffect(() => {
     const el = sentinelRef.current
@@ -162,6 +282,7 @@ export default function HomeClient() {
 
   const handleFilterChange = useCallback((newFilters: FilterOptions) => {
     setFilters(newFilters)
+    setTagMatchScope(null)
     setPage(1)
   }, [])
 
@@ -169,11 +290,15 @@ export default function HomeClient() {
     setFilters({ category: 'acompanhante', gender: 'mulher' })
     setSearchQuery('')
     setPage(1)
-  }, [])
+    setTagMatchScope(null)
+    setTagSearchBanner(null)
+    router.push('/')
+  }, [router])
 
   const hasActiveFilters =
     Object.keys(filters).filter((k) => !['category', 'gender'].includes(k) && filters[k as keyof FilterOptions] != null).length > 0 ||
-    searchQuery.length > 0
+    searchQuery.length > 0 ||
+    (tagFromUrl.length > 0 && tagFieldFromUrl.length > 0)
 
   const categoryLabel = CATEGORIES.find((c) => c.value === filters.category)?.label ?? 'Acompanhantes'
 
@@ -222,6 +347,12 @@ export default function HomeClient() {
       />
 
       <StoriesSection />
+
+      {tagSearchBanner && (
+        <div className="mb-4 rounded-xl border border-primary-500/30 bg-primary-500/10 px-4 py-3 text-sm text-primary-100">
+          {tagSearchBanner}
+        </div>
+      )}
 
       <div className="mb-6">
         <h2 className="text-sm font-bold uppercase tracking-widest text-slate-500">{categoryLabel}</h2>

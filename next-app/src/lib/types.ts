@@ -32,6 +32,8 @@ export interface Profile {
   phone?: string
   instagram?: string
   twitter?: string
+  /** Link Privacy (privacidade.me, etc.) */
+  privacy?: string
   is_online: boolean
   online_until?: string
   verified: boolean
@@ -146,6 +148,8 @@ export interface Plan {
   features: string[]
   target_type?: 'advertiser' | 'user'
   highlight_percentage?: number
+  /** Dias de assinatura no cadastro do plano (fallback do webhook PIX se não houver override em settings). */
+  subscription_days?: number
 }
 
 export interface Message {

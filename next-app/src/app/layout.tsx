@@ -60,7 +60,12 @@ export default function RootLayout({
             position="top-right"
             toastOptions={{
               duration: 4000,
-              style: { background: '#1e293b', color: '#fff', borderRadius: '8px' },
+              style: {
+                background: '#334155',
+                color: '#f8fafc',
+                borderRadius: '8px',
+                border: '1px solid rgba(148, 163, 184, 0.35)',
+              },
             }}
           />
         </ThemeProvider>

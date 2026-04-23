@@ -14,8 +14,13 @@ export default function AdminConfiguracaoPage() {
   const [announcementMessage, setAnnouncementMessage] = useState('')
   const [announcementTarget, setAnnouncementTarget] = useState<'all' | 'guests' | 'logged_in' | 'advertiser'>('all')
   const [savingAnnouncement, setSavingAnnouncement] = useState(false)
-  const [expirationDurations, setExpirationDurations] = useState<Record<string, { contact_days: number; search_days: number }>>({})
-  const [plansForExp, setPlansForExp] = useState<{ id: string; slug: string; name: string }[]>([])
+  /** Valores em settings (PocketBase `expiration_durations`); vazio = sem override, o PIX herda o plano. */
+  const [expirationDurations, setExpirationDurations] = useState<
+    Record<string, { contact_days?: number; search_days?: number }>
+  >({})
+  const [plansForExp, setPlansForExp] = useState<
+    { id: string; slug: string; name: string; subscription_days?: number }[]
+  >([])
   const [savingExpiration, setSavingExpiration] = useState(false)
 
   useEffect(() => {
@@ -35,8 +40,21 @@ export default function AdminConfiguracaoPage() {
           setAnnouncementMessage(ann.message ?? '')
           setAnnouncementTarget(ann.target === 'guests' || ann.target === 'logged_in' || ann.target === 'advertiser' ? ann.target : 'all')
         }
-        if (exp?.durations) setExpirationDurations(exp.durations)
-        if (Array.isArray(plansList)) setPlansForExp(plansList.map((p: { id: string; slug: string; name: string }) => ({ id: p.id, slug: p.slug, name: p.name })))
+        if (exp?.durations && typeof exp.durations === 'object') {
+          setExpirationDurations(exp.durations as Record<string, { contact_days?: number; search_days?: number }>)
+        }
+        if (Array.isArray(plansList)) {
+          setPlansForExp(
+            plansList.map(
+              (p: { id: string; slug: string; name: string; subscription_days?: number }) => ({
+                id: p.id,
+                slug: p.slug,
+                name: p.name,
+                subscription_days: p.subscription_days,
+              })
+            )
+          )
+        }
       })
       .catch(() => {})
       .finally(() => setLoading(false))
@@ -62,6 +80,27 @@ export default function AdminConfiguracaoPage() {
     } finally {
       setSaving(false)
     }
+  }
+
+  const setDurationField = (slug: string, field: 'contact_days' | 'search_days', raw: string) => {
+    setExpirationDurations((prev) => {
+      const v = raw.trim()
+      const cur = { ...(prev[slug] || {}) }
+      if (v === '') {
+        delete cur[field]
+      } else {
+        const n = parseInt(v, 10)
+        if (Number.isNaN(n) || n < 1) return prev
+        cur[field] = Math.min(365, n)
+      }
+      const next = { ...prev }
+      if (Object.keys(cur).length === 0) {
+        delete next[slug]
+      } else {
+        next[slug] = cur
+      }
+      return next
+    })
   }
 
   const handleSaveExpiration = async (e: React.FormEvent) => {
@@ -221,40 +260,54 @@ export default function AdminConfiguracaoPage() {
           <hr className="my-8 border-slate-700" />
           <h2 id="expiracao-planos" className="scroll-mt-20 text-lg font-semibold text-white">Expiração por plano</h2>
           <p className="text-sm text-slate-400">
-            Dias de visibilidade na busca e de exibição de contato após ativar/renovar o plano. Usado pelo webhook PIX. Se vazio, usa subscription_days do plano ou 30 dias.
+            Override gravado em <code className="text-slate-300">settings.expiration_durations</code> (PocketBase). Deixe
+            vazio para não sobrescrever: o PIX usa o campo <code className="text-slate-300">subscription_days</code> de
+            cada registo de plano; se estiver vazio, o código do webhook usa 30 dias.
+          </p>
+          <p className="mb-2 text-xs text-amber-400/90">
+            Se antes vias sempre o número 30, era o <em>placeholder</em> (cinzento), não o valor no BD. Agora a coluna
+            &quot;Padrão (plano)&quot; mostra o que vem do cadastro de planos.
           </p>
           <form onSubmit={handleSaveExpiration} className="mt-4 space-y-4">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-slate-600 text-left text-slate-400">
-                    <th className="pb-2 pr-4">Plano</th>
-                    <th className="pb-2 pr-4">Contato (dias)</th>
-                    <th className="pb-2">Busca (dias)</th>
+                    <th className="pb-2 pr-2">Plano</th>
+                    <th className="pb-2 pr-2">Padrão (plano / BD)</th>
+                    <th className="pb-2 pr-2">Contato (override)</th>
+                    <th className="pb-2">Busca (override)</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-700/50">
-                  {plansForExp.map((p) => (
+                  {plansForExp.map((p) => {
+                    const planBase = p.subscription_days != null && p.subscription_days > 0 ? p.subscription_days : null
+                    return (
                     <tr key={p.id}>
-                      <td className="py-2 pr-4 font-medium text-slate-200">{p.name || p.slug}</td>
-                      <td className="py-2 pr-4">
+                      <td className="py-2 pr-2 font-medium text-slate-200">
+                        {p.name || p.slug}
+                        <p className="text-[10px] font-normal text-slate-500">slug: {p.slug}</p>
+                      </td>
+                      <td className="max-w-[100px] py-2 pr-2 text-slate-300">
+                        {planBase != null ? (
+                          <span className="font-mono text-emerald-400/90">{planBase} dias</span>
+                        ) : (
+                          <span className="text-slate-500" title="Campo vazio no plano — PIX usa 30 no código">— (30 no código)</span>
+                        )}
+                      </td>
+                      <td className="py-2 pr-2">
                         <input
                           type="number"
                           min={1}
                           max={365}
-                          value={expirationDurations[p.slug]?.contact_days ?? ''}
-                          onChange={(e) =>
-                            setExpirationDurations((prev) => ({
-                              ...prev,
-                              [p.slug]: {
-                                ...prev[p.slug],
-                                contact_days: Math.max(1, parseInt(e.target.value, 10) || 0),
-                                search_days: prev[p.slug]?.search_days ?? 30,
-                              },
-                            }))
+                          value={
+                            expirationDurations[p.slug]?.contact_days != null
+                              ? String(expirationDurations[p.slug]!.contact_days)
+                              : ''
                           }
-                          placeholder="30"
-                          className="w-20 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-white"
+                          onChange={(e) => setDurationField(p.slug, 'contact_days', e.target.value)}
+                          placeholder="vazio = herda"
+                          className="w-24 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-white placeholder:text-slate-600"
                         />
                       </td>
                       <td className="py-2">
@@ -262,23 +315,19 @@ export default function AdminConfiguracaoPage() {
                           type="number"
                           min={1}
                           max={365}
-                          value={expirationDurations[p.slug]?.search_days ?? ''}
-                          onChange={(e) =>
-                            setExpirationDurations((prev) => ({
-                              ...prev,
-                              [p.slug]: {
-                                ...prev[p.slug],
-                                contact_days: prev[p.slug]?.contact_days ?? 30,
-                                search_days: Math.max(1, parseInt(e.target.value, 10) || 0),
-                              },
-                            }))
+                          value={
+                            expirationDurations[p.slug]?.search_days != null
+                              ? String(expirationDurations[p.slug]!.search_days)
+                              : ''
                           }
-                          placeholder="30"
-                          className="w-20 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-white"
+                          onChange={(e) => setDurationField(p.slug, 'search_days', e.target.value)}
+                          placeholder="vazio = herda"
+                          className="w-24 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-white placeholder:text-slate-600"
                         />
                       </td>
                     </tr>
-                  ))}
+                    )
+                  })}
                 </tbody>
               </table>
             </div>

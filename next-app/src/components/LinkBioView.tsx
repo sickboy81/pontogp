@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation'
 import { MessageCircle } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
 import type { Profile } from '@/lib/types'
+import { socialProfileHref } from '@/lib/social-links'
 
 interface LinkBioViewProps {
   profile: Profile
@@ -26,7 +27,18 @@ export default function LinkBioView({ profile, profileUrl }: LinkBioViewProps) {
     fetch(`/api/profiles/${profile.id}/view`, { method: 'POST' }).catch(() => {})
   }, [profile.id])
 
-  const trackClick = useCallback((contactType: 'whatsapp' | 'telegram' | 'phone' | 'message') => {
+  const trackClick = useCallback(
+    (
+      contactType:
+        | 'whatsapp'
+        | 'telegram'
+        | 'phone'
+        | 'message'
+        | 'instagram'
+        | 'twitter'
+        | 'privacy'
+        | 'onlyfans'
+    ) => {
     if (!profile.id) return
     fetch(`/api/profiles/${profile.id}/click`, {
       method: 'POST',
@@ -172,6 +184,64 @@ export default function LinkBioView({ profile, profileUrl }: LinkBioViewProps) {
             </>
           )}
         </div>
+
+        {!contactExpired &&
+          (socialProfileHref(profile.instagram, 'instagram') ||
+            socialProfileHref(profile.twitter, 'twitter') ||
+            socialProfileHref(profile.privacy, 'privacy') ||
+            socialProfileHref(profile.onlyfans, 'onlyfans')) && (
+            <div className="mt-6 w-full max-w-sm">
+              <p className="mb-2 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">
+                Redes sociais
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {socialProfileHref(profile.instagram, 'instagram') && (
+                  <a
+                    href={socialProfileHref(profile.instagram, 'instagram')!}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => trackClick('instagram')}
+                    className="flex items-center justify-center rounded-xl border border-pink-500/30 bg-pink-500/10 py-3 text-sm font-medium text-pink-200 transition hover:bg-pink-500/20"
+                  >
+                    Instagram
+                  </a>
+                )}
+                {socialProfileHref(profile.twitter, 'twitter') && (
+                  <a
+                    href={socialProfileHref(profile.twitter, 'twitter')!}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => trackClick('twitter')}
+                    className="flex items-center justify-center rounded-xl border border-slate-500/40 bg-slate-800 py-3 text-sm font-medium text-slate-200 transition hover:bg-slate-700"
+                  >
+                    X
+                  </a>
+                )}
+                {socialProfileHref(profile.privacy, 'privacy') && (
+                  <a
+                    href={socialProfileHref(profile.privacy, 'privacy')!}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => trackClick('privacy')}
+                    className="flex items-center justify-center rounded-xl border border-violet-500/30 bg-violet-500/10 py-3 text-sm font-medium text-violet-200 transition hover:bg-violet-500/20"
+                  >
+                    Privacy
+                  </a>
+                )}
+                {socialProfileHref(profile.onlyfans, 'onlyfans') && (
+                  <a
+                    href={socialProfileHref(profile.onlyfans, 'onlyfans')!}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => trackClick('onlyfans')}
+                    className="flex items-center justify-center rounded-xl bg-pink-600 py-3 text-sm font-medium text-white transition hover:bg-pink-500"
+                  >
+                    OnlyFans
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
 
         <Link
           href={pathname ? `${pathname}?view=full` : '#'}

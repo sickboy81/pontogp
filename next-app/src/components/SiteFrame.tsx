@@ -50,7 +50,7 @@ export default function SiteFrame({ children }: { children: React.ReactNode }) {
               <p className="text-sm font-semibold uppercase tracking-wider text-slate-500">Suporte</p>
               <ul className="mt-3 space-y-2">
                 <li><Link href="/contato" className="text-slate-400 hover:text-white">Contato</Link></li>
-                <li><Link href="/esqueci-senha" className="text-slate-400 hover:text-white">Esqueci minha senha</Link></li>
+                <li><Link href="/login" className="text-slate-400 hover:text-white">Login</Link></li>
               </ul>
             </div>
           </div>

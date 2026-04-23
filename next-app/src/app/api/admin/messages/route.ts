@@ -7,7 +7,11 @@ const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cer
 
 export const dynamic = 'force-dynamic'
 
-/** GET: lista mensagens do sistema (apenas admin). Query: page, perPage, read=all|true|false. */
+/**
+ * GET: lista mensagens do chat interno (moderação; apenas admin).
+ * Apenas leitura — nunca grava nada, para o admin poder ver tudo sem os utilizadores saberem.
+ * Query: page, perPage, read=all|true|false
+ */
 export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request)
   if (!auth) return Response.json({ error: 'Não autorizado' }, { status: 401 })

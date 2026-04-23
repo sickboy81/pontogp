@@ -1,11 +1,18 @@
 import { NextRequest } from 'next/server'
-import { getProfiles } from '@/lib/api/profiles'
+import {
+  getProfiles,
+  isProfileJsonTagField,
+  sanitizeProfileTagValue,
+  type ProfileJsonTagField,
+} from '@/lib/api/profiles'
 import { getAuthCookieFromHeader, getUserIdFromToken } from '@/lib/auth-cookie'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
+
+type TagMatchScope = 'city' | 'state' | 'brasil'
 
 function getToken(request: NextRequest): string | null {
   return getAuthCookieFromHeader(request.headers.get('cookie'))
@@ -27,6 +34,10 @@ export async function GET(request: NextRequest) {
   const verified = searchParams.get('verified')
   const search = searchParams.get('search')
   const sort = searchParams.get('sort') || 'default'
+  const tagRaw = searchParams.get('tag')
+  const tag_field = searchParams.get('tag_field')
+  const tag_scope = searchParams.get('tag_scope') as TagMatchScope | null
+  const exclude_profile = searchParams.get('exclude_profile')
 
   const filters: Record<string, string | number | boolean> = {}
   if (category) filters.category = category
@@ -40,6 +51,73 @@ export async function GET(request: NextRequest) {
   if (online === 'true') filters.online = true
   if (verified === 'true') filters.verified = true
   if (search?.trim()) filters.search = search.trim()
+
+  const tagVal = tagRaw != null ? sanitizeProfileTagValue(tagRaw) : ''
+  const tagFieldOk = tag_field && isProfileJsonTagField(tag_field) ? (tag_field as ProfileJsonTagField) : null
+
+  if (tagVal && tagFieldOk) {
+    const jsonTag = { field: tagFieldOk, value: tagVal }
+    const excludeId = exclude_profile?.trim() || undefined
+
+    const fetchScoped = (scope: TagMatchScope) => {
+      const f: Record<string, string | number | boolean> = { ...filters }
+      if (scope === 'state') delete f.city
+      if (scope === 'brasil') {
+        delete f.city
+        delete f.state
+      }
+      return getProfiles({
+        filters: f,
+        limit,
+        offset,
+        sort,
+        jsonTag,
+        excludeProfileId: excludeId,
+      })
+    }
+
+    const validScope =
+      tag_scope === 'city' || tag_scope === 'state' || tag_scope === 'brasil' ? tag_scope : null
+
+    if (validScope) {
+      const profiles = await fetchScoped(validScope)
+      return Response.json(
+        { profiles, tag_match_scope: validScope },
+        { headers: { 'Cache-Control': 'public, s-maxage=20, stale-while-revalidate=60' } }
+      )
+    }
+
+    if (offset > 0 && !validScope) {
+      return Response.json(
+        { error: 'Use tag_scope=city|state|brasil ao paginar resultados por etiqueta.', profiles: [], tag_match_scope: null },
+        { status: 400 }
+      )
+    }
+
+    if (city && state) {
+      const cityList = await fetchScoped('city')
+      if (cityList.length > 0) {
+        return Response.json(
+          { profiles: cityList, tag_match_scope: 'city' as const },
+          { headers: { 'Cache-Control': 'public, s-maxage=20, stale-while-revalidate=60' } }
+        )
+      }
+    }
+    if (state) {
+      const stateList = await fetchScoped('state')
+      if (stateList.length > 0) {
+        return Response.json(
+          { profiles: stateList, tag_match_scope: 'state' as const },
+          { headers: { 'Cache-Control': 'public, s-maxage=20, stale-while-revalidate=60' } }
+        )
+      }
+    }
+    const brList = await fetchScoped('brasil')
+    return Response.json(
+      { profiles: brList, tag_match_scope: 'brasil' as const },
+      { headers: { 'Cache-Control': 'public, s-maxage=20, stale-while-revalidate=60' } }
+    )
+  }
 
   const profiles = await getProfiles({ filters, limit, offset, sort })
   return Response.json(profiles, {
@@ -83,6 +161,7 @@ export async function POST(request: NextRequest) {
     if (body.phone != null) data.phone = body.phone
     if (body.instagram != null) data.instagram = body.instagram
     if (body.twitter != null) data.twitter = body.twitter
+    if (body.privacy != null) data.privacy = body.privacy
     if (body.slug != null) data.slug = body.slug
     if (body.short_description != null) data.short_description = body.short_description
     if (body.hair_color != null) data.hair_color = body.hair_color

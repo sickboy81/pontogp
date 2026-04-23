@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { ArrowLeft, ImagePlus, Loader2, Mic, Save, Trash2, Video, Settings, BarChart3, Link2, Copy, TrendingUp, Clock, Target, Lightbulb, GripVertical } from 'lucide-react'
 import type { Profile, Schedule } from '@/lib/types'
 import {
-  CATEGORIES, GENDERS, STATES, HAIR_COLORS, BODY_TYPES, BREAST_TYPES, PUBIS_TYPES,
+  CATEGORIES, GENDERS, STATES, ETHNICITIES, HAIR_COLORS, BODY_TYPES, BREAST_TYPES, PUBIS_TYPES,
   PAYMENT_METHOD_OPTIONS, SERVICE_LOCATION_OPTIONS, SERVICE_TO_OPTIONS,
   SMOKER_OPTIONS, getCitiesByState, getServicesByCategory, getSpecialServicesByCategory,
   OTHER_SERVICES_MASSAGIST, FOR_SALE_ONLINE, MASSAGE_CERTIFICATIONS,
@@ -29,6 +29,7 @@ type FormData = {
   phone: string
   instagram: string
   twitter: string
+  privacy: string
   slug: string
   short_description: string
   hair_color: string
@@ -84,6 +85,7 @@ const emptyForm: FormData = {
   phone: '',
   instagram: '',
   twitter: '',
+  privacy: '',
   slug: '',
   short_description: '',
   hair_color: '',
@@ -141,6 +143,7 @@ function profileToForm(p: Profile | null): FormData {
     phone: p.phone ?? '',
     instagram: p.instagram ?? '',
     twitter: p.twitter ?? '',
+    privacy: p.privacy ?? '',
     slug: p.slug ?? '',
     short_description: p.short_description ?? '',
     hair_color: p.hair_color != null ? String(p.hair_color) : '',
@@ -442,6 +445,7 @@ export default function DashboardPerfilForm() {
         phone: form.phone.trim() || null,
         instagram: form.instagram.trim() || null,
         twitter: form.twitter.trim() || null,
+        privacy: form.privacy.trim() || null,
         slug: form.slug.trim() || null,
         short_description: form.short_description.trim() || null,
         hair_color: String(form.hair_color ?? '').trim() || null,
@@ -681,13 +685,19 @@ export default function DashboardPerfilForm() {
 
         <div>
           <label className="mb-1 block text-sm font-medium text-slate-300">Etnia</label>
-          <input
-            type="text"
-            value={form.ethnicity}
+          <select
+            value={form.ethnicity.trim()}
             onChange={(e) => setForm((f) => ({ ...f, ethnicity: e.target.value }))}
-            placeholder="Ex: Branca, Parda, Negra"
-            className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white placeholder-slate-500 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-          />
+            className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+          >
+            <option value="">— Selecione</option>
+            {ETHNICITIES.map((eth) => (
+              <option key={eth} value={eth}>{eth}</option>
+            ))}
+            {form.ethnicity.trim() && !ETHNICITIES.includes(form.ethnicity.trim()) && (
+              <option value={form.ethnicity.trim()}>{form.ethnicity.trim()} (valor atual)</option>
+            )}
+          </select>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-3">
@@ -998,17 +1008,6 @@ export default function DashboardPerfilForm() {
         )}
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-300">Link OnlyFans</label>
-          <input
-            type="url"
-            value={form.onlyfans}
-            onChange={(e) => setForm((f) => ({ ...f, onlyfans: e.target.value }))}
-            placeholder="https://onlyfans.com/..."
-            className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white placeholder-slate-500 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-          />
-        </div>
-
-        <div>
           <label className="mb-1 block text-sm font-medium text-slate-300">Título da bio</label>
           <input
             type="text"
@@ -1082,22 +1081,53 @@ export default function DashboardPerfilForm() {
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
               />
             </div>
+          </div>
+        </div>
+
+        <div className="border-t border-slate-700 pt-4">
+          <h3 className="mb-1 font-medium text-slate-300">Redes sociais</h3>
+          <p className="mb-3 text-xs text-slate-500">
+            Links públicos no seu perfil e no link na bio. Pode colar a URL completa ou só o utilizador (Instagram / X).
+          </p>
+          <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label className="mb-1 block text-xs text-slate-500">Instagram</label>
               <input
                 type="text"
                 value={form.instagram}
                 onChange={(e) => setForm((f) => ({ ...f, instagram: e.target.value }))}
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                placeholder="@usuario ou URL"
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white placeholder-slate-600 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-slate-500">Twitter / X</label>
+              <label className="mb-1 block text-xs text-slate-500">X (Twitter)</label>
               <input
                 type="text"
                 value={form.twitter}
                 onChange={(e) => setForm((f) => ({ ...f, twitter: e.target.value }))}
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                placeholder="@usuario ou URL"
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white placeholder-slate-600 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-slate-500">Privacy</label>
+              <input
+                type="url"
+                value={form.privacy}
+                onChange={(e) => setForm((f) => ({ ...f, privacy: e.target.value }))}
+                placeholder="https://privacidade.me/…"
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white placeholder-slate-600 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-slate-500">OnlyFans</label>
+              <input
+                type="url"
+                value={form.onlyfans}
+                onChange={(e) => setForm((f) => ({ ...f, onlyfans: e.target.value }))}
+                placeholder="https://onlyfans.com/…"
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white placeholder-slate-600 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
               />
             </div>
           </div>
@@ -1573,7 +1603,9 @@ export default function DashboardPerfilForm() {
                       type="button"
                       onClick={() => {
                         const base = typeof window !== 'undefined' ? window.location.origin : ''
-                        const url = `${base}/${form.slug || 'seu-slug'}`
+                        const raw = (form.slug || 'seu-slug').trim()
+                        const slugOnly = raw.startsWith('@') ? raw.slice(1) : raw
+                        const url = `${base}/@${slugOnly}`
                         navigator.clipboard.writeText(url).then(() => toast.success('Link copiado!'))
                       }}
                       className="rounded-lg bg-slate-700 px-4 py-2 text-sm font-medium text-white hover:bg-slate-600"
@@ -1710,6 +1742,7 @@ export default function DashboardPerfilForm() {
                           <option value="perfil_completo">Perfil completo</option>
                           <option value="phone">Ligar agora</option>
                           <option value="onlyfans">OnlyFans</option>
+                          <option value="privacy">Privacy</option>
                           <option value="custom">Outro</option>
                         </select>
                         <input

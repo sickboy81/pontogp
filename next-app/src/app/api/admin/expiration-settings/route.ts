@@ -1,13 +1,14 @@
 import { NextRequest } from 'next/server'
 import { requireAdmin } from '@/lib/api/admin-auth'
 import { getAdminToken } from '@/lib/pocketbase-admin'
+import { parseExpirationDurationsValue } from '@/lib/parse-expiration-settings'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
 export const dynamic = 'force-dynamic'
 
 export type PlanExpiration = { contact_days: number; search_days: number }
-export type ExpirationDurations = Record<string, PlanExpiration>
+export type ExpirationDurations = Record<string, PlanExpiration | Partial<PlanExpiration>>
 
 /** GET: lê durações de expiração por plano (settings key "expiration_durations"). */
 export async function GET(request: NextRequest) {
@@ -24,8 +25,9 @@ export async function GET(request: NextRequest) {
     )
     if (!res.ok) return Response.json({ durations: {} })
     const data = await res.json()
-    const value = data.items?.[0]?.value as ExpirationDurations | undefined
-    return Response.json({ durations: value && typeof value === 'object' ? value : {} })
+    const value = data.items?.[0]?.value
+    const durations = parseExpirationDurationsValue(value)
+    return Response.json({ durations })
   } catch {
     return Response.json({ durations: {} })
   }
@@ -40,7 +42,18 @@ export async function PATCH(request: NextRequest) {
   if (!token) return Response.json({ error: 'Serviço indisponível' }, { status: 503 })
 
   const body = (await request.json()) as { durations?: ExpirationDurations }
-  const durations = body.durations && typeof body.durations === 'object' ? body.durations : {}
+  const raw = body.durations && typeof body.durations === 'object' ? body.durations : {}
+  /** Normaliza: só inteiros >= 1; chaves vazias são omitidas. */
+  const durations: ExpirationDurations = {}
+  for (const [slug, v] of Object.entries(raw)) {
+    if (!v || typeof v !== 'object') continue
+    const c = (v as PlanExpiration).contact_days
+    const s = (v as PlanExpiration).search_days
+    const entry: Partial<PlanExpiration> = {}
+    if (typeof c === 'number' && c >= 1 && c <= 365) entry.contact_days = Math.floor(c)
+    if (typeof s === 'number' && s >= 1 && s <= 365) entry.search_days = Math.floor(s)
+    if (Object.keys(entry).length) durations[slug] = entry as PlanExpiration
+  }
 
   try {
     const listRes = await fetch(

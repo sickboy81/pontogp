@@ -3,6 +3,8 @@
  * Regra alinhada ao webhook PIX (sem cupom: usa settings, subscription_days e slug).
  */
 
+import { parseExpirationDurationsValue } from '@/lib/parse-expiration-settings'
+
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
 function isPocketBaseId(s: string): boolean {
@@ -52,34 +54,30 @@ export async function buildProfilePlanRenewalFromPlanRef(
   let searchDays = 30
   let contactDays = 30
 
+  if (planJson.slug === 'gratis') {
+    searchDays = 7
+    contactDays = 7
+  } else if (typeof planJson.subscription_days === 'number' && planJson.subscription_days > 0) {
+    searchDays = planJson.subscription_days
+    contactDays = planJson.subscription_days
+  }
+
   const authHeader = { Authorization: `Bearer ${adminToken}` }
   const settingsRes = await fetch(
     `${PB_URL}/api/collections/settings/records?filter=${encodeURIComponent('key = "expiration_durations"')}&perPage=1&fields=value`,
     { headers: authHeader, cache: 'no-store' }
   )
   if (settingsRes.ok) {
-    const setData = (await settingsRes.json()) as {
-      items?: { value?: Record<string, { contact_days?: number; search_days?: number }> }[]
-    }
-    const durations = setData.items?.[0]?.value
-    const bySlug = planSlug && durations?.[planSlug]
-    if (bySlug && typeof bySlug.contact_days === 'number' && typeof bySlug.search_days === 'number') {
-      contactDays = Math.max(1, bySlug.contact_days)
-      searchDays = Math.max(1, bySlug.search_days)
-    } else if (planJson.slug === 'gratis') {
-      searchDays = 7
-      contactDays = 7
-    } else if (typeof planJson.subscription_days === 'number' && planJson.subscription_days > 0) {
-      searchDays = planJson.subscription_days
-      contactDays = planJson.subscription_days
-    }
-  } else {
-    if (planJson.slug === 'gratis') {
-      searchDays = 7
-      contactDays = 7
-    } else if (typeof planJson.subscription_days === 'number' && planJson.subscription_days > 0) {
-      searchDays = planJson.subscription_days
-      contactDays = planJson.subscription_days
+    const setData = (await settingsRes.json()) as { items?: { value?: unknown }[] }
+    const durations = parseExpirationDurationsValue(setData.items?.[0]?.value)
+    const bySlug = planSlug ? durations[planSlug] : undefined
+    if (bySlug) {
+      if (typeof bySlug.contact_days === 'number' && bySlug.contact_days >= 1) {
+        contactDays = Math.max(1, Math.floor(bySlug.contact_days))
+      }
+      if (typeof bySlug.search_days === 'number' && bySlug.search_days >= 1) {
+        searchDays = Math.max(1, Math.floor(bySlug.search_days))
+      }
     }
   }
 

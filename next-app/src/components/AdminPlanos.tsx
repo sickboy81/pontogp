@@ -16,6 +16,23 @@ interface PlanRow {
   max_photos?: number
   target_type?: string
   created?: string
+  features?: unknown
+}
+
+function featuresToText(features: unknown): string {
+  if (!Array.isArray(features)) return ''
+  return features
+    .filter((x): x is string => typeof x === 'string')
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .join('\n')
+}
+
+function textToFeatures(text: string): string[] {
+  return text
+    .split('\n')
+    .map((s) => s.trim())
+    .filter(Boolean)
 }
 
 const EMPTY_FORM = {
@@ -27,6 +44,7 @@ const EMPTY_FORM = {
   daily_bumps: 0,
   max_photos: 10,
   target_type: 'advertiser',
+  featuresText: '',
 }
 
 export default function AdminPlanos() {
@@ -72,6 +90,7 @@ export default function AdminPlanos() {
       daily_bumps: Number(plan.daily_bumps) || 0,
       max_photos: Number(plan.max_photos) || 10,
       target_type: plan.target_type || 'advertiser',
+      featuresText: featuresToText(plan.features),
     })
   }
 
@@ -85,15 +104,22 @@ export default function AdminPlanos() {
     try {
       const url = editingId ? `/api/admin/plans/${editingId}` : '/api/admin/plans'
       const method = editingId ? 'PATCH' : 'POST'
+      const payload = {
+        name: form.name.trim(),
+        slug: form.slug.trim().toLowerCase(),
+        enabled: form.enabled,
+        price_monthly: form.price_monthly,
+        price_weekly: form.price_weekly,
+        daily_bumps: form.daily_bumps,
+        max_photos: form.max_photos,
+        target_type: form.target_type,
+        features: textToFeatures(form.featuresText),
+      }
       const res = await fetch(url, {
         method,
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...form,
-          name: form.name.trim(),
-          slug: form.slug.trim().toLowerCase(),
-        }),
+        body: JSON.stringify(payload),
       })
       const json = await res.json().catch(() => ({}))
       if (!res.ok) {
@@ -241,6 +267,23 @@ export default function AdminPlanos() {
                 onChange={(e) => setForm((f) => ({ ...f, daily_bumps: Number(e.target.value) || 0 }))}
               />
             </div>
+          </div>
+          <div>
+            <label htmlFor="admin-plan-features" className="mb-1 block text-xs font-medium text-slate-300">
+              Texto dos itens do card (página /planos)
+            </label>
+            <p className="mb-2 text-[11px] text-slate-500">
+              Uma linha = um item com ✓ na vitrine. Inclua tudo o que quiser mostrar (fotos, bumps, extras).
+              Deixe em branco para a página usar só o resumo automático (máx. de fotos + bumps/dia).
+            </p>
+            <textarea
+              id="admin-plan-features"
+              rows={6}
+              className="w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 font-mono text-sm text-white placeholder:text-slate-600"
+              placeholder={'Ex.:\n10 fotos\n6 bumps/dia\n6 subidas diárias\nLink na Bio'}
+              value={form.featuresText}
+              onChange={(e) => setForm((f) => ({ ...f, featuresText: e.target.value }))}
+            />
           </div>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div className="w-full sm:max-w-xs">

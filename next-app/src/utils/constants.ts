@@ -45,11 +45,12 @@ export const GENDERS = [
   { value: 'casal', label: 'Casal' },
 ]
 
-export const ETHNICITIES = ['Branca', 'Parda', 'Negra', 'Asiática', 'Indígena', 'Outra']
+/** Opções de etnia (perfil e filtros). */
+export const ETHNICITIES = ['Brancas', 'Latinas', 'Mulatas', 'Negras', 'Orientais']
 
 export const HAIR_COLORS = ['Morenas', 'Loiras', 'Ruivas']
 
-export const BODY_TYPES = ['BBW', 'Gordinha', 'Magra']
+export const BODY_TYPES = ['BBW', 'Gordinha', 'Magra', 'Musculosa', 'Normal']
 
 export const BREAST_TYPES = ['Peituda', 'Siliconada', 'Naturais', 'Pequenos']
 export const PUBIS_TYPES = ['Depilado', 'Natural', 'Semi']
@@ -113,6 +114,7 @@ export const SERVICE_TO_OPTIONS = [
   { value: 'Homens', label: 'Homens' },
   { value: 'Mulheres', label: 'Mulheres' },
   { value: 'Casais', label: 'Casais' },
+  { value: 'Deficientes físicos', label: 'Deficientes físicos' },
   { value: 'Lésbicas / Gays', label: 'Lésbicas / Gays' },
 ]
 /** Serviços especiais (tags) – compatibilidade; use getSpecialServicesByCategory(category) no form */

@@ -6,6 +6,7 @@ const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cer
 export const dynamic = 'force-dynamic'
 
 function mapPlan(record: Record<string, unknown>): Plan {
+  const subDays = record.subscription_days
   return {
     id: record.id as string,
     name: (record.name as string) || '',
@@ -19,6 +20,8 @@ function mapPlan(record: Record<string, unknown>): Plan {
     features: Array.isArray(record.features) ? (record.features as string[]) : [],
     target_type: record.target_type as Plan['target_type'],
     highlight_percentage: Number(record.highlight_percentage) || 0,
+    subscription_days:
+      subDays != null && subDays !== '' ? Math.max(0, Number(subDays)) || undefined : undefined,
   }
 }
 

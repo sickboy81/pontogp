@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import crypto from 'crypto'
 import { COUPONS_COLLECTION } from '@/lib/coupons-collection'
 import { getAdminToken } from '@/lib/pocketbase-admin'
+import { parseExpirationDurationsValue } from '@/lib/parse-expiration-settings'
 import { checkRateLimit } from '@/lib/rate-limit'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
@@ -174,39 +175,38 @@ export async function POST(request: NextRequest) {
           if (planRes.ok) {
             const planJson = (await planRes.json()) as { slug?: string; subscription_days?: number }
             planSlug = planJson.slug
+
+            if (!couponId) {
+              if (planJson.slug === 'gratis') {
+                searchDays = 7
+                contactDays = 7
+              } else if (
+                typeof planJson.subscription_days === 'number' &&
+                planJson.subscription_days > 0
+              ) {
+                searchDays = planJson.subscription_days
+                contactDays = planJson.subscription_days
+              } else {
+                searchDays = 30
+                contactDays = 30
+              }
+            }
+
             const settingsRes = await fetch(
               `${PB_URL}/api/collections/settings/records?filter=${encodeURIComponent('key = "expiration_durations"')}&perPage=1&fields=value`,
               { headers: { Authorization: `Bearer ${token}` } }
             )
             if (settingsRes.ok) {
-              const setData = (await settingsRes.json()) as { items?: { value?: Record<string, { contact_days?: number; search_days?: number }> }[] }
-              const durations = setData.items?.[0]?.value
-              const bySlug = planSlug && durations?.[planSlug]
-              if (bySlug && typeof bySlug.contact_days === 'number' && typeof bySlug.search_days === 'number') {
-                contactDays = Math.max(1, bySlug.contact_days)
-                searchDays = Math.max(1, bySlug.search_days)
-              } else if (planJson.slug === 'gratis') {
-                searchDays = 7
-                contactDays = 7
-              } else if (
-                couponId == null &&
-                typeof planJson.subscription_days === 'number' &&
-                planJson.subscription_days > 0
-              ) {
-                searchDays = planJson.subscription_days
-                contactDays = planJson.subscription_days
-              }
-            } else {
-              if (planJson.slug === 'gratis') {
-                searchDays = 7
-                contactDays = 7
-              } else if (
-                couponId == null &&
-                typeof planJson.subscription_days === 'number' &&
-                planJson.subscription_days > 0
-              ) {
-                searchDays = planJson.subscription_days
-                contactDays = planJson.subscription_days
+              const setData = (await settingsRes.json()) as { items?: { value?: unknown }[] }
+              const durations = parseExpirationDurationsValue(setData.items?.[0]?.value)
+              const bySlug = planSlug ? durations[planSlug] : undefined
+              if (bySlug) {
+                if (typeof bySlug.contact_days === 'number' && bySlug.contact_days >= 1) {
+                  contactDays = Math.max(1, Math.floor(bySlug.contact_days))
+                }
+                if (typeof bySlug.search_days === 'number' && bySlug.search_days >= 1) {
+                  searchDays = Math.max(1, Math.floor(bySlug.search_days))
+                }
               }
             }
           }
