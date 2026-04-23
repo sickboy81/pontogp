@@ -55,14 +55,17 @@ async function runAutoBump() {
 
         await pb.admins.authWithPassword(ADMIN_EMAIL, ADMIN_PASSWORD);
 
-        // 1. Get all plans
-        const plans = await pb.collection('plans').getFullList();
+        // 1. Get all plans (campos mínimos)
+        const plans = await pb.collection('plans').getFullList({
+            fields: 'id,slug,daily_bumps'
+        });
         const plansMap = Object.fromEntries(plans.map(p => [p.slug, p]));
 
-        // 2. Get all active profiles (bumping everyone with a valid plan)
+        // 2. Get all active profiles (campos mínimos para reduzir payload)
         const profiles = await pb.collection('profiles').getFullList({
             filter: 'status = "active"',
-            sort: '-last_bump_at'
+            sort: '-last_bump_at',
+            fields: 'id,name,plan,last_bump_at'
         });
 
         console.log(`Found ${profiles.length} active profiles.`);
@@ -73,6 +76,20 @@ async function runAutoBump() {
         const brazilDate = new Date(now.getTime() - brazilOffset);
         const today = brazilDate.toISOString().split('T')[0];
 
+        // 3. Pré-carrega bumps do dia para evitar N+1 queries.
+        const dailyMap = new Map();
+        try {
+            const dailyRecords = await pb.collection('profile_daily_bumps').getFullList({
+                filter: `date ~ "${today}"`,
+                fields: 'id,profile,bumps_used'
+            });
+            for (const rec of dailyRecords) {
+                if (rec.profile) dailyMap.set(rec.profile, rec);
+            }
+        } catch (e) {
+            console.error('[AutoBump] Error preloading daily bumps:', e.message);
+        }
+
         for (const profile of profiles) {
             const plan = plansMap[profile.plan];
             if (!plan || !plan.daily_bumps || plan.daily_bumps <= 0) {
@@ -80,18 +97,8 @@ async function runAutoBump() {
                 continue;
             }
 
-            // 3. Check bumps used today
-            let dailyBumpRecord;
-            try {
-                const records = await pb.collection('profile_daily_bumps').getList(1, 1, {
-                    filter: `profile = "${profile.id}" && date ~ "${today}"`
-                });
-                if (records.items.length > 0) {
-                    dailyBumpRecord = records.items[0];
-                }
-            } catch (e) {
-                console.error(`Error fetching daily bumps for ${profile.id}:`, e.message);
-            }
+            // 4. Check bumps used today
+            const dailyBumpRecord = dailyMap.get(profile.id);
 
             const bumpsUsed = dailyBumpRecord ? dailyBumpRecord.bumps_used : 0;
 
@@ -100,7 +107,7 @@ async function runAutoBump() {
                 continue;
             }
 
-            // 4. Check timing
+            // 5. Check timing
             // Ideal interval in milliseconds
             const intervalMs = (24 * 60 * 60 * 1000) / plan.daily_bumps;
             const lastBump = profile.last_bump_at ? new Date(profile.last_bump_at).getTime() : 0;
@@ -115,12 +122,14 @@ async function runAutoBump() {
                     await pb.collection('profile_daily_bumps').update(dailyBumpRecord.id, {
                         bumps_used: bumpsUsed + 1
                     });
+                    dailyMap.set(profile.id, { ...dailyBumpRecord, bumps_used: bumpsUsed + 1 });
                 } else {
-                    await pb.collection('profile_daily_bumps').create({
+                    const created = await pb.collection('profile_daily_bumps').create({
                         profile: profile.id,
                         date: today,
                         bumps_used: 1
                     });
+                    dailyMap.set(profile.id, created);
                 }
 
                 await pb.collection('profiles').update(profile.id, {

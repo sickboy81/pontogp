@@ -21,9 +21,13 @@ export async function GET(request: NextRequest) {
   try {
     const res = await fetch(
       `${PB_URL}/api/collections/stories/records?filter=${encodeURIComponent(filter)}&perPage=100&sort=-created&expand=profile,profile.photos`,
-      { cache: 'no-store' }
+      { next: { revalidate: 20 } }
     )
-    if (!res.ok) return Response.json([])
+    if (!res.ok) {
+      return Response.json([], {
+        headers: { 'Cache-Control': 'public, s-maxage=20, stale-while-revalidate=60' },
+      })
+    }
     const data = await res.json()
     const items = (data.items || []).map((r: Record<string, unknown>) => {
       const expand = r.expand as Record<string, unknown> | undefined
@@ -50,8 +54,12 @@ export async function GET(request: NextRequest) {
         expires_at: r.expires_at,
       }
     })
-    return Response.json(items)
+    return Response.json(items, {
+      headers: { 'Cache-Control': 'public, s-maxage=20, stale-while-revalidate=60' },
+    })
   } catch {
-    return Response.json([])
+    return Response.json([], {
+      headers: { 'Cache-Control': 'public, s-maxage=20, stale-while-revalidate=60' },
+    })
   }
 }

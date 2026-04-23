@@ -42,7 +42,9 @@ export async function GET(request: NextRequest) {
   if (search?.trim()) filters.search = search.trim()
 
   const profiles = await getProfiles({ filters, limit, offset, sort })
-  return Response.json(profiles)
+  return Response.json(profiles, {
+    headers: { 'Cache-Control': 'public, s-maxage=20, stale-while-revalidate=60' },
+  })
 }
 
 /** POST: cria perfil para o usuário logado. */

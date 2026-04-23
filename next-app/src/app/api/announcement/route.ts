@@ -4,11 +4,26 @@ import { getAdminToken } from '@/lib/pocketbase-admin'
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
 export const dynamic = 'force-dynamic'
+const ANNOUNCEMENT_CACHE_TTL_MS = 60 * 1000
+let cachedAnnouncement: { enabled: boolean; message: string; target: 'all' | 'guests' | 'logged_in' | 'advertiser' } | null = null
+let cachedAnnouncementAt = 0
 
 /** GET: aviso do topo (announcement). Público. Retorna { enabled, message } de settings key "announcement". */
 export async function GET(_request: NextRequest) {
+  const now = Date.now()
+  if (cachedAnnouncement && now - cachedAnnouncementAt < ANNOUNCEMENT_CACHE_TTL_MS) {
+    return Response.json(cachedAnnouncement, {
+      headers: { 'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=120' },
+    })
+  }
+
   const token = await getAdminToken()
-  if (!token) return Response.json({ enabled: false, message: '', target: 'all' })
+  if (!token) {
+    return Response.json(
+      { enabled: false, message: '', target: 'all' },
+      { headers: { 'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=120' } }
+    )
+  }
 
   try {
     const res = await fetch(
@@ -20,12 +35,20 @@ export async function GET(_request: NextRequest) {
     const item = data.items?.[0]
     const value = item?.value as { enabled?: boolean; message?: string; target?: string } | undefined
     const target = value?.target === 'guests' || value?.target === 'logged_in' || value?.target === 'advertiser' ? value.target : 'all'
-    return Response.json({
+    const payload = {
       enabled: !!value?.enabled,
       message: typeof value?.message === 'string' ? value.message : '',
       target,
+    } as const
+    cachedAnnouncement = payload
+    cachedAnnouncementAt = now
+    return Response.json(payload, {
+      headers: { 'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=120' },
     })
   } catch {
-    return Response.json({ enabled: false, message: '', target: 'all' })
+    return Response.json(
+      { enabled: false, message: '', target: 'all' },
+      { headers: { 'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=120' } }
+    )
   }
 }
