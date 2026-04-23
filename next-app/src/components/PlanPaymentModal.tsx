@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Copy, Loader2, X } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { useAuthStore, isAdminRole } from '@/store/auth'
 
 interface PlanPaymentModalProps {
   isOpen: boolean
@@ -46,6 +47,8 @@ export default function PlanPaymentModal({
   const [polling, setPolling] = useState(false)
   const [couponCode, setCouponCode] = useState('')
   const [couponError, setCouponError] = useState<string | null>(null)
+  const userRole = useAuthStore((s) => s.user?.role)
+  const showSimulate = isAdminRole(userRole)
 
   const createPix = useCallback(async () => {
     setLoading(true)
@@ -218,13 +221,15 @@ export default function PlanPaymentModal({
           {pixError && (
             <div className="mt-6 rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-center">
               <p className="text-red-300 text-sm">{pixError}</p>
-              <button
-                type="button"
-                onClick={handleSimulate}
-                className="mt-4 rounded-lg border border-amber-500/50 bg-amber-500/20 px-4 py-2 text-sm font-medium text-amber-400"
-              >
-                Simular Pagamento (DEV)
-              </button>
+              {showSimulate && (
+                <button
+                  type="button"
+                  onClick={handleSimulate}
+                  className="mt-4 rounded-lg border border-amber-500/50 bg-amber-500/20 px-4 py-2 text-sm font-medium text-amber-400"
+                >
+                  Simular Pagamento (DEV)
+                </button>
+              )}
             </div>
           )}
 
@@ -276,15 +281,17 @@ export default function PlanPaymentModal({
             </div>
           )}
 
-          <div className="mt-6 border-t border-slate-700 pt-4">
-            <button
-              type="button"
-              onClick={handleSimulate}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 py-2 text-sm text-slate-400 transition hover:bg-slate-700 hover:text-slate-300"
-            >
-              Simular pagamento (desenvolvimento)
-            </button>
-          </div>
+          {showSimulate && (
+            <div className="mt-6 border-t border-slate-700 pt-4">
+              <button
+                type="button"
+                onClick={handleSimulate}
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 py-2 text-sm text-slate-400 transition hover:bg-slate-700 hover:text-slate-300"
+              >
+                Simular pagamento (desenvolvimento)
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

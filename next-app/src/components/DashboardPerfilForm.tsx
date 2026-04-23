@@ -1327,8 +1327,42 @@ export default function DashboardPerfilForm() {
           const views = profile.views ?? 0
           const clicks = profile.clicks ?? 0
           const favorites = profile.favorites_count ?? 0
+          const ctr = views > 0 ? Math.round((clicks / views) * 1000) / 10 : 0
+          const favRate = views > 0 ? Math.round((favorites / views) * 1000) / 10 : 0
 
-          const statsContent = (
+          const resumoBasico = (
+            <div className="mb-6 rounded-xl border border-slate-600 bg-slate-800/50 p-5">
+              <h3 className="mb-1 font-medium text-white">Resumo do seu anúncio</h3>
+              <p className="mb-4 text-sm text-slate-500">
+                Disponível em <strong className="text-slate-400">todos os planos</strong>. Abaixo, funil detalhado,
+                tendência e dicas avançadas são extras para <strong className="text-slate-400">Prata e Ouro</strong>.
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="rounded-lg border border-slate-700/80 bg-slate-900/40 px-3 py-3 text-center">
+                  <p className="text-2xl font-bold text-white">{views}</p>
+                  <p className="text-xs uppercase tracking-wider text-slate-500">Visualizações</p>
+                </div>
+                <div className="rounded-lg border border-slate-700/80 bg-slate-900/40 px-3 py-3 text-center">
+                  <p className="text-2xl font-bold text-white">{clicks}</p>
+                  <p className="text-xs uppercase tracking-wider text-slate-500">Cliques em contacto</p>
+                </div>
+                <div className="rounded-lg border border-slate-700/80 bg-slate-900/40 px-3 py-3 text-center">
+                  <p className="text-2xl font-bold text-white">{favorites}</p>
+                  <p className="text-xs uppercase tracking-wider text-slate-500">Favoritos</p>
+                </div>
+                <div className="rounded-lg border border-slate-700/80 bg-slate-900/40 px-3 py-3 text-center">
+                  <p className="text-2xl font-bold text-primary-400">{views > 0 ? `${ctr}%` : '—'}</p>
+                  <p className="text-xs uppercase tracking-wider text-slate-500">Cliques / visualizações (CTR)</p>
+                </div>
+              </div>
+              <p className="mt-3 text-center text-sm text-slate-500">
+                Favoritos / visualizações: <strong className="text-slate-400">{favRate}%</strong> — quanto mais alto,
+                mais pessoas salvam o seu perfil.
+              </p>
+            </div>
+          )
+
+          const advancedContent = (
             <div className="space-y-6 border-t border-slate-700 pt-4">
               <h3 className="font-medium text-slate-300">Estatísticas avançadas</h3>
 
@@ -1477,24 +1511,28 @@ export default function DashboardPerfilForm() {
           )
 
           return (
-            <div className="relative">
-              <div className={hasAdvancedStatsAccess ? '' : 'select-none blur-md pointer-events-none'}>
-                {statsContent}
-              </div>
-              {!hasAdvancedStatsAccess && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center rounded-xl border border-slate-600 bg-slate-900/90 backdrop-blur-sm">
-                  <p className="text-center text-lg font-medium text-white">Estatísticas avançadas</p>
-                  <p className="mt-1 max-w-sm text-center text-sm text-slate-300">
-                    Funil de conversão, tendências e dicas estão disponíveis nos planos <strong className="text-primary-400">Prata</strong> e <strong className="text-primary-400">Ouro</strong>.
-                  </p>
-                  <Link
-                    href="/planos"
-                    className="mt-4 rounded-lg bg-primary-600 px-6 py-3 font-semibold text-white transition hover:bg-primary-500"
-                  >
-                    Ver planos
-                  </Link>
+            <div>
+              {resumoBasico}
+              <div className="relative">
+                <div className={hasAdvancedStatsAccess ? '' : 'select-none blur-md pointer-events-none'}>
+                  {advancedContent}
                 </div>
-              )}
+                {!hasAdvancedStatsAccess && (
+                  <div className="absolute inset-0 flex min-h-[240px] flex-col items-center justify-center rounded-xl border border-slate-600 bg-slate-900/90 p-4 backdrop-blur-sm">
+                    <p className="text-center text-lg font-medium text-white">Estatísticas avançadas</p>
+                    <p className="mt-1 max-w-sm text-center text-sm text-slate-300">
+                      Funil detalhado, barras de tendência (placeholder) e dicas de performance estão incluídos nos
+                      planos <strong className="text-primary-400">Prata</strong> e <strong className="text-primary-400">Ouro</strong>.
+                    </p>
+                    <Link
+                      href="/planos"
+                      className="mt-4 rounded-lg bg-primary-600 px-6 py-3 font-semibold text-white transition hover:bg-primary-500"
+                    >
+                      Ver planos
+                    </Link>
+                  </div>
+                )}
+              </div>
             </div>
           )
         })()}

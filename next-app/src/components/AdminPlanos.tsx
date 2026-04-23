@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Loader2, Plus, Pencil, Trash2 } from 'lucide-react'
+import { ArrowLeft, Loader2, Plus, Pencil, Trash2, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 interface PlanRow {
@@ -137,32 +137,148 @@ export default function AdminPlanos() {
             if (showForm) resetForm()
             setShowForm((v) => !v)
           }}
-          className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-500"
+          className={
+            showForm
+              ? 'inline-flex items-center gap-2 rounded-lg border border-slate-500 bg-slate-700/80 px-4 py-2 text-sm font-medium text-slate-200 hover:bg-slate-600'
+              : 'inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-500'
+          }
         >
-          <Plus className="h-4 w-4" />
+          {showForm ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
           {showForm ? 'Cancelar' : 'Novo plano'}
         </button>
       </div>
 
       {showForm && (
-        <form onSubmit={onSubmit} className="mb-6 grid gap-3 rounded-xl border border-slate-700 bg-slate-800/50 p-4 md:grid-cols-3">
-          <input className="rounded border border-slate-600 bg-slate-800 px-3 py-2 text-white" placeholder="Nome*" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
-          <input className="rounded border border-slate-600 bg-slate-800 px-3 py-2 text-white" placeholder="Slug*" value={form.slug} onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value }))} />
-          <select className="rounded border border-slate-600 bg-slate-800 px-3 py-2 text-white" value={form.target_type} onChange={(e) => setForm((f) => ({ ...f, target_type: e.target.value }))}>
-            <option value="advertiser">Anunciante</option>
-            <option value="user">Usuário</option>
-          </select>
-          <input type="number" className="rounded border border-slate-600 bg-slate-800 px-3 py-2 text-white" placeholder="Preço mensal" value={form.price_monthly} onChange={(e) => setForm((f) => ({ ...f, price_monthly: Number(e.target.value) || 0 }))} />
-          <input type="number" className="rounded border border-slate-600 bg-slate-800 px-3 py-2 text-white" placeholder="Preço semanal" value={form.price_weekly} onChange={(e) => setForm((f) => ({ ...f, price_weekly: Number(e.target.value) || 0 }))} />
-          <input type="number" className="rounded border border-slate-600 bg-slate-800 px-3 py-2 text-white" placeholder="Bumps/dia" value={form.daily_bumps} onChange={(e) => setForm((f) => ({ ...f, daily_bumps: Number(e.target.value) || 0 }))} />
-          <input type="number" className="rounded border border-slate-600 bg-slate-800 px-3 py-2 text-white" placeholder="Máx. fotos" value={form.max_photos} onChange={(e) => setForm((f) => ({ ...f, max_photos: Number(e.target.value) || 0 }))} />
-          <label className="flex items-center gap-2 text-sm text-slate-300">
-            <input type="checkbox" checked={form.enabled} onChange={(e) => setForm((f) => ({ ...f, enabled: e.target.checked }))} />
-            Plano ativo
-          </label>
-          <button type="submit" disabled={saving} className="rounded bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-500 disabled:opacity-50">
-            {saving ? 'Salvando...' : editingId ? 'Salvar alterações' : 'Criar plano'}
-          </button>
+        <form
+          onSubmit={onSubmit}
+          className="mb-6 space-y-4 rounded-xl border border-slate-700 bg-slate-800/50 p-4"
+        >
+          <div className="grid gap-4 md:grid-cols-3">
+            <div>
+              <label htmlFor="admin-plan-name" className="mb-1 block text-xs font-medium text-slate-300">
+                Nome do plano <span className="text-primary-400">*</span>
+              </label>
+              <input
+                id="admin-plan-name"
+                className="w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-white"
+                autoComplete="off"
+                value={form.name}
+                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label htmlFor="admin-plan-slug" className="mb-1 block text-xs font-medium text-slate-300">
+                Slug <span className="text-primary-400">*</span>
+              </label>
+              <p className="mb-1 text-[11px] text-slate-500">ID interno (ex.: prata, ouro, gratis). Só letras minúsculas, sem espaços.</p>
+              <input
+                id="admin-plan-slug"
+                className="w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-white"
+                autoComplete="off"
+                value={form.slug}
+                onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label htmlFor="admin-plan-target" className="mb-1 block text-xs font-medium text-slate-300">
+                Tipo de público
+              </label>
+              <p className="mb-1 text-[11px] text-slate-500">A quem o plano se aplica no sistema.</p>
+              <select
+                id="admin-plan-target"
+                className="w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-white"
+                value={form.target_type}
+                onChange={(e) => setForm((f) => ({ ...f, target_type: e.target.value }))}
+              >
+                <option value="advertiser">Anunciante (perfil de anúncio)</option>
+                <option value="user">Usuário (conta comum)</option>
+              </select>
+            </div>
+          </div>
+          <div className="grid gap-4 md:grid-cols-3">
+            <div>
+              <label htmlFor="admin-plan-price-monthly" className="mb-1 block text-xs font-medium text-slate-300">
+                Preço mensal (R$)
+              </label>
+              <p className="mb-1 text-[11px] text-slate-500">Cobrado no período &quot;Mensal&quot; na vitrine de planos.</p>
+              <input
+                id="admin-plan-price-monthly"
+                type="number"
+                min={0}
+                step={0.01}
+                className="w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-white"
+                value={form.price_monthly}
+                onChange={(e) => setForm((f) => ({ ...f, price_monthly: Number(e.target.value) || 0 }))}
+              />
+            </div>
+            <div>
+              <label htmlFor="admin-plan-price-weekly" className="mb-1 block text-xs font-medium text-slate-300">
+                Preço semanal (R$)
+              </label>
+              <p className="mb-1 text-[11px] text-slate-500">Cobrado no período &quot;Semanal&quot; na vitrine de planos.</p>
+              <input
+                id="admin-plan-price-weekly"
+                type="number"
+                min={0}
+                step={0.01}
+                className="w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-white"
+                value={form.price_weekly}
+                onChange={(e) => setForm((f) => ({ ...f, price_weekly: Number(e.target.value) || 0 }))}
+              />
+            </div>
+            <div>
+              <label htmlFor="admin-plan-bumps" className="mb-1 block text-xs font-medium text-slate-300">
+                Bumps por dia
+              </label>
+              <p className="mb-1 text-[11px] text-slate-500">Subidas diárias permitidas do anúncio (destaque na lista).</p>
+              <input
+                id="admin-plan-bumps"
+                type="number"
+                min={0}
+                step={1}
+                className="w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-white"
+                value={form.daily_bumps}
+                onChange={(e) => setForm((f) => ({ ...f, daily_bumps: Number(e.target.value) || 0 }))}
+              />
+            </div>
+          </div>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div className="w-full sm:max-w-xs">
+              <label htmlFor="admin-plan-max-photos" className="mb-1 block text-xs font-medium text-slate-300">
+                Máximo de fotos no perfil
+              </label>
+              <p className="mb-1 text-[11px] text-slate-500">Limite de mídias do anunciante com este plano.</p>
+              <input
+                id="admin-plan-max-photos"
+                type="number"
+                min={0}
+                step={1}
+                className="w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-white"
+                value={form.max_photos}
+                onChange={(e) => setForm((f) => ({ ...f, max_photos: Number(e.target.value) || 0 }))}
+              />
+            </div>
+            <label
+              htmlFor="admin-plan-enabled"
+              className="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-600 bg-slate-800/80 px-3 py-2 text-sm text-slate-200"
+            >
+              <input
+                id="admin-plan-enabled"
+                type="checkbox"
+                className="rounded border-slate-500 text-primary-500 focus:ring-primary-500"
+                checked={form.enabled}
+                onChange={(e) => setForm((f) => ({ ...f, enabled: e.target.checked }))}
+              />
+              <span>Plano ativo (aparece na listagem pública de planos)</span>
+            </label>
+            <button
+              type="submit"
+              disabled={saving}
+              className="shrink-0 rounded-lg bg-primary-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-primary-500 disabled:opacity-50"
+            >
+              {saving ? 'Salvando...' : editingId ? 'Salvar alterações' : 'Criar plano'}
+            </button>
+          </div>
         </form>
       )}
 

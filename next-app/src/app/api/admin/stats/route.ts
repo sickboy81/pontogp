@@ -25,6 +25,13 @@ async function fetchCount(
   }
 }
 
+function dateFilterSinceDays(days: number): string {
+  const d = new Date()
+  d.setDate(d.getDate() - days)
+  d.setHours(0, 0, 0, 0)
+  return `created >= "${d.toISOString()}"`
+}
+
 async function fetchRevenue(token: string): Promise<number> {
   try {
     const baseUrl = `${PB_URL}/api/collections/payments/records?perPage=200&page=1&fields=amount&filter=${encodeURIComponent('status = "paid"')}`
@@ -65,17 +72,34 @@ export async function GET(request: NextRequest) {
   try {
     const token = (await getAdminToken()) || auth.token
 
-    const [totalUsers, totalProfiles, pendingReports, unreadMessages, pendingVerifications, unreadContacts, activeSubscriptions, totalRevenue] =
-      await Promise.all([
-        fetchCount(token, 'users'),
-        fetchCount(token, 'profiles'),
-        fetchCount(token, 'reports', 'status = "pending"'),
-        fetchCount(token, 'messages', 'read = false'),
-        fetchCount(token, 'verification_requests', 'status = "pending"'),
-        fetchCount(token, 'contacts', 'read = false'),
-        fetchCount(token, 'subscriptions', 'status = "active"'),
-        fetchRevenue(token),
-      ])
+    const filter7d = dateFilterSinceDays(7)
+    const [
+      totalUsers,
+      totalProfiles,
+      pendingReports,
+      unreadMessages,
+      pendingVerifications,
+      unreadContacts,
+      activeSubscriptions,
+      totalRevenue,
+      pendingPayments,
+      activeProfiles,
+      newUsers7d,
+      totalStories,
+    ] = await Promise.all([
+      fetchCount(token, 'users'),
+      fetchCount(token, 'profiles'),
+      fetchCount(token, 'reports', 'status = "pending"'),
+      fetchCount(token, 'messages', 'read = false'),
+      fetchCount(token, 'verification_requests', 'status = "pending"'),
+      fetchCount(token, 'contacts', 'read = false'),
+      fetchCount(token, 'subscriptions', 'status = "active"'),
+      fetchRevenue(token),
+      fetchCount(token, 'payments', 'status = "pending"'),
+      fetchCount(token, 'profiles', 'status = "active"'),
+      fetchCount(token, 'users', filter7d),
+      fetchCount(token, 'stories'),
+    ])
     return Response.json({
       totalUsers,
       totalProfiles,
@@ -85,6 +109,10 @@ export async function GET(request: NextRequest) {
       unreadContacts,
       activeSubscriptions,
       totalRevenue,
+      pendingPayments,
+      activeProfiles,
+      newUsers7d,
+      totalStories,
     })
   } catch {
     return Response.json(
@@ -97,6 +125,10 @@ export async function GET(request: NextRequest) {
         unreadContacts: 0,
         activeSubscriptions: 0,
         totalRevenue: 0,
+        pendingPayments: 0,
+        activeProfiles: 0,
+        newUsers7d: 0,
+        totalStories: 0,
       }
     )
   }

@@ -106,6 +106,11 @@ export default function DashboardClient() {
   const price = profile.price_30min ?? profile.price_1h ?? profile.prices?.[0]?.price ?? 0
   const searchDays = daysUntil(profile.search_expires_at)
   const contactDays = daysUntil(profile.contact_expires_at)
+  const viewsN = profile.views ?? 0
+  const clicksN = profile.clicks ?? 0
+  const statsCtr = viewsN > 0 ? Math.round((clicksN / viewsN) * 1000) / 10 : null
+  const statsFavRate =
+    viewsN > 0 ? Math.round(((profile.favorites_count ?? 0) / viewsN) * 1000) / 10 : null
   const searchExpired = searchDays !== null && searchDays <= 0
   const contactExpired = contactDays !== null && contactDays <= 0
   const hasAnyExpirationIssue = searchExpired || contactExpired
@@ -336,11 +341,27 @@ export default function DashboardClient() {
             <BarChart3 className="h-4 w-4" />
             Estatísticas
           </h3>
-          <div className="flex gap-6 text-sm">
-            <span className="text-slate-300"><strong className="text-white">{profile.views ?? 0}</strong> visualizações</span>
-            <span className="text-slate-300"><strong className="text-white">{profile.clicks ?? 0}</strong> cliques</span>
-            <span className="text-slate-300"><strong className="text-white">{profile.favorites_count ?? 0}</strong> favoritos</span>
+          <div className="flex flex-wrap gap-6 text-sm">
+            <span className="text-slate-300"><strong className="text-white">{viewsN}</strong> visualizações</span>
+            <span className="text-slate-300"><strong className="text-white">{clicksN}</strong> cliques</span>
+            <span className="text-slate-300">
+              <strong className="text-white">{profile.favorites_count ?? 0}</strong> favoritos
+            </span>
           </div>
+          <p className="mt-3 text-xs text-slate-500">
+            CTR (cliques por visualização):{' '}
+            <strong className="text-slate-400">
+              {statsCtr != null ? `${statsCtr}%` : '—'}
+            </strong>
+            {statsFavRate != null && (
+              <>
+                {' '}
+                · Favoritos / views: <strong className="text-slate-400">{statsFavRate}%</strong>
+              </>
+            )}
+            . Mais detalhes em <Link href="/dashboard/perfil?tab=stats" className="text-primary-400 hover:underline">Perfil → Stats</Link>
+            .
+          </p>
         </div>
         <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-4">
           <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-400">Status</h3>
