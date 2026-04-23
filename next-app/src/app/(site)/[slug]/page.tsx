@@ -55,18 +55,20 @@ export default async function ProfileBySlugPage({ params, searchParams }: Props)
   const slug = rawSlug.startsWith('@') ? rawSlug.slice(1) : rawSlug
   const resolved = await searchParams
   const viewFull = resolved?.view === 'full'
+  const fromAtRewrite = resolved?.__at === '1'
 
   if (STATIC_SLUGS.has(slug)) notFound()
 
   const profile = await getProfileBySlug(slug)
   if (!profile) notFound()
 
-  if (profile.display_mode === 'link_bio' && !rawSlug.startsWith('@')) {
+  if (profile.display_mode === 'link_bio' && !rawSlug.startsWith('@') && !fromAtRewrite) {
     const suffix = viewFull ? '?view=full' : ''
     redirect(`/@${slug}${suffix}`)
   }
 
-  const profileUrl = `${SITE_URL}/${rawSlug}`
+  const publicSlug = fromAtRewrite ? `@${slug}` : rawSlug
+  const profileUrl = `${SITE_URL}/${publicSlug}`
   const content =
     profile.display_mode === 'link_bio' && !viewFull ? (
       <LinkBioView profile={profile} profileUrl={profileUrl} />

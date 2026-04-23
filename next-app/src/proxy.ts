@@ -10,6 +10,19 @@ function isProtected(pathname: string): boolean {
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
+
+  // Reescreve /@username -> /username mantendo URL pública com @.
+  // Isso evita 404 em ambientes onde o matcher de rota não resolve "@" diretamente.
+  if (pathname.startsWith('/@') && pathname.length > 2) {
+    const slug = pathname.slice(2)
+    if (slug && !slug.includes('/')) {
+      const rewriteUrl = request.nextUrl.clone()
+      rewriteUrl.pathname = `/${slug}`
+      rewriteUrl.searchParams.set('__at', '1')
+      return NextResponse.rewrite(rewriteUrl)
+    }
+  }
+
   if (!isProtected(pathname)) return NextResponse.next()
 
   const cookieHeader = request.headers.get('cookie')
@@ -24,5 +37,12 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/mensagens/:path*', '/diretrizes-fotos-videos/:path*', '/admin/:path*', '/favoritos'],
+  matcher: [
+    '/@:path*',
+    '/dashboard/:path*',
+    '/mensagens/:path*',
+    '/diretrizes-fotos-videos/:path*',
+    '/admin/:path*',
+    '/favoritos',
+  ],
 }
