@@ -1,0 +1,35 @@
+{
+  "name": "cerejavip-next",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "schema": "node scripts/export-pocketbase-schema.mjs",
+    "auto-bump": "node scripts/auto_bump.mjs",
+    "cleanup-profiles": "node scripts/cleanup_profiles.mjs",
+    "smoke:critical": "node scripts/smoke-critical.mjs"
+  },
+  "dependencies": {
+    "lucide-react": "^1.8.0",
+    "next": "^16",
+    "pocketbase": "^0.26.6",
+    "react": "^19",
+    "react-dom": "^19",
+    "react-hot-toast": "^2.4.1",
+    "zustand": "^4.4.7"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "autoprefixer": "^10",
+    "eslint": "^9",
+    "eslint-config-next": "^16",
+    "postcss": "^8",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5.1"
+  }
+}

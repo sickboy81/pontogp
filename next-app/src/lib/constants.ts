@@ -1,0 +1,23 @@
+/** Rotas estáticas que NÃO são slug de perfil. Usado em app/(site)/[slug] para redirect. */
+export const STATIC_SLUGS = new Set([
+  'anunciantes',
+  'favoritos',
+  'planos',
+  'sobre',
+  'termos',
+  'privacidade',
+  'seguranca',
+  'contato',
+  'login',
+  'register',
+  'esqueci-senha',
+  'redefinir-senha',
+  'verificar-email',
+  'verificar-email-pendente',
+  'mensagens',
+  'dashboard',
+  'diretrizes-fotos-videos',
+  'admin',
+  'manutencao',
+  'cidade',
+])

@@ -1,0 +1,24 @@
+{
+  "name": "CerejaVIP - Acompanhantes Brasil",
+  "short_name": "CerejaVIP",
+  "description": "Plataforma de classificados premium para profissionais de entretenimento.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/logo-cerejavip.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo-cerejavip.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -1,0 +1,162 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import Link from 'next/link'
+import { ArrowLeft, Loader2, Trash2 } from 'lucide-react'
+import toast from 'react-hot-toast'
+
+interface ContactRow {
+  id: string
+  name?: string
+  email?: string
+  subject?: string
+  message?: string
+  read?: boolean
+  created?: string
+}
+
+export default function AdminContatos() {
+  const [items, setItems] = useState<ContactRow[]>([])
+  const [loading, setLoading] = useState(true)
+  const [filter, setFilter] = useState<'all' | 'read' | 'unread'>('all')
+
+  const load = async () => {
+    setLoading(true)
+    try {
+      const readParam = filter === 'all' ? '' : filter === 'read' ? 'true' : 'false'
+      const qs = readParam ? `?page=1&perPage=100&read=${readParam}` : '?page=1&perPage=100'
+      const res = await fetch(`/api/admin/contacts${qs}`, { credentials: 'include' })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error('Erro')
+      setItems(((data as { items?: ContactRow[] }).items || []) as ContactRow[])
+    } catch {
+      setItems([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    load()
+  }, [filter])
+
+  const markRead = async (id: string, value: boolean) => {
+    const res = await fetch(`/api/admin/contacts/${id}`, {
+      method: 'PATCH',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ read: !value }),
+    })
+    const json = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      toast.error((json as { error?: string }).error || 'Erro ao atualizar contato')
+      return
+    }
+    load()
+  }
+
+  const remove = async (id: string) => {
+    if (!window.confirm('Excluir mensagem de contato?')) return
+    const res = await fetch(`/api/admin/contacts/${id}`, { method: 'DELETE', credentials: 'include' })
+    const json = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      toast.error((json as { error?: string }).error || 'Erro ao excluir contato')
+      return
+    }
+    toast.success('Mensagem excluída')
+    load()
+  }
+
+  const formatDate = (value?: string) => {
+    if (!value) return '-'
+    try {
+      return new Date(value).toLocaleString('pt-BR')
+    } catch {
+      return value
+    }
+  }
+
+  return (
+    <div>
+      <Link href="/admin" className="mb-6 inline-flex items-center gap-2 text-slate-400 hover:text-white">
+        <ArrowLeft className="h-4 w-4" />
+        Voltar ao painel
+      </Link>
+
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold text-white">Mensagens de contato</h1>
+        <select
+          value={filter}
+          onChange={(e) => setFilter(e.target.value as 'all' | 'read' | 'unread')}
+          className="rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white"
+        >
+          <option value="all">Todas</option>
+          <option value="unread">Não lidas</option>
+          <option value="read">Lidas</option>
+        </select>
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-primary-500" />
+        </div>
+      ) : (
+        <div className="overflow-hidden rounded-xl border border-slate-700">
+          <table className="w-full text-left text-sm">
+            <thead className="border-b border-slate-700 bg-slate-800/50">
+              <tr>
+                <th className="p-4 text-slate-300">Data</th>
+                <th className="p-4 text-slate-300">Nome</th>
+                <th className="p-4 text-slate-300">E-mail</th>
+                <th className="p-4 text-slate-300">Assunto</th>
+                <th className="p-4 text-slate-300">Mensagem</th>
+                <th className="p-4 text-slate-300">Status</th>
+                <th className="p-4 text-slate-300">Ações</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-700/50">
+              {items.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="p-8 text-center text-slate-500">
+                    Nenhum contato encontrado.
+                  </td>
+                </tr>
+              ) : items.map((contact) => (
+                <tr key={contact.id} className="hover:bg-slate-800/30">
+                  <td className="p-4 text-slate-300">{formatDate(contact.created)}</td>
+                  <td className="p-4 text-slate-300">{contact.name || '-'}</td>
+                  <td className="p-4 text-slate-300">{contact.email || '-'}</td>
+                  <td className="p-4 text-slate-300">{contact.subject || '-'}</td>
+                  <td className="max-w-md truncate p-4 text-slate-300">{contact.message || '-'}</td>
+                  <td className="p-4">
+                    <span className={contact.read ? 'text-green-400' : 'text-amber-400'}>
+                      {contact.read ? 'Lida' : 'Não lida'}
+                    </span>
+                  </td>
+                  <td className="p-4">
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => markRead(contact.id, !!contact.read)}
+                        className="rounded border border-slate-600 px-2 py-1 text-xs text-slate-300 hover:bg-slate-700"
+                      >
+                        {contact.read ? 'Marcar não lida' : 'Marcar lida'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => remove(contact.id)}
+                        className="rounded border border-red-500/40 px-2 py-1 text-xs text-red-300 hover:bg-red-500/10"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  )
+}

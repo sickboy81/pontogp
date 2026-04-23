@@ -1,0 +1,133 @@
+import { NextRequest } from 'next/server'
+import { getProfiles } from '@/lib/api/profiles'
+import { getAuthCookieFromHeader, getUserIdFromToken } from '@/lib/auth-cookie'
+
+const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
+
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
+function getToken(request: NextRequest): string | null {
+  return getAuthCookieFromHeader(request.headers.get('cookie'))
+}
+
+export async function GET(request: NextRequest) {
+  const { searchParams } = request.nextUrl
+  const limit = Math.min(Number(searchParams.get('limit')) || 21, 50)
+  const offset = Number(searchParams.get('offset')) || 0
+  const category = searchParams.get('category')
+  const gender = searchParams.get('gender')
+  const state = searchParams.get('state')
+  const city = searchParams.get('city')
+  const min_age = searchParams.get('min_age')
+  const max_age = searchParams.get('max_age')
+  const min_price = searchParams.get('min_price')
+  const max_price = searchParams.get('max_price')
+  const online = searchParams.get('online')
+  const verified = searchParams.get('verified')
+  const search = searchParams.get('search')
+  const sort = searchParams.get('sort') || 'default'
+
+  const filters: Record<string, string | number | boolean> = {}
+  if (category) filters.category = category
+  if (gender) filters.gender = gender
+  if (state) filters.state = state
+  if (city) filters.city = city
+  if (min_age) filters.min_age = Number(min_age)
+  if (max_age) filters.max_age = Number(max_age)
+  if (min_price != null && min_price !== '') filters.min_price = Number(min_price)
+  if (max_price != null && max_price !== '') filters.max_price = Number(max_price)
+  if (online === 'true') filters.online = true
+  if (verified === 'true') filters.verified = true
+  if (search?.trim()) filters.search = search.trim()
+
+  const profiles = await getProfiles({ filters, limit, offset, sort })
+  return Response.json(profiles)
+}
+
+/** POST: cria perfil para o usuário logado. */
+export async function POST(request: NextRequest) {
+  const token = getToken(request)
+  if (!token) return Response.json({ error: 'Não autorizado' }, { status: 401 })
+  const userId = getUserIdFromToken(token)
+  if (!userId) return Response.json({ error: 'Token inválido' }, { status: 401 })
+
+  try {
+    const body = (await request.json()) as Record<string, unknown>
+    const data: Record<string, unknown> = {
+      user: userId,
+      name: body.name ?? '',
+      age: Number(body.age) || 18,
+      city: (body.city as string) ?? '',
+      state: (body.state as string) ?? '',
+      bio: (body.bio as string) ?? '',
+      category: body.category ?? 'acompanhante',
+      gender: body.gender ?? 'mulher',
+      ethnicity: (body.ethnicity as string) ?? '',
+      services: Array.isArray(body.services) ? body.services : [],
+      payment_methods: Array.isArray(body.payment_methods) ? body.payment_methods : [],
+      neighborhoods: Array.isArray(body.neighborhoods) ? body.neighborhoods : [],
+      service_locations: Array.isArray(body.service_locations) ? body.service_locations : [],
+      service_to: Array.isArray(body.service_to) ? body.service_to : [],
+      special_services: Array.isArray(body.special_services) ? body.special_services : [],
+      location_approximate: body.location_approximate !== false,
+      status: 'active',
+      plan: body.plan ?? 'gratis',
+      verified: false,
+    }
+    if (body.bio_title != null) data.bio_title = body.bio_title
+    if (body.whatsapp != null) data.whatsapp = body.whatsapp
+    if (body.telegram != null) data.telegram = body.telegram
+    if (body.phone != null) data.phone = body.phone
+    if (body.instagram != null) data.instagram = body.instagram
+    if (body.twitter != null) data.twitter = body.twitter
+    if (body.slug != null) data.slug = body.slug
+    if (body.short_description != null) data.short_description = body.short_description
+    if (body.hair_color != null) data.hair_color = body.hair_color
+    if (body.body_type != null) data.body_type = body.body_type
+    if (body.height != null) data.height = Number(body.height)
+    if (body.weight != null) data.weight = body.weight
+    if (body.height_exact != null) data.height_exact = body.height_exact
+    if (body.breast_type != null) data.breast_type = body.breast_type
+    if (body.pubis_type != null) data.pubis_type = body.pubis_type
+    if (body.onlyfans != null) data.onlyfans = body.onlyfans
+    if (body.piercings != null) data.piercings = body.piercings
+    if (body.tattoos != null) data.tattoos = body.tattoos
+    if (body.smoker != null) data.smoker = body.smoker
+    if (body.location_lat != null) data.location_lat = Number(body.location_lat)
+    if (body.location_lng != null) data.location_lng = Number(body.location_lng)
+    if (body.schedule != null) data.schedule = body.schedule
+    if (body.price_30min != null) data.price_30min = Number(body.price_30min)
+    if (body.price_1h != null) data.price_1h = Number(body.price_1h)
+    if (body.price_2h != null) data.price_2h = Number(body.price_2h)
+    if (body.price_overnight != null) data.price_overnight = Number(body.price_overnight)
+    if (body.prices != null) data.prices = body.prices
+    if (body.massage_types != null) data.massage_types = Array.isArray(body.massage_types) ? body.massage_types : []
+    if (body.online_services != null) data.online_services = Array.isArray(body.online_services) ? body.online_services : []
+    if (body.other_services != null) data.other_services = Array.isArray(body.other_services) ? body.other_services : []
+    if (body.for_sale != null) data.for_sale = Array.isArray(body.for_sale) ? body.for_sale : []
+    if (body.virtual_fantasies != null) data.virtual_fantasies = Array.isArray(body.virtual_fantasies) ? body.virtual_fantasies : []
+    if (body.certified != null) data.certified = body.certified === true
+    if (body.offers_happy_ending != null) data.offers_happy_ending = body.offers_happy_ending
+
+    const res = await fetch(`${PB_URL}/api/collections/profiles/records`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      return Response.json(
+        { error: (err as { message?: string }).message || 'Erro ao criar perfil' },
+        { status: res.status }
+      )
+    }
+    const record = (await res.json()) as Record<string, unknown>
+    return Response.json(record)
+  } catch (e) {
+    return Response.json({ error: 'Erro ao criar perfil' }, { status: 500 })
+  }
+}
