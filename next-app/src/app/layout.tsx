@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Toaster } from 'react-hot-toast'
 import AuthCookieSync from '@/components/AuthCookieSync'
+import LegacySwCleanup from '@/components/LegacySwCleanup'
 import MaintenanceGate from '@/components/MaintenanceGate'
 import ThemeProvider from '@/components/ThemeProvider'
 import './globals.css'
@@ -52,6 +53,7 @@ export default function RootLayout({
       </head>
       <body>
         <ThemeProvider>
+          <LegacySwCleanup />
           <AuthCookieSync />
           <MaintenanceGate>{children}</MaintenanceGate>
             <Toaster

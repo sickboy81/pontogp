@@ -62,10 +62,14 @@ export default function AdminLayout({
     <div className="min-h-screen bg-slate-900">
       <header className="sticky top-0 z-50 border-b border-slate-700/50 bg-slate-900/95 backdrop-blur">
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
-          <Link href="/admin" className="flex items-center gap-2">
-            <img src="/logo-header.png" alt="CerejaVIP" className="h-9 w-auto max-h-10 object-contain md:h-12" />
-            <span className="text-lg font-semibold text-amber-400">Admin</span>
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link href="/" className="flex shrink-0 items-center" title="Página inicial">
+              <img src="/logo-header.png" alt="CerejaVIP" className="h-9 w-auto max-h-10 object-contain md:h-12" />
+            </Link>
+            <Link href="/admin" className="text-lg font-semibold text-amber-400 hover:text-amber-300">
+              Admin
+            </Link>
+          </div>
 
           <div className="relative">
               <button

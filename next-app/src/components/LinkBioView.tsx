@@ -184,9 +184,9 @@ export default function LinkBioView({ profile, profileUrl }: LinkBioViewProps) {
 
         <div className={`mt-8 flex flex-col items-center gap-1 ${theme === 'dark' ? 'text-slate-400' : theme === 'sunset' || theme === 'cherry' ? 'text-white/70' : 'text-slate-500'}`}>
           <p className="text-center text-sm">Faça parte do</p>
-          <a href="https://cerejavip.com" target="_blank" rel="noopener noreferrer" className="mt-1 block h-8 w-auto max-w-[140px]">
+          <Link href="/" className="mt-1 block h-8 w-auto max-w-[140px]" title="Página inicial">
             <img src="/logo-header.png" alt="CerejaVIP" className="h-8 w-auto object-contain" />
-          </a>
+          </Link>
           <p className="mt-3 text-center text-[10px] opacity-80">cerejavip.com © 2026</p>
         </div>
       </div>

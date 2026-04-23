@@ -14,6 +14,8 @@ interface SubscriptionRow {
   starts_at: string | null
   expires_at: string | null
   auto_renew: boolean
+  /** Dados vêm do perfil (plano + datas) — o PIX não cria a coleção `subscriptions`. */
+  source?: 'profile' | 'subscription'
 }
 
 export default function AdminAssinaturas() {
@@ -39,12 +41,13 @@ export default function AdminAssinaturas() {
     load()
   }, [status])
 
-  const toggleAutoRenew = async (id: string, value: boolean) => {
-    const res = await fetch(`/api/admin/subscriptions/${id}`, {
+  const toggleAutoRenew = async (row: SubscriptionRow) => {
+    if (row.source === 'profile') return
+    const res = await fetch(`/api/admin/subscriptions/${row.id}`, {
       method: 'PATCH',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ auto_renew: !value }),
+      body: JSON.stringify({ auto_renew: !row.auto_renew }),
     })
     const json = await res.json().catch(() => ({}))
     if (!res.ok) {
@@ -71,7 +74,7 @@ export default function AdminAssinaturas() {
         Voltar ao painel
       </Link>
 
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-white">Assinaturas</h1>
         <select
           value={status}
@@ -85,6 +88,11 @@ export default function AdminAssinaturas() {
           <option value="pending">Pendente</option>
         </select>
       </div>
+      <p className="mb-6 max-w-3xl text-sm text-slate-500">
+        A coleção <code className="text-slate-400">subscriptions</code> costuma estar vazia: o plano fica no{' '}
+        <strong className="text-slate-400">perfil</strong> (após renovação/PIX). Nesse caso, a lista abaixo mostra
+        a vigência a partir do perfil. A coluna <span className="text-primary-400">Origem</span> indica a fonte.
+      </p>
 
       {loading ? (
         <div className="flex justify-center py-12">
@@ -96,6 +104,7 @@ export default function AdminAssinaturas() {
             <thead className="border-b border-slate-700 bg-slate-800/50">
               <tr>
                 <th className="p-4 text-slate-300">Usuário</th>
+                <th className="p-4 text-slate-300">Origem</th>
                 <th className="p-4 text-slate-300">Plano</th>
                 <th className="p-4 text-slate-300">Valor</th>
                 <th className="p-4 text-slate-300">Status</th>
@@ -107,26 +116,40 @@ export default function AdminAssinaturas() {
             <tbody className="divide-y divide-slate-700/50">
               {items.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="p-8 text-center text-slate-500">
-                    Nenhuma assinatura encontrada (ou coleção `subscriptions` ausente neste ambiente).
+                  <td colSpan={8} className="p-8 text-center text-slate-500">
+                    Nenhum registo encontrado para este filtro. Se existem perfis com plano, aguarde o carregamento ou
+                    verifique a consola.
                   </td>
                 </tr>
               ) : items.map((row) => (
                 <tr key={row.id} className="hover:bg-slate-800/30">
                   <td className="p-4 text-slate-300">{row.user_email || '-'}</td>
+                  <td className="p-4">
+                    {row.source === 'profile' ? (
+                      <span className="rounded bg-primary-500/20 px-2 py-0.5 text-xs text-primary-300">Perfil</span>
+                    ) : (
+                      <span className="rounded bg-slate-600/50 px-2 py-0.5 text-xs text-slate-300">Coleção</span>
+                    )}
+                  </td>
                   <td className="p-4 text-slate-300">{row.plan_name || '-'}</td>
-                  <td className="p-4 text-white">R$ {Number(row.amount || 0).toFixed(2)}</td>
+                  <td className="p-4 text-white">
+                    {row.source === 'profile' ? '—' : `R$ ${Number(row.amount || 0).toFixed(2)}`}
+                  </td>
                   <td className="p-4 text-slate-300">{row.status || '-'}</td>
                   <td className="p-4 text-slate-300">{formatDate(row.starts_at)}</td>
                   <td className="p-4 text-slate-300">{formatDate(row.expires_at)}</td>
-                  <td className="p-4">
+                  <td className="p-4 text-slate-400">
+                    {row.source === 'profile' ? (
+                      <span className="text-xs">— (use o perfil / plano)</span>
+                    ) : (
                     <button
                       type="button"
-                      onClick={() => toggleAutoRenew(row.id, row.auto_renew)}
+                      onClick={() => toggleAutoRenew(row)}
                       className="rounded border border-slate-600 px-2 py-1 text-xs text-slate-300 hover:bg-slate-700"
                     >
                       {row.auto_renew ? 'Desativar' : 'Ativar'}
                     </button>
+                    )}
                   </td>
                 </tr>
               ))}

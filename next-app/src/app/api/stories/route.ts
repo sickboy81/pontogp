@@ -36,8 +36,10 @@ export async function GET(request: NextRequest) {
       const fileUrl = file
         ? `${PB_URL}/api/files/stories/${r.id}/${file}`
         : ''
-      const profileExpand = profile as Record<string, unknown> | undefined
-      const profilePhotos = profileExpand?.expand?.photos as Array<{ file: string; collectionId: string; id: string }> | undefined
+      const profileInnerExpand = (profile?.expand ?? {}) as {
+        photos?: Array<{ file: string; collectionId: string; id: string }>
+      }
+      const profilePhotos = profileInnerExpand.photos
       let thumbnail = (profile?.thumbnail as string) || ''
       if (!thumbnail && profilePhotos?.[0]) {
         const p = profilePhotos[0]

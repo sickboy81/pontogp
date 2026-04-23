@@ -11,6 +11,35 @@ async function getEffectiveToken(userToken: string): Promise<string> {
   return adminToken || userToken
 }
 
+/** O fluxo PIX/renovação grava o plano no `profiles`, não cria `subscriptions`. Estas linhas refletem a vigência real. */
+function profileToSubscriptionRow(r: Record<string, unknown>, statusFilter: string) {
+  const expand = (r.expand || {}) as Record<string, unknown>
+  const user = expand.user as Record<string, unknown> | undefined
+  const plan = expand.plan as Record<string, unknown> | undefined
+  const searchExp = r.search_expires_at as string | undefined
+  const searchOpen = !searchExp || searchExp === '' || new Date(searchExp) > new Date()
+  const st = searchOpen ? 'active' : 'expired'
+  if (statusFilter === 'canceled' || statusFilter === 'pending') {
+    return null
+  }
+  if (statusFilter === 'active' && st !== 'active') return null
+  if (statusFilter === 'expired' && st !== 'expired') return null
+
+  return {
+    id: r.id as string,
+    user_id: r.user ?? null,
+    user_email: (user?.email as string) ?? null,
+    plan_id: r.plan ?? null,
+    plan_name: (plan?.name as string) || (plan?.slug as string) || null,
+    status: st,
+    amount: 0,
+    starts_at: (r.created as string) || (r.created_at as string) || (r.updated as string) || null,
+    expires_at: searchExp || (r.contact_expires_at as string) || null,
+    auto_renew: false,
+    source: 'profile' as const,
+  }
+}
+
 export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request)
   if (!auth) return Response.json({ error: 'Não autorizado' }, { status: 401 })
@@ -30,33 +59,53 @@ export async function GET(request: NextRequest) {
       cache: 'no-store',
     })
 
-    // Collection pode não existir em alguns ambientes antigos.
-    if (!res.ok) return Response.json({ items: [], totalItems: 0, page, perPage })
+    let items: Array<Record<string, unknown>> = []
+    let totalItems = 0
 
-    const data = await res.json()
-    const items = (data.items || []).map((r: Record<string, unknown>) => {
-      const expand = r.expand as Record<string, unknown> | undefined
-      const user = expand?.user as Record<string, unknown> | undefined
-      const plan = expand?.plan as Record<string, unknown> | undefined
+    if (res.ok) {
+      const data = await res.json()
+      items = (data.items || []).map((r: Record<string, unknown>) => {
+        const expand = r.expand as Record<string, unknown> | undefined
+        const user = expand?.user as Record<string, unknown> | undefined
+        const plan = expand?.plan as Record<string, unknown> | undefined
 
-      return {
-        id: r.id,
-        user_id: r.user ?? null,
-        user_email: user?.email ?? null,
-        plan_id: r.plan ?? null,
-        plan_name: plan?.name ?? plan?.slug ?? null,
-        status: r.status ?? null,
-        amount: Number(r.amount) || 0,
-        starts_at: r.starts_at ?? null,
-        expires_at: r.expires_at ?? null,
-        auto_renew: !!r.auto_renew,
-        created: r.created ?? null,
+        return {
+          id: r.id,
+          user_id: r.user ?? null,
+          user_email: user?.email ?? null,
+          plan_id: r.plan ?? null,
+          plan_name: plan?.name ?? plan?.slug ?? null,
+          status: r.status ?? null,
+          amount: Number(r.amount) || 0,
+          starts_at: r.starts_at ?? null,
+          expires_at: r.expires_at ?? null,
+          auto_renew: !!r.auto_renew,
+          created: r.created ?? null,
+          source: 'subscription' as const,
+        }
+      })
+      totalItems = Number(data.totalItems) || items.length
+    }
+
+    if (items.length === 0) {
+      const profRes = await fetch(
+        `${PB_URL}/api/collections/profiles/records?page=1&perPage=500&sort=-updated&expand=user,plan`,
+        { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' }
+      )
+      if (profRes.ok) {
+        const pData = await profRes.json()
+        const raw = (pData.items || []) as Record<string, unknown>[]
+        const mapped = raw
+          .map((row) => profileToSubscriptionRow(row, status))
+          .filter((x): x is NonNullable<typeof x> => x != null)
+        items = mapped as unknown as Array<Record<string, unknown>>
+        totalItems = items.length
       }
-    })
+    }
 
     return Response.json({
       items,
-      totalItems: data.totalItems ?? 0,
+      totalItems,
       page,
       perPage,
     })

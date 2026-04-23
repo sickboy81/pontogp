@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
+import type { RecordModel } from 'pocketbase'
 import { useAuthStore } from '@/store/auth'
 import { setAuthCookie, clearAuthCookie } from '@/lib/auth-cookie'
 import { getPb } from '@/lib/pb'
@@ -17,7 +18,18 @@ export default function AuthCookieSync() {
       try {
         const pb = getPb()
         if (user && typeof pb.authStore.save === 'function') {
-          pb.authStore.save(token, { id: user.id, email: user.email, name: user.name } as unknown as Record<string, unknown>)
+          const displayName =
+            (user.name && user.name.trim()) ||
+            [user.first_name, user.last_name].filter(Boolean).join(' ').trim() ||
+            user.email
+          const model = {
+            id: user.id,
+            collectionId: '',
+            collectionName: 'users',
+            email: user.email,
+            name: displayName,
+          } as RecordModel
+          pb.authStore.save(token, model)
         }
       } catch {
         // ignore

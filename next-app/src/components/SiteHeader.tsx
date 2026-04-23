@@ -182,7 +182,21 @@ export default function SiteHeader() {
       <div className="mx-auto max-w-6xl px-4 py-2 md:py-3">
         {/* Linha 1: logo (maior) + ícones à direita */}
         <div className="flex min-h-14 items-center justify-between md:min-h-16">
-          <Link href="/" className="flex items-center gap-2">
+          <Link
+            href="/"
+            className="flex items-center gap-2"
+            title="Página inicial"
+            onClick={(e) => {
+              closeAll()
+              if (pathname === '/' && searchParams.toString()) {
+                e.preventDefault()
+                router.replace('/')
+              }
+              if (pathname === '/' && typeof window !== 'undefined') {
+                window.scrollTo({ top: 0, behavior: 'smooth' })
+              }
+            }}
+          >
             <img src="/logo-header.png" alt="CerejaVIP" className="h-11 w-auto max-h-12 object-contain md:h-14 md:max-h-16" />
           </Link>
 

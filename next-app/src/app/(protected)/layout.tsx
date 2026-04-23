@@ -70,7 +70,7 @@ export default function ProtectedLayout({
     <div className="min-h-screen bg-slate-900">
       <header className="sticky top-0 z-50 border-b border-slate-700/50 bg-slate-900/95 backdrop-blur">
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
-          <Link href="/dashboard" className="flex items-center gap-2">
+          <Link href="/" className="flex items-center gap-2" title="Página inicial">
             <img src="/logo-header.png" alt="CerejaVIP" className="h-9 w-auto max-h-10 object-contain md:h-12" />
           </Link>
           <div className="relative">
