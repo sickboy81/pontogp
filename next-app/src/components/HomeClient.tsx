@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
+import dynamic from 'next/dynamic'
 import { Search, Filter, X } from 'lucide-react'
 import ProfileCard from '@/components/ProfileCard'
 import StoriesSection from '@/components/StoriesSection'
@@ -11,21 +12,13 @@ import type { Profile, FilterOptions } from '@/lib/types'
 import { CATEGORIES } from '@/utils/constants'
 import { useAuthStore } from '@/store/auth'
 import { useFavoritesStore } from '@/store/favorites'
-import { SEO_CITIES } from '@/lib/seo-cities'
-import { SEO_STATES } from '@/lib/seo-states'
 
 const LIMIT = 21
 
-const SEO_QUICK_LINKS = [
-  { href: '/?category=acompanhante&gender=mulher', label: 'Acompanhantes femininas' },
-  { href: '/?category=acompanhante&gender=homem', label: 'Acompanhantes masculinos' },
-  { href: '/?category=acompanhante&gender=trans', label: 'Acompanhantes trans' },
-  { href: '/?category=massagista&gender=mulher', label: 'Massagistas femininas' },
-  { href: '/?category=massagista&gender=homem', label: 'Massagistas masculinos' },
-  { href: '/?category=online&gender=mulher', label: 'Atendimento online feminino' },
-  { href: '/?category=online&gender=homem', label: 'Atendimento online masculino' },
-  { href: '/?verified=true', label: 'Perfis verificados' },
-]
+const HomeSeoSection = dynamic(() => import('@/components/HomeSeoSection'), {
+  ssr: false,
+  loading: () => <div className="mt-16 h-24 rounded-2xl border border-slate-800 bg-slate-900/30" />,
+})
 
 type TagMatchScope = 'city' | 'state' | 'brasil'
 
@@ -111,6 +104,7 @@ export default function HomeClient() {
   const planColorMap: Record<string, string> = { gratis: '#64748b', bronze: '#b45309', prata: '#737373', ouro: '#ca8a04' }
 
   const [debouncedSearch, setDebouncedSearch] = useState(searchQuery)
+  const [showSeoSection, setShowSeoSection] = useState(false)
   const [tagMatchScope, setTagMatchScope] = useState<TagMatchScope | null>(() =>
     parseTagScope(searchParams.get('tag_scope'))
   )
@@ -152,6 +146,26 @@ export default function HomeClient() {
     const t = setTimeout(() => setDebouncedSearch(searchQuery), 500)
     return () => clearTimeout(t)
   }, [searchQuery])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    let cancelled = false
+    const run = () => {
+      if (!cancelled) setShowSeoSection(true)
+    }
+    if ('requestIdleCallback' in window) {
+      const id = window.requestIdleCallback(run, { timeout: 2000 })
+      return () => {
+        cancelled = true
+        window.cancelIdleCallback(id)
+      }
+    }
+    const t = globalThis.setTimeout(run, 900)
+    return () => {
+      cancelled = true
+      globalThis.clearTimeout(t)
+    }
+  }, [])
 
   useEffect(() => {
     if (isAuthenticated) fetchFavorites()
@@ -410,97 +424,7 @@ export default function HomeClient() {
         </>
       )}
 
-      <section className="mt-16 border-t border-slate-800 pt-10 md:pt-14">
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-6 md:p-10">
-          <p className="mb-3 text-xs font-bold uppercase tracking-widest text-primary-400">Explorar com precisão</p>
-          <h3 className="text-2xl font-bold text-white md:text-3xl">
-            Encontre perfis por <span className="text-primary-500">estado, categoria e estilo de atendimento</span>
-          </h3>
-          <p className="mt-4 max-w-3xl text-sm leading-relaxed text-slate-400 md:text-base">
-            Use os filtros e atalhos para navegar por regiões do Brasil e refinar sua busca por tipo de serviço, gênero, faixa de preço e verificação.
-            A proposta da CerejaVIP é facilitar uma busca mais objetiva, com perfis completos e atualização frequente.
-          </p>
-          <p className="mt-4 max-w-3xl text-sm leading-relaxed text-slate-500">
-            Para conteúdo local e atalhos prontos, abra as páginas de{' '}
-            <Link href="/cidade/sao-paulo-sp" className="text-primary-400 hover:text-primary-300">
-              São Paulo
-            </Link>
-            ,{' '}
-            <Link href="/cidade/rio-de-janeiro-rj" className="text-primary-400 hover:text-primary-300">
-              Rio de Janeiro
-            </Link>{' '}
-            ou{' '}
-            <Link href="/estado/minas-gerais-mg" className="text-primary-400 hover:text-primary-300">
-              Minas Gerais
-            </Link>
-            ; a{' '}
-            <Link href="/" className="text-primary-400 hover:text-primary-300">
-              busca geral
-            </Link>{' '}
-            continua nesta página inicial.
-          </p>
-
-          <div className="mt-8 grid gap-6 lg:grid-cols-2">
-            <div>
-              <p className="mb-3 text-sm font-semibold text-white">Buscar por estado</p>
-              <div className="flex flex-wrap gap-2">
-                {SEO_STATES.map((state) => (
-                  <Link
-                    key={state.uf}
-                    href={`/estado/${state.slug}`}
-                    className="inline-flex items-center gap-2 rounded-lg border border-slate-700 px-3 py-2 text-xs text-slate-300 transition hover:border-primary-500 hover:text-white md:text-sm"
-                  >
-                    <span className="font-semibold">{state.uf}</span>
-                    <span className="text-slate-400">{state.label}</span>
-                  </Link>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <p className="mb-3 text-sm font-semibold text-white">Atalhos populares</p>
-              <div className="flex flex-wrap gap-2">
-                {SEO_QUICK_LINKS.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className="inline-flex rounded-lg border border-slate-700 px-3 py-2 text-xs text-slate-300 transition hover:border-primary-500 hover:text-white md:text-sm"
-                  >
-                    {item.label}
-                  </Link>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-6">
-            <p className="mb-3 text-sm font-semibold text-white">Cidades em destaque</p>
-            <div className="flex flex-wrap gap-2">
-              {SEO_CITIES.map((item) => (
-                <Link
-                  key={`${item.state}-${item.city}`}
-                  href={`/cidade/${item.slug}`}
-                  className="inline-flex items-center gap-2 rounded-lg border border-slate-700 px-3 py-2 text-xs text-slate-300 transition hover:border-primary-500 hover:text-white md:text-sm"
-                >
-                  <span>{item.city}</span>
-                  <span className="font-semibold text-slate-400">{item.state}</span>
-                </Link>
-              ))}
-            </div>
-          </div>
-
-          <div className="mt-8 space-y-3 text-sm leading-relaxed text-slate-400 md:text-base">
-            <p>
-              Perfis com fotos recentes, descrição clara e selo de verificação tendem a gerar mais confiança e melhores resultados de contato.
-              Para quem anuncia, manter informações atualizadas ajuda no posicionamento dentro da plataforma e na conversão de visitas.
-            </p>
-            <p>
-              Para quem busca, recomendamos combinar filtros de localização e categoria para encontrar resultados mais relevantes.
-              Se preferir, você pode começar pela listagem completa de <Link href="/anunciantes" className="text-primary-400 hover:text-primary-300">anunciantes</Link> e depois refinar.
-            </p>
-          </div>
-        </div>
-      </section>
+      {showSeoSection ? <HomeSeoSection /> : null}
     </div>
   )
 }

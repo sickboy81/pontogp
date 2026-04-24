@@ -205,7 +205,6 @@ export default function SiteHeader() {
               height={80}
               sizes="(max-width: 768px) 176px, 224px"
               className="h-11 w-auto max-h-12 object-contain md:h-14 md:max-h-16"
-              priority
             />
           </Link>
 
