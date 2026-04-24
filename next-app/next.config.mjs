@@ -9,9 +9,6 @@ const nextConfig = {
   turbopack: { root: __dirname },
   poweredByHeader: false,
   reactStrictMode: true,
-  experimental: {
-    optimizeCss: true,
-  },
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: 'pocketbase.cerejavip.com' },
