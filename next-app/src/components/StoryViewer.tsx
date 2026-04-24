@@ -1,7 +1,9 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import Link from 'next/link'
 import { X, ChevronLeft, ChevronRight, Heart, MessageCircle } from 'lucide-react'
+import toast from 'react-hot-toast'
 import { useAuthStore } from '@/store/auth'
 
 export interface StoryItem {
@@ -38,6 +40,7 @@ export default function StoryViewer({ stories, initialIndex = 0, onClose }: Stor
   const [likeLoading, setLikeLoading] = useState(false)
   const [showComments, setShowComments] = useState(false)
   const user = useAuthStore((s) => s.user)
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
 
   const story = stories[currentIndex]
   const hasNext = currentIndex < stories.length - 1
@@ -99,17 +102,35 @@ export default function StoryViewer({ stories, initialIndex = 0, onClose }: Stor
 
   const handleLike = useCallback(() => {
     if (!story?.id || likeLoading) return
+    if (!isAuthenticated) {
+      toast.error('Faça login para curtir')
+      return
+    }
     setLikeLoading(true)
     fetch(`/api/stories/${story.id}/like`, {
       method: 'POST',
       credentials: 'include',
     })
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.liked !== undefined) setLikes((prev) => ({ count: d.count ?? (prev.count + (d.liked ? 1 : -1)), liked: d.liked }))
+      .then(async (r) => {
+        const d = (await r.json().catch(() => ({}))) as {
+          liked?: boolean
+          count?: number
+          error?: string
+        }
+        if (!r.ok) {
+          toast.error(d.error || 'Não foi possível curtir')
+          return
+        }
+        if (typeof d.liked === 'boolean') {
+          const liked = d.liked
+          setLikes((prev) => ({
+            count: d.count ?? (prev.count + (liked ? 1 : -1)),
+            liked,
+          }))
+        }
       })
       .finally(() => setLikeLoading(false))
-  }, [story?.id, likeLoading])
+  }, [story?.id, likeLoading, isAuthenticated])
 
   const handleCommentSubmit = useCallback(
     (e: React.FormEvent) => {
@@ -123,10 +144,27 @@ export default function StoryViewer({ stories, initialIndex = 0, onClose }: Stor
         credentials: 'include',
         body: JSON.stringify({ content }),
       })
-        .then((r) => r.json())
-        .then((d) => {
-          if (d.id) {
-            setComments((prev) => [...prev, { id: d.id, content: d.content, created: d.created, userName: user?.name ?? 'Você' }])
+        .then(async (r) => {
+          const d = (await r.json().catch(() => ({}))) as {
+            id?: string
+            content?: string
+            created?: string
+            error?: string
+          }
+          if (!r.ok) {
+            toast.error(d.error || 'Não foi possível enviar o comentário')
+            return
+          }
+          if (d.id && d.content && d.created) {
+            const displayName =
+              (user?.name && user.name.trim()) ||
+              [user?.first_name, user?.last_name].filter(Boolean).join(' ').trim() ||
+              user?.email ||
+              'Você'
+            setComments((prev) => [
+              ...prev,
+              { id: d.id!, content: d.content!, created: d.created!, userName: displayName },
+            ])
             setCommentInput('')
           }
         })
@@ -187,13 +225,13 @@ export default function StoryViewer({ stories, initialIndex = 0, onClose }: Stor
         <div className="flex flex-1 items-center justify-center">
           <button
             type="button"
-            className="absolute left-0 top-0 bottom-0 z-10 w-1/3 cursor-default focus:outline-none md:w-1/4"
+            className="absolute left-0 top-0 bottom-28 z-10 w-1/3 cursor-default focus:outline-none md:w-1/4"
             onClick={goPrev}
             aria-label="Anterior"
           />
           <button
             type="button"
-            className="absolute right-0 top-0 bottom-0 z-10 w-1/3 cursor-default focus:outline-none md:w-1/4"
+            className="absolute right-0 top-0 bottom-28 z-10 w-1/3 cursor-default focus:outline-none md:w-1/4"
             onClick={goNext}
             aria-label="Próximo"
           />
@@ -223,8 +261,8 @@ export default function StoryViewer({ stories, initialIndex = 0, onClose }: Stor
           </div>
         </div>
 
-        {/* Like + Comment + Nav */}
-        <div className="absolute bottom-4 left-0 right-0 flex items-end justify-between px-4">
+        {/* Like + Comment + Nav — z-30 acima das zonas de toque anterior/próximo (z-10) */}
+        <div className="absolute bottom-4 left-0 right-0 z-30 flex items-end justify-between px-4">
           <div className="flex items-center gap-3">
             <button
               type="button"
@@ -269,7 +307,7 @@ export default function StoryViewer({ stories, initialIndex = 0, onClose }: Stor
 
         {/* Comments panel */}
         {showComments && (
-          <div className="absolute right-0 top-0 bottom-0 z-20 flex w-full max-w-sm flex-col border-l border-white/20 bg-black/80 backdrop-blur sm:w-96">
+          <div className="absolute right-0 top-0 bottom-0 z-40 flex w-full max-w-sm flex-col border-l border-white/20 bg-black/80 backdrop-blur sm:w-96">
             <div className="flex items-center justify-between border-b border-white/20 p-3">
               <span className="text-sm font-semibold text-white">Comentários</span>
               <button type="button" onClick={() => setShowComments(false)} className="rounded p-1 text-white/80 hover:bg-white/20">
@@ -288,7 +326,7 @@ export default function StoryViewer({ stories, initialIndex = 0, onClose }: Stor
                 ))
               )}
             </div>
-            {user && (
+            {isAuthenticated ? (
               <form onSubmit={handleCommentSubmit} className="border-t border-white/20 p-3">
                 <div className="flex gap-2">
                   <input
@@ -308,6 +346,13 @@ export default function StoryViewer({ stories, initialIndex = 0, onClose }: Stor
                   </button>
                 </div>
               </form>
+            ) : (
+              <div className="border-t border-white/20 p-3 text-center text-sm text-white/80">
+                <Link href="/login" className="font-medium text-primary-400 underline hover:text-primary-300">
+                  Entre
+                </Link>{' '}
+                para comentar.
+              </div>
             )}
           </div>
         )}

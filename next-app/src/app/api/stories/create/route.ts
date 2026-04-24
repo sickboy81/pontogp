@@ -1,5 +1,12 @@
 import { NextRequest } from 'next/server'
 import { getAuthCookieFromHeader, getUserIdFromToken } from '@/lib/auth-cookie'
+import {
+  imageFileToWebp,
+  isRasterImageMime,
+  maybeVideoToCompactMp4,
+} from '@/lib/server/media-upload'
+
+export const maxDuration = 300
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
@@ -11,6 +18,29 @@ function getToken(request: NextRequest): string | null {
 
 function toPBDate(d: Date = new Date()) {
   return d.toISOString().replace('T', ' ')
+}
+
+/** MIME confiável: muitos browsers/OS enviam type vazio ou application/octet-stream. */
+function resolveStoryMime(file: File): string | null {
+  const ext = (file.name.split('.').pop() || '').toLowerCase()
+  const fromExt: Record<string, string> = {
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    png: 'image/png',
+    webp: 'image/webp',
+    mp4: 'video/mp4',
+    webm: 'video/webm',
+    mov: 'video/quicktime',
+  }
+  const t = (file.type || '').trim().toLowerCase()
+  if (
+    t &&
+    t !== 'application/octet-stream' &&
+    t !== 'application/x-msdownload'
+  ) {
+    return t
+  }
+  return fromExt[ext] || null
 }
 
 /** POST: cria story. Multipart: file, profileId, text? */
@@ -43,9 +73,24 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: 'Sem permissão para criar story neste perfil' }, { status: 403 })
     }
 
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'video/mp4', 'video/webm']
-    if (!allowedTypes.includes(file.type)) {
-      return Response.json({ error: 'Tipo não permitido. Use imagem ou vídeo.' }, { status: 400 })
+    const allowedTypes = [
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'image/webp',
+      'video/mp4',
+      'video/webm',
+      'video/quicktime',
+    ]
+    const effectiveMime = resolveStoryMime(file)
+    if (!effectiveMime || !allowedTypes.includes(effectiveMime)) {
+      return Response.json(
+        {
+          error:
+            'Formato não suportado. Use JPG, PNG, WebP, MP4, WebM ou MOV (até 50 MB).',
+        },
+        { status: 400 }
+      )
     }
 
     const maxSize = 50 * 1024 * 1024
@@ -53,13 +98,39 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: 'Arquivo muito grande. Máximo 50 MB.' }, { status: 400 })
     }
 
+    let fileForPb: File
+    let storyType: 'image' | 'video'
+    if (effectiveMime.startsWith('video/')) {
+      fileForPb = await maybeVideoToCompactMp4(file)
+      storyType = 'video'
+    } else {
+      if (!isRasterImageMime(effectiveMime)) {
+        return Response.json({ error: 'Formato de imagem inválido.' }, { status: 400 })
+      }
+      try {
+        fileForPb = await imageFileToWebp(file)
+      } catch {
+        return Response.json(
+          { error: 'Não foi possível processar a imagem. Tente outro arquivo.' },
+          { status: 400 }
+        )
+      }
+      storyType = 'image'
+    }
+    if (fileForPb.size > maxSize) {
+      return Response.json(
+        { error: 'Arquivo após otimização ainda excede 50 MB.' },
+        { status: 400 }
+      )
+    }
+
     const expiresAt = toPBDate(new Date(Date.now() + 12 * 60 * 60 * 1000))
 
     const pbForm = new FormData()
     pbForm.append('profile', profileId)
-    pbForm.append('file', file)
+    pbForm.append('file', fileForPb)
     pbForm.append('expires_at', expiresAt)
-    pbForm.append('type', file.type.startsWith('video/') ? 'video' : 'image')
+    pbForm.append('type', storyType)
     pbForm.append('views', '0')
     if (text) pbForm.append('text', text)
 

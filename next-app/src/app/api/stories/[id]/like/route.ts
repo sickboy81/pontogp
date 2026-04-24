@@ -34,10 +34,17 @@ export async function POST(
     const existing = listData.items?.[0]
 
     if (existing) {
-      await fetch(`${PB_URL}/api/collections/story_likes/records/${existing.id}`, {
+      const delRes = await fetch(`${PB_URL}/api/collections/story_likes/records/${existing.id}`, {
         method: 'DELETE',
         headers: authHeader,
       })
+      if (!delRes.ok) {
+        const err = (await delRes.json().catch(() => ({}))) as { message?: string }
+        return Response.json(
+          { error: err.message || 'Não foi possível descurtir' },
+          { status: delRes.status }
+        )
+      }
       const adminToken = await getAdminToken()
       const countHeaders: HeadersInit | undefined = adminToken
         ? { Authorization: `Bearer ${adminToken}` }
@@ -50,11 +57,18 @@ export async function POST(
       return Response.json({ liked: false, count: Math.max(0, total - 1) })
     }
 
-    await fetch(`${PB_URL}/api/collections/story_likes/records`, {
+    const createRes = await fetch(`${PB_URL}/api/collections/story_likes/records`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...authHeader },
       body: JSON.stringify({ story: storyId, user: userId }),
     })
+    if (!createRes.ok) {
+      const err = (await createRes.json().catch(() => ({}))) as { message?: string }
+      return Response.json(
+        { error: err.message || 'Não foi possível curtir' },
+        { status: createRes.status }
+      )
+    }
     const adminToken = await getAdminToken()
     const countHeaders: HeadersInit | undefined = adminToken
       ? { Authorization: `Bearer ${adminToken}` }

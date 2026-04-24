@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server'
 import { getAuthCookieFromHeader, getUserIdFromToken } from '@/lib/auth-cookie'
+import { imageFileToWebp, isRasterImageMime, resolveImageMime } from '@/lib/server/media-upload'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
@@ -63,6 +64,51 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const maxEach = 10 * 1024 * 1024
+    for (const f of [docFront, docBack, selfie]) {
+      if (f && f.size > maxEach) {
+        return Response.json({ error: 'Cada arquivo deve ter no máximo 10 MB.' }, { status: 400 })
+      }
+    }
+
+    async function docFileForPb(f: File): Promise<File> {
+      const isPdf = f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf')
+      if (isPdf) return f
+      const mime = resolveImageMime(f)
+      if (!mime || !isRasterImageMime(mime)) {
+        throw new Error('INVALID_DOC')
+      }
+      const webp = await imageFileToWebp(f)
+      if (webp.size > maxEach) {
+        throw new Error('TOO_LARGE')
+      }
+      return webp
+    }
+
+    let frontOut: File
+    let backOut: File
+    let selfieOut: File
+    try {
+      frontOut = await docFileForPb(docFront as File)
+      backOut = await docFileForPb(docBack as File)
+      selfieOut = await docFileForPb(selfie as File)
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : ''
+      if (msg === 'INVALID_DOC') {
+        return Response.json(
+          { error: 'Documentos e selfie devem ser imagens (ou PDF nos documentos).' },
+          { status: 400 }
+        )
+      }
+      if (msg === 'TOO_LARGE') {
+        return Response.json(
+          { error: 'Imagem otimizada excede 10 MB. Envie foto com resolução menor.' },
+          { status: 400 }
+        )
+      }
+      return Response.json({ error: 'Não foi possível processar os arquivos.' }, { status: 400 })
+    }
+
     const res = await fetch(
       `${PB_URL}/api/collections/profiles/records/${profileId}?fields=id,user`,
       { headers: { Authorization: `Bearer ${token}` } }
@@ -77,9 +123,9 @@ export async function POST(request: NextRequest) {
     pbForm.append('profile', profileId)
     pbForm.append('user', userId)
     pbForm.append('status', 'pending')
-    pbForm.append('document_front', docFront as File)
-    pbForm.append('document_back', docBack as File)
-    pbForm.append('selfie', selfie as File)
+    pbForm.append('document_front', frontOut)
+    pbForm.append('document_back', backOut)
+    pbForm.append('selfie', selfieOut)
 
     const createRes = await fetch(`${PB_URL}/api/collections/verification_requests/records`, {
       method: 'POST',

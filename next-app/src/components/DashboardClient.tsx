@@ -197,11 +197,14 @@ export default function DashboardClient() {
         const data = await res.json().catch(() => ({}))
         throw new Error((data as { error?: string }).error || 'Erro ao enviar story')
       }
+      toast.success('Story publicada! Ela aparece na página inicial nas próximas horas.')
       e.target.value = ''
     } catch (err) {
-      console.error(err)
+      const msg = err instanceof Error ? err.message : 'Erro ao enviar story'
+      toast.error(msg)
     } finally {
       setStoryUploading(false)
+      e.target.value = ''
     }
   }
 

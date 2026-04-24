@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  serverExternalPackages: ['sharp', 'ffmpeg-static'],
   typescript: {
     // Mantém deploy estável no VPS enquanto saneamos tipagem gradualmente.
     ignoreBuildErrors: true,

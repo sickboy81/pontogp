@@ -1,5 +1,8 @@
 import { NextRequest } from 'next/server'
 import { getAuthCookieFromHeader, getUserIdFromToken } from '@/lib/auth-cookie'
+import { maybeVideoToCompactMp4, resolveVideoMime } from '@/lib/server/media-upload'
+
+export const maxDuration = 300
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
@@ -49,10 +52,11 @@ export async function POST(
       return Response.json({ error: 'Arquivo inválido ou vazio' }, { status: 400 })
     }
 
-    const allowedTypes = ['video/mp4', 'video/webm', 'video/quicktime']
-    if (!allowedTypes.includes(file.type)) {
+    const allowedTypes = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-matroska']
+    const effectiveMime = resolveVideoMime(file)
+    if (!effectiveMime || !allowedTypes.includes(effectiveMime)) {
       return Response.json(
-        { error: 'Tipo não permitido. Use MP4 ou WebM.' },
+        { error: 'Tipo não permitido. Use MP4, WebM, MOV ou MKV.' },
         { status: 400 }
       )
     }
@@ -65,8 +69,16 @@ export async function POST(
       )
     }
 
+    const fileForPb = await maybeVideoToCompactMp4(file)
+    if (fileForPb.size > maxSize) {
+      return Response.json(
+        { error: 'Vídeo após compressão ainda excede 100 MB.' },
+        { status: 400 }
+      )
+    }
+
     const pbFormData = new FormData()
-    pbFormData.append('file', file)
+    pbFormData.append('file', fileForPb)
 
     const createRes = await fetch(`${PB_URL}/api/collections/files/records`, {
       method: 'POST',

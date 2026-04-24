@@ -1,9 +1,11 @@
 import { NextRequest } from 'next/server'
 import { getAuthCookieFromHeader, getUserIdFromToken } from '@/lib/auth-cookie'
+import { maybeAudioToCompactM4a, pocketbaseAcceptsAudioMime, resolveAudioMime } from '@/lib/server/media-upload'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
 export const dynamic = 'force-dynamic'
+export const maxDuration = 180
 
 function getToken(request: NextRequest): string | null {
   return getAuthCookieFromHeader(request.headers.get('cookie'))
@@ -49,10 +51,10 @@ export async function POST(
       return Response.json({ error: 'Arquivo inválido ou vazio' }, { status: 400 })
     }
 
-    const allowedTypes = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/ogg', 'audio/webm', 'audio/x-m4a']
-    if (!allowedTypes.includes(file.type)) {
+    const effectiveMime = resolveAudioMime(file)
+    if (!effectiveMime || !effectiveMime.startsWith('audio/')) {
       return Response.json(
-        { error: 'Tipo não permitido. Use MP3, WAV, OGG ou M4A.' },
+        { error: 'Tipo não permitido. Envie um arquivo de áudio (MP3, M4A, WAV, OGG, etc.).' },
         { status: 400 }
       )
     }
@@ -65,8 +67,30 @@ export async function POST(
       )
     }
 
+    const fileForPb = await maybeAudioToCompactM4a(file)
+    const outMime = (fileForPb.type || resolveAudioMime(fileForPb) || '').toLowerCase()
+    if (!pocketbaseAcceptsAudioMime(outMime)) {
+      return Response.json(
+        {
+          error:
+            'Não foi possível preparar o áudio para envio. Use MP3 ou M4A, ou configure ffmpeg no servidor (FFMPEG_PATH).',
+        },
+        { status: 400 }
+      )
+    }
+    if (fileForPb.size > maxSize) {
+      return Response.json(
+        { error: 'Áudio após compactação ainda excede 10 MB.' },
+        { status: 400 }
+      )
+    }
+
     const pbFormData = new FormData()
-    pbFormData.append('file', file)
+    const normalizedFile =
+      outMime === 'audio/mpeg' || outMime === 'audio/mp3'
+        ? new File([fileForPb], fileForPb.name.replace(/\.[^.]+$/, '') + '.mp3', { type: 'audio/mpeg' })
+        : fileForPb
+    pbFormData.append('file', normalizedFile)
 
     const createRes = await fetch(`${PB_URL}/api/collections/files/records`, {
       method: 'POST',

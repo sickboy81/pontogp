@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server'
 import { getAuthCookieFromHeader, getUserIdFromToken } from '@/lib/auth-cookie'
+import { imageFileToWebp, isRasterImageMime, resolveImageMime } from '@/lib/server/media-upload'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
@@ -50,14 +51,6 @@ export async function POST(
       return Response.json({ error: 'Arquivo inválido ou vazio' }, { status: 400 })
     }
 
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
-    if (!allowedTypes.includes(file.type)) {
-      return Response.json(
-        { error: 'Tipo não permitido. Use JPG, PNG ou WebP.' },
-        { status: 400 }
-      )
-    }
-
     const maxSize = 5 * 1024 * 1024
     if (file.size > maxSize) {
       return Response.json(
@@ -66,8 +59,32 @@ export async function POST(
       )
     }
 
+    const effectiveMime = resolveImageMime(file)
+    if (!effectiveMime || !isRasterImageMime(effectiveMime)) {
+      return Response.json(
+        { error: 'Tipo não permitido. Envie uma imagem (JPG, PNG, WebP, HEIC, etc.).' },
+        { status: 400 }
+      )
+    }
+
+    let fileForPb: File
+    try {
+      fileForPb = await imageFileToWebp(file)
+    } catch {
+      return Response.json(
+        { error: 'Não foi possível processar a imagem. Tente outro arquivo.' },
+        { status: 400 }
+      )
+    }
+    if (fileForPb.size > maxSize) {
+      return Response.json(
+        { error: 'Imagem otimizada ainda excede 5 MB. Use uma foto com resolução menor.' },
+        { status: 400 }
+      )
+    }
+
     const pbFormData = new FormData()
-    pbFormData.append('file', file)
+    pbFormData.append('file', fileForPb)
 
     const createRes = await fetch(`${PB_URL}/api/collections/files/records`, {
       method: 'POST',
