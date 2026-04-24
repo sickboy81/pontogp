@@ -2,7 +2,23 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { User, Plus, Edit, Eye, ImagePlus, Loader2, Calendar, BarChart3, ArrowUp, Zap, AlertTriangle, CreditCard } from 'lucide-react'
+import {
+  User,
+  Plus,
+  Edit,
+  Eye,
+  ImagePlus,
+  Loader2,
+  Calendar,
+  BarChart3,
+  ArrowUp,
+  Zap,
+  AlertTriangle,
+  CreditCard,
+  Trash2,
+  Heart,
+  MessageCircle,
+} from 'lucide-react'
 import VerificationRequestForm from '@/components/VerificationRequestForm'
 import type { Profile } from '@/lib/types'
 import { formatPrice } from '@/utils/format'
@@ -25,10 +41,28 @@ function daysUntil(iso: string | undefined): number | null {
   return Math.ceil((d.getTime() - now.getTime()) / (24 * 60 * 60 * 1000))
 }
 
+type MyStoryRow = {
+  id: string
+  type: string
+  text: string
+  file: string
+  created?: string
+  expires_at?: string
+  views: number
+  active: boolean
+  likesCount: number
+  commentsCount: number
+}
+
 export default function DashboardClient() {
   const [profile, setProfile] = useState<Profile | null | undefined>(undefined)
   const [loading, setLoading] = useState(true)
   const [storyUploading, setStoryUploading] = useState(false)
+  const [myStories, setMyStories] = useState<MyStoryRow[]>([])
+  const [storiesLoading, setStoriesLoading] = useState(false)
+  const [storyDeletingId, setStoryDeletingId] = useState<string | null>(null)
+  const [editingStory, setEditingStory] = useState<{ id: string; text: string } | null>(null)
+  const [storySaveLoading, setStorySaveLoading] = useState(false)
   const [bumpLoading, setBumpLoading] = useState(false)
   const [dailyBumps, setDailyBumps] = useState(0)
   const [currentPlanName, setCurrentPlanName] = useState<string | null>(null)
@@ -69,6 +103,22 @@ export default function DashboardClient() {
       )
       .catch(() => {})
   }, [profile])
+
+  const loadMyStories = () => {
+    setStoriesLoading(true)
+    fetch('/api/stories/mine', { credentials: 'include', cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : { items: [] }))
+      .then((data: { items?: MyStoryRow[] }) => {
+        setMyStories(Array.isArray(data.items) ? data.items : [])
+      })
+      .catch(() => setMyStories([]))
+      .finally(() => setStoriesLoading(false))
+  }
+
+  useEffect(() => {
+    if (!profile?.id) return
+    loadMyStories()
+  }, [profile?.id])
 
   if (loading) {
     return (
@@ -198,6 +248,7 @@ export default function DashboardClient() {
         throw new Error((data as { error?: string }).error || 'Erro ao enviar story')
       }
       toast.success('Story publicada! Ela aparece na página inicial nas próximas horas.')
+      loadMyStories()
       e.target.value = ''
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Erro ao enviar story'
@@ -205,6 +256,48 @@ export default function DashboardClient() {
     } finally {
       setStoryUploading(false)
       e.target.value = ''
+    }
+  }
+
+  const handleDeleteStory = async (id: string) => {
+    if (!confirm('Excluir esta story? Não dá para desfazer.')) return
+    setStoryDeletingId(id)
+    try {
+      const res = await fetch(`/api/stories/${id}`, { method: 'DELETE', credentials: 'include' })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        toast.error((data as { error?: string }).error || 'Erro ao excluir')
+        return
+      }
+      toast.success('Story excluída.')
+      setMyStories((prev) => prev.filter((s) => s.id !== id))
+      if (editingStory?.id === id) setEditingStory(null)
+    } finally {
+      setStoryDeletingId(null)
+    }
+  }
+
+  const handleSaveStoryText = async () => {
+    if (!editingStory) return
+    setStorySaveLoading(true)
+    try {
+      const res = await fetch(`/api/stories/${editingStory.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ text: editingStory.text }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        toast.error((data as { error?: string }).error || 'Erro ao salvar')
+        return
+      }
+      const t = (data as { text?: string }).text ?? editingStory.text
+      setMyStories((prev) => prev.map((s) => (s.id === editingStory.id ? { ...s, text: t } : s)))
+      setEditingStory(null)
+      toast.success('Texto atualizado.')
+    } finally {
+      setStorySaveLoading(false)
     }
   }
 
@@ -272,6 +365,154 @@ export default function DashboardClient() {
             Nova story
           </label>
         </div>
+      </div>
+
+      {/* Os meus stories */}
+      <div className="mt-6 rounded-xl border border-slate-700 bg-slate-800/50 p-4">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-slate-400">
+            <ImagePlus className="h-4 w-4" />
+            Os meus stories
+          </h3>
+          <button
+            type="button"
+            onClick={loadMyStories}
+            disabled={storiesLoading}
+            className="text-xs font-medium text-primary-400 hover:underline disabled:opacity-50"
+          >
+            {storiesLoading ? 'A carregar…' : 'Atualizar lista'}
+          </button>
+        </div>
+        {storiesLoading && myStories.length === 0 ? (
+          <div className="flex items-center gap-2 py-6 text-slate-400">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            A carregar as suas stories…
+          </div>
+        ) : myStories.length === 0 ? (
+          <p className="py-2 text-sm text-slate-400">
+            Ainda não tem stories publicadas. Use &quot;Nova story&quot; acima para publicar.
+          </p>
+        ) : (
+          <ul className="space-y-3">
+            {myStories.map((s) => (
+              <li
+                key={s.id}
+                className="flex flex-col gap-3 rounded-lg border border-slate-600/80 bg-slate-900/40 p-3 sm:flex-row sm:items-stretch"
+              >
+                <div className="shrink-0 sm:w-24">
+                  {s.file && s.type === 'video' ? (
+                    <video
+                      src={s.file}
+                      className="h-28 w-full rounded-md object-cover sm:h-24 sm:w-24"
+                      muted
+                      playsInline
+                      preload="metadata"
+                    />
+                  ) : s.file ? (
+                    <img src={s.file} alt="" className="h-28 w-full rounded-md object-cover sm:h-24 sm:w-24" />
+                  ) : (
+                    <div className="flex h-28 items-center justify-center rounded-md bg-slate-700 text-xs text-slate-500 sm:h-24 sm:w-24">
+                      Sem ficheiro
+                    </div>
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2 text-xs">
+                    <span
+                      className={`rounded px-2 py-0.5 font-medium ${
+                        s.active ? 'bg-emerald-500/20 text-emerald-300' : 'bg-slate-600 text-slate-300'
+                      }`}
+                    >
+                      {s.active ? 'Ativa' : 'Expirada / inativa'}
+                    </span>
+                    <span className="text-slate-500">{s.type === 'video' ? 'Vídeo' : 'Imagem'}</span>
+                    {s.expires_at && (
+                      <span className="text-slate-500">
+                        Expira: {formatExpiresAt(s.expires_at) ?? s.expires_at}
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-4 text-sm text-slate-300">
+                    <span className="inline-flex items-center gap-1" title="Visualizações">
+                      <Eye className="h-4 w-4 text-slate-500" />
+                      {s.views}
+                    </span>
+                    <span className="inline-flex items-center gap-1" title="Curtidas">
+                      <Heart className="h-4 w-4 text-slate-500" />
+                      {s.likesCount}
+                    </span>
+                    <span className="inline-flex items-center gap-1" title="Comentários">
+                      <MessageCircle className="h-4 w-4 text-slate-500" />
+                      {s.commentsCount}
+                    </span>
+                  </div>
+                  {editingStory?.id === s.id ? (
+                    <div className="mt-2 space-y-2">
+                      <textarea
+                        value={editingStory.text}
+                        onChange={(e) => setEditingStory({ ...editingStory, text: e.target.value })}
+                        rows={3}
+                        maxLength={2000}
+                        className="w-full rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                        placeholder="Legenda da story (opcional)"
+                      />
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={handleSaveStoryText}
+                          disabled={storySaveLoading}
+                          className="inline-flex items-center gap-1 rounded-lg bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-500 disabled:opacity-50"
+                        >
+                          {storySaveLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                          Guardar texto
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditingStory(null)}
+                          disabled={storySaveLoading}
+                          className="rounded-lg border border-slate-600 px-3 py-1.5 text-sm text-slate-300 hover:bg-slate-700 disabled:opacity-50"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      {s.text ? (
+                        <p className="mt-2 line-clamp-3 text-sm text-slate-300">{s.text}</p>
+                      ) : (
+                        <p className="mt-2 text-sm italic text-slate-500">Sem legenda</p>
+                      )}
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setEditingStory({ id: s.id, text: s.text })}
+                          className="inline-flex items-center gap-1 rounded-lg border border-slate-600 px-3 py-1.5 text-sm text-slate-200 hover:bg-slate-700"
+                        >
+                          <Edit className="h-3.5 w-3.5" />
+                          Editar texto
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteStory(s.id)}
+                          disabled={storyDeletingId === s.id}
+                          className="inline-flex items-center gap-1 rounded-lg border border-red-900/60 bg-red-950/30 px-3 py-1.5 text-sm text-red-200 hover:bg-red-950/50 disabled:opacity-50"
+                        >
+                          {storyDeletingId === s.id ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-3.5 w-3.5" />
+                          )}
+                          Excluir
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       {/* Plano atual */}

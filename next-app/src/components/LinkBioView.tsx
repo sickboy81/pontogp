@@ -7,6 +7,7 @@ import { MessageCircle } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
 import type { Profile } from '@/lib/types'
 import { socialProfileHref } from '@/lib/social-links'
+import { telegramContactHref, whatsAppContactHref } from '@/lib/contact-prefill'
 
 interface LinkBioViewProps {
   profile: Profile
@@ -151,7 +152,7 @@ export default function LinkBioView({ profile, profileUrl }: LinkBioViewProps) {
               )}
               {profile.whatsapp && (
                 <a
-                  href={`https://wa.me/${profile.whatsapp.replace(/\D/g, '')}`}
+                  href={whatsAppContactHref(profile.whatsapp, profileUrl)}
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() => trackClick('whatsapp')}
@@ -163,7 +164,7 @@ export default function LinkBioView({ profile, profileUrl }: LinkBioViewProps) {
               )}
               {profile.telegram && (
                 <a
-                  href={`https://t.me/${profile.telegram.replace('@', '')}`}
+                  href={telegramContactHref(profile.telegram, profileUrl)}
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() => trackClick('telegram')}

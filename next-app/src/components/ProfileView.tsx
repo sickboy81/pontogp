@@ -13,6 +13,7 @@ import ProfileImageWithWatermark from '@/components/ProfileImageWithWatermark'
 import toast from 'react-hot-toast'
 import { socialProfileHref } from '@/lib/social-links'
 import { profileTagSearchPath } from '@/lib/profile-tag-search'
+import { telegramContactHref, whatsAppContactHref } from '@/lib/contact-prefill'
 
 interface ProfileViewProps {
   profile: Profile
@@ -440,7 +441,7 @@ export default function ProfileView({ profile, profileUrl, openStories = false }
                   )}
                   {profile.whatsapp && (
                     <a
-                      href={`https://wa.me/${profile.whatsapp.replace(/\D/g, '')}`}
+                      href={whatsAppContactHref(profile.whatsapp, profileUrl)}
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={() => trackClick('whatsapp')}
@@ -452,7 +453,7 @@ export default function ProfileView({ profile, profileUrl, openStories = false }
                   )}
                   {profile.telegram && (
                     <a
-                      href={`https://t.me/${profile.telegram.replace('@', '')}`}
+                      href={telegramContactHref(profile.telegram, profileUrl)}
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={() => trackClick('telegram')}
