@@ -10,7 +10,7 @@ function getToken(request: NextRequest): string | null {
   return getAuthCookieFromHeader(request.headers.get('cookie'))
 }
 
-/** POST: toggle curtida (curtir / descurtir). Retorna { liked, count }. */
+/** POST: toggle curtida (só utilizador autenticado). Retorna { liked, count }. */
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -54,7 +54,7 @@ export async function POST(
         { headers: countHeaders, cache: 'no-store' }
       )
       const total = countRes.ok ? ((await countRes.json()) as { totalItems?: number }).totalItems ?? 0 : 0
-      return Response.json({ liked: false, count: Math.max(0, total - 1) })
+      return Response.json({ liked: false, count: Math.max(0, total) })
     }
 
     const createRes = await fetch(`${PB_URL}/api/collections/story_likes/records`, {

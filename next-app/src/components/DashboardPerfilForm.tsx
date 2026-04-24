@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, ImagePlus, Loader2, Mic, Save, Trash2, Video, Settings, BarChart3, Link2, Copy, TrendingUp, Clock, Target, Lightbulb, GripVertical } from 'lucide-react'
+import { ArrowLeft, ImagePlus, Loader2, Mic, Plus, Save, Trash2, Video, Settings, BarChart3, Link2, Copy, TrendingUp, Clock, Target, Lightbulb, GripVertical } from 'lucide-react'
 import type { Profile, Schedule } from '@/lib/types'
 import {
   CATEGORIES, GENDERS, STATES, ETHNICITIES, HAIR_COLORS, BODY_TYPES, BREAST_TYPES, PUBIS_TYPES,
@@ -61,10 +61,8 @@ type FormData = {
   bio_button_color: string
   bio_links: Array<{ label: string; url: string; type?: string; enabled?: boolean }>
   bio_avatar_index: number
-  price_30min: string
-  price_1h: string
-  price_2h: string
-  price_overnight: string
+  /** Linhas livres: o que oferece + valor (R$). */
+  price_rows: Array<{ description: string; price: string }>
   location_lat: string
   location_lng: string
   location_approximate: boolean
@@ -117,13 +115,25 @@ const emptyForm: FormData = {
   bio_button_color: '',
   bio_links: [],
   bio_avatar_index: 0,
-  price_30min: '',
-  price_1h: '',
-  price_2h: '',
-  price_overnight: '',
+  price_rows: [{ description: '', price: '' }],
   location_lat: '',
   location_lng: '',
   location_approximate: true,
+}
+
+function profilePriceRowsFromProfile(p: Profile): Array<{ description: string; price: string }> {
+  if (p.prices?.length) {
+    return p.prices.map((row) => ({
+      description: row.description ?? '',
+      price: row.price != null ? String(row.price) : '',
+    }))
+  }
+  const legacy: Array<{ description: string; price: string }> = []
+  if (p.price_30min != null) legacy.push({ description: '30 min', price: String(p.price_30min) })
+  if (p.price_1h != null) legacy.push({ description: '1h', price: String(p.price_1h) })
+  if (p.price_2h != null) legacy.push({ description: '2h', price: String(p.price_2h) })
+  if (p.price_overnight != null) legacy.push({ description: 'Pernoite', price: String(p.price_overnight) })
+  return legacy.length > 0 ? legacy : [{ description: '', price: '' }]
 }
 
 function profileToForm(p: Profile | null): FormData {
@@ -175,10 +185,7 @@ function profileToForm(p: Profile | null): FormData {
     bio_button_color: p.bio_button_color ?? '',
     bio_links: Array.isArray(p.bio_links) ? p.bio_links.map((l) => ({ label: l?.label ?? '', url: l?.url ?? '', type: (l as { type?: string })?.type ?? 'custom', enabled: (l as { enabled?: boolean })?.enabled !== false })) : [],
     bio_avatar_index: p.bio_avatar_index != null ? p.bio_avatar_index : 0,
-    price_30min: p.price_30min != null ? String(p.price_30min) : '',
-    price_1h: p.price_1h != null ? String(p.price_1h) : '',
-    price_2h: p.price_2h != null ? String(p.price_2h) : '',
-    price_overnight: p.price_overnight != null ? String(p.price_overnight) : '',
+    price_rows: profilePriceRowsFromProfile(p),
     location_lat: p.location_lat != null ? String(p.location_lat) : '',
     location_lng: p.location_lng != null ? String(p.location_lng) : '',
     location_approximate: p.location_approximate ?? true,
@@ -430,6 +437,38 @@ export default function DashboardPerfilForm() {
     setError(null)
     setSaving(true)
     try {
+      const parsePrice = (s: string) => {
+        const t = s.trim().replace(/\s/g, '').replace(',', '.')
+        if (!t) return NaN
+        return Number(t)
+      }
+      const halfRow = form.price_rows.some((r) => {
+        const d = r.description.trim()
+        const hasP = r.price.trim().length > 0
+        return (d && !hasP) || (!d && hasP)
+      })
+      if (halfRow) {
+        setError('Em cada linha de preço, preencha o nome e o valor em R$, ou deixe a linha totalmente vazia.')
+        setSaving(false)
+        return
+      }
+      const badPrice = form.price_rows.some((r) => {
+        if (!r.description.trim()) return false
+        const pr = parsePrice(r.price)
+        return !Number.isFinite(pr) || pr < 0
+      })
+      if (badPrice) {
+        setError('Verifique os valores em R$ (use números, por exemplo 150 ou 199,90).')
+        setSaving(false)
+        return
+      }
+      const pricesPayload = form.price_rows
+        .map((r) => ({
+          description: r.description.trim(),
+          price: parsePrice(r.price),
+        }))
+        .filter((r) => r.description && Number.isFinite(r.price) && r.price >= 0)
+
       const body = {
         name: form.name.trim(),
         age: Number(form.age) || 18,
@@ -477,10 +516,11 @@ export default function DashboardPerfilForm() {
         bio_button_color: form.display_mode === 'link_bio' && form.bio_button_color ? form.bio_button_color : null,
         bio_links: form.display_mode === 'link_bio' && form.bio_links.length > 0 ? form.bio_links.filter((l) => l.enabled !== false && l.label.trim() && l.url.trim()).map((l) => ({ label: l.label.trim(), url: l.url.trim() })) : null,
         bio_avatar_index: form.display_mode === 'link_bio' ? form.bio_avatar_index : null,
-        price_30min: form.price_30min ? Number(form.price_30min) : null,
-        price_1h: form.price_1h ? Number(form.price_1h) : null,
-        price_2h: form.price_2h ? Number(form.price_2h) : null,
-        price_overnight: form.price_overnight ? Number(form.price_overnight) : null,
+        prices: pricesPayload.length > 0 ? pricesPayload : null,
+        price_30min: null,
+        price_1h: null,
+        price_2h: null,
+        price_overnight: null,
         location_lat: form.location_lat ? Number(form.location_lat) : null,
         location_lng: form.location_lng ? Number(form.location_lng) : null,
         location_approximate: form.location_approximate,
@@ -1134,52 +1174,82 @@ export default function DashboardPerfilForm() {
         </div>
 
         <div className="border-t border-slate-700 pt-4">
-          <h3 className="mb-3 font-medium text-slate-300">Preços (R$)</h3>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label className="mb-1 block text-xs text-slate-500">30 min</label>
-              <input
-                type="number"
-                min={0}
-                step={0.01}
-                value={form.price_30min}
-                onChange={(e) => setForm((f) => ({ ...f, price_30min: e.target.value }))}
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs text-slate-500">1h</label>
-              <input
-                type="number"
-                min={0}
-                step={0.01}
-                value={form.price_1h}
-                onChange={(e) => setForm((f) => ({ ...f, price_1h: e.target.value }))}
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs text-slate-500">2h</label>
-              <input
-                type="number"
-                min={0}
-                step={0.01}
-                value={form.price_2h}
-                onChange={(e) => setForm((f) => ({ ...f, price_2h: e.target.value }))}
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs text-slate-500">Pernoite</label>
-              <input
-                type="number"
-                min={0}
-                step={0.01}
-                value={form.price_overnight}
-                onChange={(e) => setForm((f) => ({ ...f, price_overnight: e.target.value }))}
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-              />
-            </div>
+          <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <h3 className="font-medium text-slate-300">Preços (R$)</h3>
+            <p className="max-w-md text-xs leading-relaxed text-slate-500 sm:text-right">
+              Em cada linha escreva <span className="text-slate-400">o que é a tarifa</span> e o{' '}
+              <span className="text-slate-400">valor</span>. Ex.: «1 hora» + 350 · «Pernoite» + 1200 · «Videochamada 15
+              min» + 80 · «Pacote dia inteiro» + 2500
+            </p>
+          </div>
+          <div className="space-y-3">
+            {form.price_rows.map((row, idx) => (
+              <div key={idx} className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                <div className="min-w-0 flex-1">
+                  <label className="mb-1 block text-xs text-slate-500">O que inclui / nome da tarifa</label>
+                  <input
+                    type="text"
+                    value={row.description}
+                    onChange={(e) =>
+                      setForm((f) => {
+                        const price_rows = [...f.price_rows]
+                        price_rows[idx] = { ...price_rows[idx], description: e.target.value }
+                        return { ...f, price_rows }
+                      })
+                    }
+                    placeholder="Ex.: 30 minutos, Diária, Só massagem…"
+                    className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white placeholder-slate-600 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                  />
+                </div>
+                <div className="w-full sm:w-36">
+                  <label className="mb-1 block text-xs text-slate-500">Valor (R$)</label>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={row.price}
+                    onChange={(e) =>
+                      setForm((f) => {
+                        const price_rows = [...f.price_rows]
+                        price_rows[idx] = { ...price_rows[idx], price: e.target.value }
+                        return { ...f, price_rows }
+                      })
+                    }
+                    placeholder="0 ou 150"
+                    className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white placeholder-slate-600 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                  />
+                </div>
+                {form.price_rows.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setForm((f) => ({
+                        ...f,
+                        price_rows: f.price_rows.filter((_, i) => i !== idx),
+                      }))
+                    }
+                    className="flex shrink-0 items-center justify-center rounded-lg border border-slate-600 p-2 text-slate-400 hover:border-red-500/50 hover:bg-red-500/10 hover:text-red-300 sm:mb-0.5"
+                    aria-label="Remover linha de preço"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+            ))}
+            {form.price_rows.length < 15 && (
+              <button
+                type="button"
+                onClick={() =>
+                  setForm((f) => ({
+                    ...f,
+                    price_rows: [...f.price_rows, { description: '', price: '' }],
+                  }))
+                }
+                className="inline-flex items-center gap-2 rounded-lg border border-dashed border-slate-600 px-3 py-2 text-sm text-slate-400 transition hover:border-primary-500/50 hover:text-primary-300"
+              >
+                <Plus className="h-4 w-4" />
+                Adicionar outra tarifa
+              </button>
+            )}
           </div>
         </div>
           </>

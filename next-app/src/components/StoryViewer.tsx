@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
-import { X, ChevronLeft, ChevronRight, Heart, MessageCircle } from 'lucide-react'
+import { X, Heart, MessageCircle, Volume2, VolumeX } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAuthStore } from '@/store/auth'
 
@@ -28,7 +28,10 @@ interface StoryViewerProps {
   onClose: () => void
 }
 
-const AUTO_NEXT_MS = 6000
+const AUTO_NEXT_MS = 7000
+const SWIPE_MIN = 56
+const TAP_MAX_MOVE = 18
+const TAP_MAX_MS = 320
 
 export default function StoryViewer({ stories, initialIndex = 0, onClose }: StoryViewerProps) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex)
@@ -39,8 +42,15 @@ export default function StoryViewer({ stories, initialIndex = 0, onClose }: Stor
   const [commentSending, setCommentSending] = useState(false)
   const [likeLoading, setLikeLoading] = useState(false)
   const [showComments, setShowComments] = useState(false)
+  const [isPaused, setIsPaused] = useState(false)
+  const [videoMuted, setVideoMuted] = useState(true)
+  const [heartBurst, setHeartBurst] = useState(false)
   const user = useAuthStore((s) => s.user)
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const touchStart = useRef<{ y: number; x: number; t: number } | null>(null)
+  const lastTap = useRef<{ t: number; x: number; y: number } | null>(null)
 
   const story = stories[currentIndex]
   const hasNext = currentIndex < stories.length - 1
@@ -50,6 +60,8 @@ export default function StoryViewer({ stories, initialIndex = 0, onClose }: Stor
     if (hasNext) {
       setCurrentIndex((i) => i + 1)
       setProgress(0)
+      setIsPaused(false)
+      setVideoMuted(true)
     } else {
       onClose()
     }
@@ -59,11 +71,26 @@ export default function StoryViewer({ stories, initialIndex = 0, onClose }: Stor
     if (hasPrev) {
       setCurrentIndex((i) => i - 1)
       setProgress(0)
+      setIsPaused(false)
+      setVideoMuted(true)
     }
   }, [hasPrev])
 
   useEffect(() => {
-    if (!story || story.type === 'video') return
+    const v = videoRef.current
+    if (!v) return
+    if (story?.type === 'video') {
+      v.muted = videoMuted
+      if (isPaused || showComments) {
+        v.pause()
+      } else {
+        v.play().catch(() => {})
+      }
+    }
+  }, [story?.type, story?.file, isPaused, showComments, videoMuted, currentIndex])
+
+  useEffect(() => {
+    if (!story || story.type === 'video' || isPaused || showComments) return
     const start = Date.now()
     const t = setInterval(() => {
       const elapsed = Date.now() - start
@@ -74,13 +101,17 @@ export default function StoryViewer({ stories, initialIndex = 0, onClose }: Stor
       }
     }, 50)
     return () => clearInterval(t)
-  }, [currentIndex, story?.type, goNext])
+  }, [currentIndex, story?.type, story?.id, goNext, isPaused, showComments])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
-      if (e.key === 'ArrowRight') goNext()
-      if (e.key === 'ArrowLeft') goPrev()
+      if (e.key === 'ArrowDown' || e.key === 'ArrowRight') goNext()
+      if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') goPrev()
+      if (e.key === ' ') {
+        e.preventDefault()
+        setIsPaused((p) => !p)
+      }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -90,6 +121,7 @@ export default function StoryViewer({ stories, initialIndex = 0, onClose }: Stor
     if (!story?.id) return
     setLikes({ count: 0, liked: false })
     setComments([])
+    setIsPaused(false)
     fetch(`/api/stories/${story.id}/likes`, { credentials: 'include' })
       .then((r) => r.json())
       .then((d) => setLikes({ count: d.count ?? 0, liked: !!d.liked }))
@@ -132,6 +164,17 @@ export default function StoryViewer({ stories, initialIndex = 0, onClose }: Stor
       .finally(() => setLikeLoading(false))
   }, [story?.id, likeLoading, isAuthenticated])
 
+  const triggerDoubleTapLike = useCallback(() => {
+    setHeartBurst(true)
+    window.setTimeout(() => setHeartBurst(false), 900)
+    if (!isAuthenticated) {
+      toast.error('Faça login para curtir')
+      return
+    }
+    if (!story?.id || likeLoading) return
+    if (!likes.liked) handleLike()
+  }, [isAuthenticated, story?.id, likes.liked, likeLoading, handleLike])
+
   const handleCommentSubmit = useCallback(
     (e: React.FormEvent) => {
       e.preventDefault()
@@ -170,23 +213,67 @@ export default function StoryViewer({ stories, initialIndex = 0, onClose }: Stor
         })
         .finally(() => setCommentSending(false))
     },
-    [story?.id, commentInput, commentSending, user?.name]
+    [story?.id, commentInput, commentSending, user?.name, user?.first_name, user?.last_name, user?.email]
   )
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    const p = e.touches[0]
+    touchStart.current = { y: p.clientY, x: p.clientX, t: Date.now() }
+  }
+
+  const onTouchEnd = (e: React.TouchEvent) => {
+    const start = touchStart.current
+    touchStart.current = null
+    if (!start) return
+    const p = e.changedTouches[0]
+    const dy = start.y - p.clientY
+    const dx = p.clientX - start.x
+    const dt = Date.now() - start.t
+    const moved = Math.hypot(dx, dy)
+
+    if (moved < TAP_MAX_MOVE && dt < TAP_MAX_MS) {
+      const prev = lastTap.current
+      lastTap.current = { t: Date.now(), x: p.clientX, y: p.clientY }
+      if (prev && Date.now() - prev.t < 350 && Math.hypot(p.clientX - prev.x, p.clientY - prev.y) < 40) {
+        lastTap.current = null
+        triggerDoubleTapLike()
+        return
+      }
+      setIsPaused((p) => !p)
+      return
+    }
+
+    if (Math.abs(dy) >= SWIPE_MIN && Math.abs(dy) > Math.abs(dx) * 0.7) {
+      if (dy > 0) goNext()
+      else goPrev()
+    }
+  }
+
+  const onWheel = (e: React.WheelEvent) => {
+    if (Math.abs(e.deltaY) < 40) return
+    e.preventDefault()
+    if (e.deltaY > 0) goNext()
+    else goPrev()
+  }
 
   if (!story) return null
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black">
-      <div className="absolute inset-0 flex flex-col">
-        {/* Progress bars */}
-        <div className="flex gap-1 p-2">
+    <div className="fixed inset-0 z-[100] flex justify-center bg-black">
+      <div
+        className="relative h-[100dvh] w-full max-w-[430px] touch-pan-y overflow-hidden shadow-2xl shadow-black/50"
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
+        onWheel={onWheel}
+        role="application"
+        aria-label="Stories"
+      >
+        {/* Barras de progresso (tipo TikTok / IG) */}
+        <div className="pointer-events-none absolute left-0 right-0 top-0 z-20 flex gap-1 px-2 pt-[max(0.5rem,env(safe-area-inset-top))]">
           {stories.map((_, i) => (
-            <div
-              key={stories[i].id}
-              className="h-0.5 flex-1 overflow-hidden rounded-full bg-white/30"
-            >
+            <div key={stories[i].id} className="h-0.5 flex-1 overflow-hidden rounded-full bg-white/25">
               <div
-                className="h-full bg-white transition-all duration-75"
+                className="h-full bg-white transition-[width] duration-75 ease-linear"
                 style={{
                   width: i < currentIndex ? '100%' : i === currentIndex ? `${progress}%` : '0%',
                 }}
@@ -195,160 +282,191 @@ export default function StoryViewer({ stories, initialIndex = 0, onClose }: Stor
           ))}
         </div>
 
-        {/* Header: profile + close */}
-        <div className="absolute left-0 right-0 top-12 z-10 flex items-center justify-between px-4">
-          <div className="flex items-center gap-3">
-            {story.profile?.thumbnail ? (
-              <img
-                src={story.profile.thumbnail}
-                alt=""
-                className="h-10 w-10 rounded-full border-2 border-white object-cover"
-              />
-            ) : (
-              <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-white bg-slate-600 text-sm font-bold text-white">
-                {story.profile?.name?.charAt(0) || '?'}
-              </div>
-            )}
-            <span className="font-semibold text-white">{story.profile?.name || 'Story'}</span>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-full p-2 text-white/90 hover:bg-white/20"
-            aria-label="Fechar"
-          >
-            <X className="h-6 w-6" />
-          </button>
-        </div>
+        {/* Mídia full-bleed vertical */}
+        <div className="absolute inset-0 bg-black">
+          {story.type === 'video' ? (
+            <video
+              ref={videoRef}
+              src={story.file}
+              className="h-full w-full object-cover"
+              playsInline
+              muted={videoMuted}
+              loop={false}
+              onEnded={goNext}
+            />
+          ) : (
+            <img
+              src={story.file}
+              alt=""
+              className="h-full w-full object-cover"
+              draggable={false}
+            />
+          )}
 
-        {/* Content area - tap zones */}
-        <div className="flex flex-1 items-center justify-center">
+          {/* Toque único: pausar / retomar (área central; não cobre a rail direita) */}
           <button
             type="button"
-            className="absolute left-0 top-0 bottom-28 z-10 w-1/3 cursor-default focus:outline-none md:w-1/4"
-            onClick={goPrev}
-            aria-label="Anterior"
-          />
-          <button
-            type="button"
-            className="absolute right-0 top-0 bottom-28 z-10 w-1/3 cursor-default focus:outline-none md:w-1/4"
-            onClick={goNext}
-            aria-label="Próximo"
+            aria-label={isPaused ? 'Retomar' : 'Pausar'}
+            className="absolute inset-y-0 left-0 right-20 z-10 cursor-default bg-transparent md:right-24"
+            onClick={() => setIsPaused((p) => !p)}
           />
 
-          <div className="relative max-h-full w-full max-w-lg">
-            {story.type === 'video' ? (
-              <video
-                src={story.file}
-                controls
-                autoPlay
-                playsInline
-                className="max-h-[85vh] w-full object-contain"
-                onEnded={goNext}
-              />
-            ) : (
-              <img
-                src={story.file}
-                alt=""
-                className="max-h-[85vh] w-full object-contain"
-              />
-            )}
-            {story.text && (
-              <p className="absolute bottom-4 left-4 right-4 rounded-lg bg-black/50 px-3 py-2 text-sm text-white">
-                {story.text}
-              </p>
-            )}
-          </div>
-        </div>
+          {heartBurst && (
+            <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center">
+              <Heart className="h-28 w-28 animate-ping text-red-500/90 drop-shadow-lg" fill="currentColor" />
+            </div>
+          )}
 
-        {/* Like + Comment + Nav — z-30 acima das zonas de toque anterior/próximo (z-10) */}
-        <div className="absolute bottom-4 left-0 right-0 z-30 flex items-end justify-between px-4">
-          <div className="flex items-center gap-3">
+          {/* Gradientes */}
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/70 to-transparent" />
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+
+          {/* Cabeçalho: avatar + nome */}
+          <div className="absolute left-0 right-0 top-0 z-30 flex items-center justify-between pl-3 pr-2 pt-[max(0.75rem,env(safe-area-inset-top))]">
+            <div className="flex min-w-0 flex-1 items-center gap-2.5 pr-2">
+              {story.profile?.thumbnail ? (
+                <img
+                  src={story.profile.thumbnail}
+                  alt=""
+                  className="h-11 w-11 shrink-0 rounded-full border-2 border-white object-cover ring-2 ring-white/20"
+                />
+              ) : (
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 border-white bg-white/10 text-sm font-bold text-white ring-2 ring-white/20">
+                  {story.profile?.name?.charAt(0) || '?'}
+                </div>
+              )}
+              <span className="truncate text-sm font-semibold tracking-tight text-white drop-shadow-md">
+                {story.profile?.name || 'Story'}
+              </span>
+            </div>
             <button
               type="button"
-              onClick={handleLike}
+              onClick={onClose}
+              className="shrink-0 rounded-full p-2 text-white hover:bg-white/15"
+              aria-label="Fechar"
+            >
+              <X className="h-7 w-7" />
+            </button>
+          </div>
+
+          {/* Legenda em baixo (estilo TikTok) */}
+          {story.text ? (
+            <div className="absolute bottom-0 left-0 right-20 z-30 px-4 pb-[max(5.5rem,env(safe-area-inset-bottom))] md:right-24">
+              <p className="text-sm leading-snug text-white drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)]">{story.text}</p>
+            </div>
+          ) : null}
+
+          {/* Rail direita: som, curtir, comentar */}
+          <div
+            className="absolute bottom-0 right-2 z-40 flex flex-col items-center gap-5 pb-[max(5rem,env(safe-area-inset-bottom))] pt-24"
+            onTouchStart={(e) => e.stopPropagation()}
+            onTouchEnd={(e) => e.stopPropagation()}
+          >
+            {story.type === 'video' && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setVideoMuted((m) => !m)
+                }}
+                className="flex h-12 w-12 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur-sm hover:bg-black/50"
+                aria-label={videoMuted ? 'Ativar som' : 'Silenciar'}
+              >
+                {videoMuted ? <VolumeX className="h-6 w-6" /> : <Volume2 className="h-6 w-6" />}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                handleLike()
+              }}
               disabled={likeLoading}
-              className="flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-2 text-white hover:bg-white/30 disabled:opacity-60"
+              className="flex flex-col items-center gap-1 text-white drop-shadow-md disabled:opacity-60"
               aria-label={likes.liked ? 'Descurtir' : 'Curtir'}
             >
-              <Heart className={`h-5 w-5 ${likes.liked ? 'fill-red-400 text-red-400' : ''}`} />
-              <span className="text-sm font-medium">{likes.count}</span>
+              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-black/35 backdrop-blur-sm hover:bg-black/50">
+                <Heart className={`h-7 w-7 ${likes.liked ? 'fill-red-500 text-red-500' : ''}`} />
+              </span>
+              <span className="text-xs font-semibold tabular-nums">{likes.count > 999 ? '999+' : likes.count}</span>
             </button>
             <button
               type="button"
-              onClick={() => setShowComments((v) => !v)}
-              className="flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-2 text-white hover:bg-white/30"
+              onClick={(e) => {
+                e.stopPropagation()
+                setShowComments((v) => !v)
+                setIsPaused(true)
+              }}
+              className="flex flex-col items-center gap-1 text-white drop-shadow-md"
               aria-label="Comentários"
             >
-              <MessageCircle className="h-5 w-5" />
-              <span className="text-sm font-medium">{comments.length}</span>
-            </button>
-          </div>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={goPrev}
-              className="rounded-full bg-white/20 p-2 text-white hover:bg-white/30 disabled:invisible"
-              disabled={!hasPrev}
-              aria-label="Anterior"
-            >
-              <ChevronLeft className="h-6 w-6" />
-            </button>
-            <button
-              type="button"
-              onClick={goNext}
-              className="rounded-full bg-white/20 p-2 text-white hover:bg-white/30"
-              aria-label="Próximo"
-            >
-              <ChevronRight className="h-6 w-6" />
+              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-black/35 backdrop-blur-sm hover:bg-black/50">
+                <MessageCircle className="h-7 w-7" />
+              </span>
+              <span className="text-xs font-semibold tabular-nums">{comments.length > 999 ? '999+' : comments.length}</span>
             </button>
           </div>
         </div>
 
-        {/* Comments panel */}
+        {/* Indicador pausa */}
+        {isPaused && !showComments && (
+          <div className="pointer-events-none absolute left-1/2 top-1/2 z-[24] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/40 bg-black/40 px-4 py-2 text-xs font-medium text-white/90 backdrop-blur-sm">
+            Pausado · deslize ↑ próximo
+          </div>
+        )}
+
+        {/* Sheet comentários (de baixo, estilo mobile) */}
         {showComments && (
-          <div className="absolute right-0 top-0 bottom-0 z-40 flex w-full max-w-sm flex-col border-l border-white/20 bg-black/80 backdrop-blur sm:w-96">
-            <div className="flex items-center justify-between border-b border-white/20 p-3">
+          <div className="absolute inset-x-0 bottom-0 z-50 flex max-h-[58vh] flex-col rounded-t-2xl border border-white/10 bg-zinc-950/95 shadow-[0_-8px_40px_rgba(0,0,0,0.6)] backdrop-blur-md">
+            <div className="flex shrink-0 items-center justify-between border-b border-white/10 px-4 py-3">
               <span className="text-sm font-semibold text-white">Comentários</span>
-              <button type="button" onClick={() => setShowComments(false)} className="rounded p-1 text-white/80 hover:bg-white/20">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowComments(false)
+                  setIsPaused(false)
+                }}
+                className="rounded-full p-2 text-white/80 hover:bg-white/10"
+                aria-label="Fechar comentários"
+              >
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto p-3 space-y-2">
+            <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 py-2">
               {comments.length === 0 ? (
-                <p className="text-center text-sm text-white/60">Nenhum comentário ainda.</p>
+                <p className="py-6 text-center text-sm text-white/50">Nenhum comentário ainda.</p>
               ) : (
                 comments.map((c) => (
-                  <div key={c.id} className="rounded-lg bg-white/10 px-3 py-2 text-sm">
-                    <p className="font-medium text-white">{c.userName}</p>
+                  <div key={c.id} className="rounded-xl bg-white/5 px-3 py-2.5 text-sm">
+                    <p className="font-medium text-primary-300">{c.userName}</p>
                     <p className="text-white/90">{c.content}</p>
                   </div>
                 ))
               )}
             </div>
             {isAuthenticated ? (
-              <form onSubmit={handleCommentSubmit} className="border-t border-white/20 p-3">
+              <form onSubmit={handleCommentSubmit} className="shrink-0 border-t border-white/10 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
                 <div className="flex gap-2">
                   <input
                     type="text"
                     value={commentInput}
                     onChange={(e) => setCommentInput(e.target.value)}
-                    placeholder="Comentar..."
+                    placeholder="Adicionar comentário..."
                     maxLength={500}
-                    className="flex-1 rounded-lg border border-white/30 bg-white/10 px-3 py-2 text-sm text-white placeholder:text-white/50 focus:border-primary-400 focus:outline-none"
+                    className="min-w-0 flex-1 rounded-xl border border-white/15 bg-white/5 px-3 py-2.5 text-sm text-white placeholder:text-white/40 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
                   />
                   <button
                     type="submit"
                     disabled={commentSending || !commentInput.trim()}
-                    className="rounded-lg bg-primary-500 px-4 py-2 text-sm font-medium text-white hover:bg-primary-600 disabled:opacity-50"
+                    className="shrink-0 rounded-xl bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-500 disabled:opacity-45"
                   >
-                    {commentSending ? '...' : 'Enviar'}
+                    {commentSending ? '…' : 'Enviar'}
                   </button>
                 </div>
               </form>
             ) : (
-              <div className="border-t border-white/20 p-3 text-center text-sm text-white/80">
-                <Link href="/login" className="font-medium text-primary-400 underline hover:text-primary-300">
+              <div className="shrink-0 border-t border-white/10 p-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-center text-sm text-white/70">
+                <Link href="/login" className="font-semibold text-primary-400 underline hover:text-primary-300">
                   Entre
                 </Link>{' '}
                 para comentar.
