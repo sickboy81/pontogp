@@ -296,7 +296,7 @@ export default function PlanosClient() {
         </button>
       </div>
 
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(240px,280px))] justify-center gap-6">
         {plans.map((plan) => {
           const price = getPrice(plan)
           const currentProfile = profiles[0]

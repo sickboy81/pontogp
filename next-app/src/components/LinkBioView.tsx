@@ -202,7 +202,7 @@ export default function LinkBioView({ profile, profileUrl }: LinkBioViewProps) {
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={() => trackClick('instagram')}
-                    className="flex items-center justify-center rounded-xl border border-pink-500/30 bg-pink-500/10 py-3 text-sm font-medium text-pink-200 transition hover:bg-pink-500/20"
+                    className="flex items-center justify-center rounded-xl bg-pink-600 py-3 text-sm font-medium text-white transition hover:bg-pink-500"
                   >
                     Instagram
                   </a>
@@ -213,7 +213,7 @@ export default function LinkBioView({ profile, profileUrl }: LinkBioViewProps) {
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={() => trackClick('twitter')}
-                    className="flex items-center justify-center rounded-xl border border-slate-500/40 bg-slate-800 py-3 text-sm font-medium text-slate-200 transition hover:bg-slate-700"
+                    className="flex items-center justify-center rounded-xl bg-slate-600 py-3 text-sm font-medium text-white transition hover:bg-slate-500"
                   >
                     X
                   </a>
@@ -224,7 +224,7 @@ export default function LinkBioView({ profile, profileUrl }: LinkBioViewProps) {
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={() => trackClick('privacy')}
-                    className="flex items-center justify-center rounded-xl border border-violet-500/30 bg-violet-500/10 py-3 text-sm font-medium text-violet-200 transition hover:bg-violet-500/20"
+                    className="flex items-center justify-center rounded-xl bg-orange-500 py-3 text-sm font-medium text-white transition hover:bg-orange-400"
                   >
                     Privacy
                   </a>
@@ -235,7 +235,7 @@ export default function LinkBioView({ profile, profileUrl }: LinkBioViewProps) {
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={() => trackClick('onlyfans')}
-                    className="flex items-center justify-center rounded-xl bg-pink-600 py-3 text-sm font-medium text-white transition hover:bg-pink-500"
+                    className="flex items-center justify-center rounded-xl bg-cyan-500 py-3 text-sm font-medium text-white transition hover:bg-cyan-400"
                   >
                     OnlyFans
                   </a>

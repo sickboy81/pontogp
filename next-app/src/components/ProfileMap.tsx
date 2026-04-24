@@ -21,23 +21,15 @@ export default function ProfileMap({ lat, lng, city, state, approximate, classNa
 
   return (
     <div className={className}>
-      <div className="mb-2 flex items-center justify-between">
+      <div className="mb-2 flex items-center">
         <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500">
           Localização
           {approximate && (
             <span className="ml-2 text-xs font-normal text-slate-400">(aproximada)</span>
           )}
         </h3>
-        <a
-          href={`https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}&zoom=14`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-xs text-primary-500 hover:underline"
-        >
-          Abrir em tela cheia
-        </a>
       </div>
-      <div className="overflow-hidden rounded-lg border border-slate-600 bg-slate-800">
+      <div className="overflow-hidden rounded-lg border border-slate-300 bg-white dark:border-slate-600 dark:bg-slate-800">
         <iframe
           title="Mapa de localização"
           src={embedUrl}
@@ -46,7 +38,7 @@ export default function ProfileMap({ lat, lng, city, state, approximate, classNa
           referrerPolicy="no-referrer-when-downgrade"
         />
         {city && state && (
-          <p className="border-t border-slate-700 bg-slate-800/80 px-3 py-2 text-sm text-slate-300">
+          <p className="border-t border-slate-200 bg-slate-100 px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-300">
             {city}, {state}
           </p>
         )}

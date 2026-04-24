@@ -500,7 +500,7 @@ export default function ProfileView({
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={() => trackClick('instagram')}
-                        className="flex items-center gap-2 rounded-lg border border-pink-500/40 bg-pink-500/10 px-4 py-2 text-sm font-medium text-pink-200 hover:bg-pink-500/20"
+                        className="flex items-center gap-2 rounded-lg bg-pink-600 px-4 py-2 text-sm font-medium text-white hover:bg-pink-500"
                       >
                         Instagram
                       </a>
@@ -511,7 +511,7 @@ export default function ProfileView({
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={() => trackClick('twitter')}
-                        className="flex items-center gap-2 rounded-lg border border-slate-500/50 bg-slate-700/80 px-4 py-2 text-sm font-medium text-slate-100 hover:bg-slate-600"
+                        className="flex items-center gap-2 rounded-lg bg-slate-600 px-4 py-2 text-sm font-medium text-white hover:bg-slate-500"
                       >
                         X (Twitter)
                       </a>
@@ -522,7 +522,7 @@ export default function ProfileView({
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={() => trackClick('privacy')}
-                        className="flex items-center gap-2 rounded-lg border border-violet-500/40 bg-violet-500/10 px-4 py-2 text-sm font-medium text-violet-200 hover:bg-violet-500/20"
+                        className="flex items-center gap-2 rounded-lg bg-orange-500 px-4 py-2 text-sm font-medium text-white hover:bg-orange-400"
                       >
                         Privacy
                       </a>
@@ -533,7 +533,7 @@ export default function ProfileView({
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={() => trackClick('onlyfans')}
-                        className="flex items-center gap-2 rounded-lg bg-pink-600 px-4 py-2 text-sm font-medium text-white hover:bg-pink-500"
+                        className="flex items-center gap-2 rounded-lg bg-cyan-500 px-4 py-2 text-sm font-medium text-white hover:bg-cyan-400"
                       >
                         OnlyFans
                       </a>
