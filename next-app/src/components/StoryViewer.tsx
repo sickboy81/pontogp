@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
-import { X, Heart, MessageCircle, Volume2, VolumeX } from 'lucide-react'
+import { X, Heart, MessageCircle, Volume2, VolumeX, MoreVertical, Share2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAuthStore } from '@/store/auth'
+import { formatRelativeTime } from '@/utils/format'
 
 export interface StoryItem {
   id: string
@@ -26,6 +27,8 @@ interface StoryViewerProps {
   stories: StoryItem[]
   initialIndex?: number
   onClose: () => void
+  /** Pode ver menu de opções (ex.: denunciar): logado e não é o dono do perfil. */
+  canReport?: boolean
 }
 
 const AUTO_NEXT_MS = 7000
@@ -33,7 +36,27 @@ const SWIPE_MIN = 56
 const TAP_MAX_MOVE = 18
 const TAP_MAX_MS = 320
 
-export default function StoryViewer({ stories, initialIndex = 0, onClose }: StoryViewerProps) {
+/** Largura máx. do “telefone” no viewer: ~8% mais larga que 430px (largura comum de stories antiga). */
+const VIEWER_MAX_W = 500
+
+const STORY_REPORT_REASONS = [
+  { value: 'Conteúdo sexual explícito indevido', label: 'Conteúdo sexual explícito indevido' },
+  { value: 'Nudez ou pornografia proibida', label: 'Nudez ou pornografia proibida' },
+  { value: 'Violência, ódio ou assédio', label: 'Violência, ódio ou assédio' },
+  { value: 'Spam ou publicidade enganosa', label: 'Spam ou publicidade enganosa' },
+  { value: 'Fraude, golpe ou identidade falsa', label: 'Fraude, golpe ou identidade falsa' },
+  { value: 'Menor de idade ou exploração', label: 'Menor de idade ou exploração' },
+  { value: 'Drogas, armas ou atividades ilegais', label: 'Drogas, armas ou atividades ilegais' },
+  { value: 'Violação de direitos autorais', label: 'Violação de direitos autorais' },
+  { value: 'Outro', label: 'Outro' },
+] as const
+
+export default function StoryViewer({
+  stories,
+  initialIndex = 0,
+  onClose,
+  canReport = false,
+}: StoryViewerProps) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex)
   const [progress, setProgress] = useState(0)
   const [likes, setLikes] = useState({ count: 0, liked: false })
@@ -45,12 +68,18 @@ export default function StoryViewer({ stories, initialIndex = 0, onClose }: Stor
   const [isPaused, setIsPaused] = useState(false)
   const [videoMuted, setVideoMuted] = useState(true)
   const [heartBurst, setHeartBurst] = useState(false)
+  const [optionsOpen, setOptionsOpen] = useState(false)
+  const [reportOpen, setReportOpen] = useState(false)
+  const [reportReason, setReportReason] = useState('')
+  const [reportDescription, setReportDescription] = useState('')
+  const [reportSubmitting, setReportSubmitting] = useState(false)
   const user = useAuthStore((s) => s.user)
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
 
   const videoRef = useRef<HTMLVideoElement>(null)
   const touchStart = useRef<{ y: number; x: number; t: number } | null>(null)
   const lastTap = useRef<{ t: number; x: number; y: number } | null>(null)
+  const optionsMenuRef = useRef<HTMLDivElement | null>(null)
 
   const story = stories[currentIndex]
   const hasNext = currentIndex < stories.length - 1
@@ -81,16 +110,16 @@ export default function StoryViewer({ stories, initialIndex = 0, onClose }: Stor
     if (!v) return
     if (story?.type === 'video') {
       v.muted = videoMuted
-      if (isPaused || showComments) {
+      if (isPaused || showComments || reportOpen) {
         v.pause()
       } else {
         v.play().catch(() => {})
       }
     }
-  }, [story?.type, story?.file, isPaused, showComments, videoMuted, currentIndex])
+  }, [story?.type, story?.file, isPaused, showComments, reportOpen, videoMuted, currentIndex])
 
   useEffect(() => {
-    if (!story || story.type === 'video' || isPaused || showComments) return
+    if (!story || story.type === 'video' || isPaused || showComments || reportOpen) return
     const start = Date.now()
     const t = setInterval(() => {
       const elapsed = Date.now() - start
@@ -101,11 +130,30 @@ export default function StoryViewer({ stories, initialIndex = 0, onClose }: Stor
       }
     }, 50)
     return () => clearInterval(t)
-  }, [currentIndex, story?.type, story?.id, goNext, isPaused, showComments])
+  }, [currentIndex, story?.type, story?.id, goNext, isPaused, showComments, reportOpen])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') {
+        if (reportOpen) {
+          setReportOpen(false)
+          setIsPaused(false)
+          return
+        }
+        if (showComments) {
+          setShowComments(false)
+          setIsPaused(false)
+          return
+        }
+        if (optionsOpen) {
+          setOptionsOpen(false)
+          return
+        }
+        onClose()
+        return
+      }
+      if (showComments) return
+      if (reportOpen) return
       if (e.key === 'ArrowDown' || e.key === 'ArrowRight') goNext()
       if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') goPrev()
       if (e.key === ' ') {
@@ -115,7 +163,7 @@ export default function StoryViewer({ stories, initialIndex = 0, onClose }: Stor
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [onClose, goNext, goPrev])
+  }, [onClose, goNext, goPrev, reportOpen, showComments, optionsOpen])
 
   useEffect(() => {
     if (!story?.id) return
@@ -131,6 +179,40 @@ export default function StoryViewer({ stories, initialIndex = 0, onClose }: Stor
       .then((d) => setComments(d.items ?? []))
       .catch(() => {})
   }, [story?.id])
+
+  const handleShare = useCallback(async () => {
+    if (!story?.profile?.id) {
+      toast.error('Não foi possível gerar o link')
+      return
+    }
+    setIsPaused(true)
+    setOptionsOpen(false)
+    setShowComments(false)
+    const path = `/perfil/${story.profile.id}?stories=1&story=${encodeURIComponent(story.id)}`
+    const url = typeof window !== 'undefined' ? `${window.location.origin}${path}` : ''
+    try {
+      if (typeof navigator !== 'undefined' && navigator.share) {
+        await navigator.share({
+          title: story.profile?.name ? `Story — ${story.profile.name}` : 'Story — CerejaVIP',
+          text:
+            story.text?.trim() ||
+            (story.profile?.name
+              ? `Confira o story de ${story.profile.name} no CerejaVIP.`
+              : 'Confira este story no CerejaVIP.'),
+          url,
+        })
+        return
+      }
+    } catch (e) {
+      if ((e as { name?: string }).name === 'AbortError') return
+    }
+    try {
+      await navigator.clipboard?.writeText(url)
+      toast.success('Link copiado!')
+    } catch {
+      toast.error('Não foi possível copiar o link')
+    }
+  }, [story])
 
   const handleLike = useCallback(() => {
     if (!story?.id || likeLoading) return
@@ -198,7 +280,7 @@ export default function StoryViewer({ stories, initialIndex = 0, onClose }: Stor
             toast.error(d.error || 'Não foi possível enviar o comentário')
             return
           }
-          if (d.id && d.content && d.created) {
+          if (d.id && d.content) {
             const displayName =
               (user?.name && user.name.trim()) ||
               [user?.first_name, user?.last_name].filter(Boolean).join(' ').trim() ||
@@ -206,15 +288,73 @@ export default function StoryViewer({ stories, initialIndex = 0, onClose }: Stor
               'Você'
             setComments((prev) => [
               ...prev,
-              { id: d.id!, content: d.content!, created: d.created!, userName: displayName },
+              {
+                id: d.id!,
+                content: d.content!,
+                created: d.created || new Date().toISOString(),
+                userName: displayName,
+              },
             ])
             setCommentInput('')
+          } else {
+            toast.error('Resposta inesperada do servidor')
           }
         })
         .finally(() => setCommentSending(false))
     },
     [story?.id, commentInput, commentSending, user?.name, user?.first_name, user?.last_name, user?.email]
   )
+
+  useEffect(() => {
+    if (!optionsOpen) return
+    const close = (e: MouseEvent) => {
+      if (optionsMenuRef.current && !optionsMenuRef.current.contains(e.target as Node)) {
+        setOptionsOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
+  }, [optionsOpen])
+
+  const handleReportSubmit = useCallback(async () => {
+    if (!story?.id || !story.profile?.id) return
+    if (!reportReason) {
+      toast.error('Selecione um motivo')
+      return
+    }
+    setReportSubmitting(true)
+    try {
+      const res = await fetch('/api/reports', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          profileId: story.profile.id,
+          storyId: story.id,
+          reason: reportReason,
+          description: reportDescription.trim(),
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        toast.error((data as { error?: string }).error || 'Erro ao enviar denúncia')
+        return
+      }
+      toast.success('Denúncia enviada. Obrigado.')
+      setReportOpen(false)
+      setReportReason('')
+      setReportDescription('')
+      setOptionsOpen(false)
+      setIsPaused(false)
+    } finally {
+      setReportSubmitting(false)
+    }
+  }, [story?.id, story?.profile, reportReason, reportDescription])
+
+  useEffect(() => {
+    setOptionsOpen(false)
+    setReportOpen(false)
+  }, [story?.id])
 
   const onTouchStart = (e: React.TouchEvent) => {
     const p = e.touches[0]
@@ -259,9 +399,104 @@ export default function StoryViewer({ stories, initialIndex = 0, onClose }: Stor
   if (!story) return null
 
   return (
+    <>
+      {reportOpen && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={() => {
+              if (!reportSubmitting) {
+                setReportOpen(false)
+                setIsPaused(false)
+              }
+            }}
+            aria-hidden
+          />
+          <div
+            className="relative w-full max-w-md rounded-xl border border-slate-700 bg-slate-900 p-6 shadow-2xl"
+            role="dialog"
+            aria-labelledby="story-report-title"
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <h3 id="story-report-title" className="text-lg font-bold text-white">
+                Denunciar story
+              </h3>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!reportSubmitting) {
+                    setReportOpen(false)
+                    setIsPaused(false)
+                  }
+                }}
+                className="rounded p-1 text-slate-400 hover:bg-slate-800 hover:text-white"
+                aria-label="Fechar"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <p className="mb-4 text-sm text-slate-400">
+              Escolha o motivo. Nossa equipe analisará a denúncia.
+            </p>
+            <div className="space-y-4">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-500">Motivo</label>
+                <select
+                  value={reportReason}
+                  onChange={(e) => setReportReason(e.target.value)}
+                  className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white outline-none focus:ring-2 focus:ring-primary-500"
+                >
+                  <option value="">Selecione</option>
+                  {STORY_REPORT_REASONS.map((r) => (
+                    <option key={r.value} value={r.value}>
+                      {r.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-500">Detalhes (opcional)</label>
+                <textarea
+                  value={reportDescription}
+                  onChange={(e) => setReportDescription(e.target.value)}
+                  rows={3}
+                  maxLength={1000}
+                  placeholder="Complemente se quiser (máx. 1000 caracteres)"
+                  className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white placeholder:text-slate-500 outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+            </div>
+            <div className="mt-6 flex gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  if (!reportSubmitting) {
+                    setReportOpen(false)
+                    setIsPaused(false)
+                  }
+                }}
+                disabled={reportSubmitting}
+                className="flex-1 rounded-lg bg-slate-700 py-2.5 font-medium text-slate-300 transition hover:bg-slate-600 disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleReportSubmit}
+                disabled={reportSubmitting}
+                className="flex-1 rounded-lg bg-amber-600 py-2.5 font-medium text-white transition hover:bg-amber-500 disabled:opacity-50"
+              >
+                {reportSubmitting ? 'Enviando…' : 'Enviar denúncia'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     <div className="fixed inset-0 z-[100] flex justify-center bg-black">
       <div
-        className="relative h-[100dvh] w-full max-w-[430px] touch-pan-y overflow-hidden shadow-2xl shadow-black/50"
+        className="relative h-[100dvh] w-full touch-pan-y overflow-hidden shadow-2xl shadow-black/50"
+        style={{ maxWidth: `min(100vw, ${VIEWER_MAX_W}px)` }}
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
         onWheel={onWheel}
@@ -307,7 +542,7 @@ export default function StoryViewer({ stories, initialIndex = 0, onClose }: Stor
           <button
             type="button"
             aria-label={isPaused ? 'Retomar' : 'Pausar'}
-            className="absolute inset-y-0 left-0 right-20 z-10 cursor-default bg-transparent md:right-24"
+            className="absolute inset-y-0 left-0 right-[5.5rem] z-10 cursor-default bg-transparent md:right-24"
             onClick={() => setIsPaused((p) => !p)}
           />
 
@@ -335,9 +570,16 @@ export default function StoryViewer({ stories, initialIndex = 0, onClose }: Stor
                   {story.profile?.name?.charAt(0) || '?'}
                 </div>
               )}
-              <span className="truncate text-sm font-semibold tracking-tight text-white drop-shadow-md">
-                {story.profile?.name || 'Story'}
-              </span>
+              <div className="min-w-0">
+                <span className="truncate text-sm font-semibold tracking-tight text-white drop-shadow-md">
+                  {story.profile?.name || 'Story'}
+                </span>
+                {story.created && (
+                  <p className="text-xs text-white/60 drop-shadow-md">
+                    {formatRelativeTime(story.created) || '—'}
+                  </p>
+                )}
+              </div>
             </div>
             <button
               type="button"
@@ -351,7 +593,7 @@ export default function StoryViewer({ stories, initialIndex = 0, onClose }: Stor
 
           {/* Legenda em baixo (estilo TikTok) */}
           {story.text ? (
-            <div className="absolute bottom-0 left-0 right-20 z-30 px-4 pb-[max(5.5rem,env(safe-area-inset-bottom))] md:right-24">
+            <div className="absolute bottom-0 left-0 right-[5.5rem] z-30 px-4 pb-[max(5.5rem,env(safe-area-inset-bottom))] md:right-24">
               <p className="text-sm leading-snug text-white drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)]">{story.text}</p>
             </div>
           ) : null}
@@ -396,6 +638,7 @@ export default function StoryViewer({ stories, initialIndex = 0, onClose }: Stor
                 e.stopPropagation()
                 setShowComments((v) => !v)
                 setIsPaused(true)
+                setOptionsOpen(false)
               }}
               className="flex flex-col items-center gap-1 text-white drop-shadow-md"
               aria-label="Comentários"
@@ -405,11 +648,70 @@ export default function StoryViewer({ stories, initialIndex = 0, onClose }: Stor
               </span>
               <span className="text-xs font-semibold tabular-nums">{comments.length > 999 ? '999+' : comments.length}</span>
             </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                handleShare()
+              }}
+              className="flex flex-col items-center gap-1 text-white drop-shadow-md"
+              aria-label="Compartilhar"
+            >
+              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-black/35 backdrop-blur-sm hover:bg-black/50">
+                <Share2 className="h-7 w-7" />
+              </span>
+              <span className="max-w-[4.5rem] text-center text-[10px] font-semibold leading-tight text-white/95">
+                Compartilhar
+              </span>
+            </button>
+            {canReport && story.profile?.id && (
+              <div className="relative z-[50]" ref={optionsMenuRef}>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setOptionsOpen((v) => !v)
+                    setIsPaused(true)
+                    setShowComments(false)
+                  }}
+                  className="flex h-10 w-10 items-center justify-center rounded-full text-white drop-shadow-md hover:bg-white/10"
+                  aria-label="Mais opções"
+                  aria-expanded={optionsOpen}
+                >
+                  <MoreVertical className="h-7 w-7" />
+                </button>
+                {optionsOpen && (
+                  <div
+                    className="absolute bottom-full right-0 z-[60] mb-2 min-w-[12rem] overflow-hidden rounded-xl border border-white/10 bg-zinc-950/95 py-1 shadow-xl backdrop-blur-md"
+                    role="menu"
+                  >
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className="w-full px-4 py-2.5 text-left text-sm text-white transition hover:bg-white/10"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setOptionsOpen(false)
+                        setShowComments(false)
+                        if (!isAuthenticated) {
+                          toast.error('Faça login para denunciar')
+                          return
+                        }
+                        setReportOpen(true)
+                        setIsPaused(true)
+                      }}
+                    >
+                      Denunciar
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
         {/* Indicador pausa */}
-        {isPaused && !showComments && (
+        {isPaused && !showComments && !reportOpen && (
           <div className="pointer-events-none absolute left-1/2 top-1/2 z-[24] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/40 bg-black/40 px-4 py-2 text-xs font-medium text-white/90 backdrop-blur-sm">
             Pausado · deslize ↑ próximo
           </div>
@@ -438,7 +740,14 @@ export default function StoryViewer({ stories, initialIndex = 0, onClose }: Stor
               ) : (
                 comments.map((c) => (
                   <div key={c.id} className="rounded-xl bg-white/5 px-3 py-2.5 text-sm">
-                    <p className="font-medium text-primary-300">{c.userName}</p>
+                    <div className="flex items-baseline justify-between gap-2">
+                      <p className="font-medium text-primary-300">{c.userName}</p>
+                      {c.created && (
+                        <span className="shrink-0 text-[10px] text-white/40">
+                          {formatRelativeTime(c.created)}
+                        </span>
+                      )}
+                    </div>
                     <p className="text-white/90">{c.content}</p>
                   </div>
                 ))
@@ -476,5 +785,6 @@ export default function StoryViewer({ stories, initialIndex = 0, onClose }: Stor
         )}
       </div>
     </div>
+    </>
   )
 }

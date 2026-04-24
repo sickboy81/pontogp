@@ -19,13 +19,21 @@ interface ProfileViewProps {
   profile: Profile
   profileUrl: string
   openStories?: boolean
+  /** Abre o viewer nesse story (URL partilhada: ?story=...) */
+  initialStoryId?: string
 }
 
-export default function ProfileView({ profile, profileUrl, openStories = false }: ProfileViewProps) {
+export default function ProfileView({
+  profile,
+  profileUrl,
+  openStories = false,
+  initialStoryId,
+}: ProfileViewProps) {
   const user = useAuthStore((s) => s.user)
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [stories, setStories] = useState<StoryItem[]>([])
   const [storyViewerOpen, setStoryViewerOpen] = useState(false)
+  const [storyStartIndex, setStoryStartIndex] = useState(0)
   const canMessage = user && user.id !== profile.user_id
   const canReport = user && user.id !== profile.user_id
   const [lightboxIndex, setLightboxIndex] = useState(0)
@@ -39,17 +47,20 @@ export default function ProfileView({ profile, profileUrl, openStories = false }
     'inline-block rounded-lg border border-transparent bg-slate-700/50 px-3 py-1.5 text-sm text-slate-200 transition hover:border-primary-500/40 hover:bg-slate-600/80 hover:text-white'
 
   useEffect(() => {
-    if (!openStories || !profile.id) return
+    const shouldOpen = openStories || Boolean(initialStoryId)
+    if (!shouldOpen || !profile.id) return
     fetch(`/api/stories?profileId=${encodeURIComponent(profile.id)}`)
       .then((r) => r.json())
       .then((data: StoryItem[]) => {
         if (data?.length) {
+          const idx = initialStoryId ? data.findIndex((s) => s.id === initialStoryId) : 0
+          setStoryStartIndex(idx >= 0 ? idx : 0)
           setStories(data)
           setStoryViewerOpen(true)
         }
       })
       .catch(() => {})
-  }, [openStories, profile.id])
+  }, [openStories, initialStoryId, profile.id])
 
   useEffect(() => {
     if (!profile.id) return
@@ -604,9 +615,11 @@ export default function ProfileView({ profile, profileUrl, openStories = false }
 
       {storyViewerOpen && stories.length > 0 && (
         <StoryViewer
+          key={`${stories.map((s) => s.id).join('-')}-${storyStartIndex}`}
           stories={stories}
-          initialIndex={0}
+          initialIndex={storyStartIndex}
           onClose={() => setStoryViewerOpen(false)}
+          canReport={!!canReport}
         />
       )}
 

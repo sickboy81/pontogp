@@ -12,17 +12,20 @@ function getToken(request: NextRequest): string | null {
 
 /** GET: lista comentários da story. */
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: storyId } = await params
   if (!storyId) return Response.json({ error: 'ID obrigatório' }, { status: 400 })
 
   try {
+    const userToken = getToken(request)
     const adminToken = await getAdminToken()
     const headers: HeadersInit | undefined = adminToken
       ? { Authorization: `Bearer ${adminToken}` }
-      : undefined
+      : userToken
+        ? { Authorization: `Bearer ${userToken}` }
+        : undefined
     const res = await fetch(
       `${PB_URL}/api/collections/story_comments/records?filter=${encodeURIComponent(`story="${storyId}"`)}&perPage=50&sort=created&expand=user`,
       { headers, cache: 'no-store' }
@@ -54,28 +57,45 @@ export async function POST(
   const { id: storyId } = await params
   if (!storyId) return Response.json({ error: 'ID obrigatório' }, { status: 400 })
 
-  let body: { content?: string }
+  let parsed: { content?: string }
   try {
-    body = (await request.json()) as { content?: string }
+    parsed = (await request.json()) as { content?: string }
   } catch {
     return Response.json({ error: 'Body inválido' }, { status: 400 })
   }
-  const content = typeof body.content === 'string' ? body.content.trim() : ''
+  const content = typeof parsed.content === 'string' ? parsed.content.trim() : ''
   if (!content) return Response.json({ error: 'Conteúdo obrigatório' }, { status: 400 })
   if (content.length > 500) return Response.json({ error: 'Máximo 500 caracteres' }, { status: 400 })
 
+  const pbBody = JSON.stringify({ story: storyId, user: userId, content })
+  const userHeaders = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` } as const
+
   try {
-    const res = await fetch(`${PB_URL}/api/collections/story_comments/records`, {
+    let res = await fetch(`${PB_URL}/api/collections/story_comments/records`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ story: storyId, user: userId, content }),
+      headers: userHeaders,
+      body: pbBody,
     })
+    if (!res.ok) {
+      const adminToken = await getAdminToken()
+      if (adminToken && (res.status === 403 || res.status === 401)) {
+        res = await fetch(`${PB_URL}/api/collections/story_comments/records`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+          body: pbBody,
+        })
+      }
+    }
     if (!res.ok) {
       const err = (await res.json().catch(() => ({}))) as { message?: string }
       return Response.json({ error: err.message || 'Erro ao comentar' }, { status: res.status })
     }
-    const record = (await res.json()) as { id: string; content: string; created: string }
-    return Response.json({ id: record.id, content: record.content, created: record.created })
+    const record = (await res.json()) as { id: string; content: string; created?: string; updated?: string }
+    return Response.json({
+      id: record.id,
+      content: record.content,
+      created: record.created || record.updated || new Date().toISOString(),
+    })
   } catch {
     return Response.json({ error: 'Erro ao comentar' }, { status: 500 })
   }

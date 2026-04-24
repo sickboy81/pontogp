@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import {
   User,
@@ -18,6 +18,7 @@ import {
   Trash2,
   Heart,
   MessageCircle,
+  X,
 } from 'lucide-react'
 import VerificationRequestForm from '@/components/VerificationRequestForm'
 import type { Profile } from '@/lib/types'
@@ -54,10 +55,26 @@ type MyStoryRow = {
   commentsCount: number
 }
 
+const STORY_CAPTION_MAX = 2000
+
+function isVideoFile(f: File): boolean {
+  const t = (f.type || '').toLowerCase()
+  if (t.startsWith('video/')) return true
+  const ext = (f.name.split('.').pop() || '').toLowerCase()
+  return ['mp4', 'webm', 'mov', 'm4v'].includes(ext)
+}
+
 export default function DashboardClient() {
   const [profile, setProfile] = useState<Profile | null | undefined>(undefined)
   const [loading, setLoading] = useState(true)
   const [storyUploading, setStoryUploading] = useState(false)
+  const [storyDraft, setStoryDraft] = useState<{
+    file: File
+    previewUrl: string
+    isVideo: boolean
+  } | null>(null)
+  const [storyCaption, setStoryCaption] = useState('')
+  const storyFileInputRef = useRef<HTMLInputElement | null>(null)
   const [myStories, setMyStories] = useState<MyStoryRow[]>([])
   const [storiesLoading, setStoriesLoading] = useState(false)
   const [storyDeletingId, setStoryDeletingId] = useState<string | null>(null)
@@ -119,6 +136,65 @@ export default function DashboardClient() {
     if (!profile?.id) return
     loadMyStories()
   }, [profile?.id])
+
+  const closeStoryCompose = useCallback(() => {
+    setStoryDraft((d) => {
+      if (d) URL.revokeObjectURL(d.previewUrl)
+      return null
+    })
+    setStoryCaption('')
+    if (storyFileInputRef.current) storyFileInputRef.current.value = ''
+  }, [])
+
+  const handleStoryFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !profile) return
+    setStoryDraft((prev) => {
+      if (prev) URL.revokeObjectURL(prev.previewUrl)
+      const previewUrl = URL.createObjectURL(file)
+      return { file, previewUrl, isVideo: isVideoFile(file) }
+    })
+    setStoryCaption('')
+    e.target.value = ''
+  }
+
+  const submitStoryCompose = async () => {
+    if (!profile || !storyDraft) return
+    setStoryUploading(true)
+    try {
+      const fd = new FormData()
+      fd.append('file', storyDraft.file)
+      fd.append('profileId', profile.id)
+      const cap = storyCaption.trim()
+      if (cap) fd.append('text', cap.slice(0, STORY_CAPTION_MAX))
+      const res = await fetch('/api/stories/create', {
+        method: 'POST',
+        credentials: 'include',
+        body: fd,
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error((data as { error?: string }).error || 'Erro ao enviar story')
+      }
+      toast.success('Story publicada! Ela aparece na página inicial nas próximas horas.')
+      closeStoryCompose()
+      loadMyStories()
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Erro ao enviar story'
+      toast.error(msg)
+    } finally {
+      setStoryUploading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (!storyDraft) return
+    const onK = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !storyUploading) closeStoryCompose()
+    }
+    window.addEventListener('keydown', onK)
+    return () => window.removeEventListener('keydown', onK)
+  }, [storyDraft, storyUploading, closeStoryCompose])
 
   if (loading) {
     return (
@@ -230,35 +306,6 @@ export default function DashboardClient() {
     }
   }
 
-  const handleStoryUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file || !profile) return
-    setStoryUploading(true)
-    try {
-      const fd = new FormData()
-      fd.append('file', file)
-      fd.append('profileId', profile.id)
-      const res = await fetch('/api/stories/create', {
-        method: 'POST',
-        credentials: 'include',
-        body: fd,
-      })
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        throw new Error((data as { error?: string }).error || 'Erro ao enviar story')
-      }
-      toast.success('Story publicada! Ela aparece na página inicial nas próximas horas.')
-      loadMyStories()
-      e.target.value = ''
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Erro ao enviar story'
-      toast.error(msg)
-    } finally {
-      setStoryUploading(false)
-      e.target.value = ''
-    }
-  }
-
   const handleDeleteStory = async (id: string) => {
     if (!confirm('Excluir esta story? Não dá para desfazer.')) return
     setStoryDeletingId(id)
@@ -304,6 +351,100 @@ export default function DashboardClient() {
   return (
     <div className="mx-auto max-w-2xl">
       <h1 className="mb-6 text-2xl font-bold text-white">Dashboard</h1>
+
+      {storyDraft && (
+        <div
+          className="fixed inset-0 z-[60] flex items-end justify-center p-4 sm:items-center"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="story-compose-title"
+        >
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={() => {
+              if (!storyUploading) closeStoryCompose()
+            }}
+            aria-label="Fechar"
+          />
+          <div
+            className="relative z-10 flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-slate-600 bg-slate-900 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-slate-700 px-4 py-3">
+              <h2 id="story-compose-title" className="text-lg font-semibold text-white">
+                Nova story
+              </h2>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!storyUploading) closeStoryCompose()
+                }}
+                className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-800 hover:text-white"
+                aria-label="Fechar"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto p-4">
+              <div className="overflow-hidden rounded-xl bg-black">
+                {storyDraft.isVideo ? (
+                  <video
+                    src={storyDraft.previewUrl}
+                    className="max-h-[50vh] w-full object-contain"
+                    controls
+                    playsInline
+                  />
+                ) : (
+                  <img
+                    src={storyDraft.previewUrl}
+                    alt="Pré-visualização do story"
+                    className="max-h-[50vh] w-full object-contain"
+                  />
+                )}
+              </div>
+              <label className="mt-3 block text-xs font-medium text-slate-500" htmlFor="story-caption">
+                Legenda (opcional)
+              </label>
+              <textarea
+                id="story-caption"
+                value={storyCaption}
+                onChange={(e) => setStoryCaption(e.target.value.slice(0, STORY_CAPTION_MAX))}
+                rows={3}
+                maxLength={STORY_CAPTION_MAX}
+                placeholder="Escreva algo para acompanhar o story…"
+                className="mt-1.5 w-full rounded-xl border border-slate-600 bg-slate-800/80 px-3 py-2.5 text-sm text-white placeholder:text-slate-500 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                disabled={storyUploading}
+              />
+              <p className="mt-1 text-right text-xs text-slate-500">
+                {storyCaption.length}/{STORY_CAPTION_MAX}
+              </p>
+            </div>
+            <div className="flex gap-2 border-t border-slate-700 p-4">
+              <button
+                type="button"
+                onClick={() => {
+                  if (!storyUploading) closeStoryCompose()
+                }}
+                className="flex-1 rounded-xl border border-slate-600 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-slate-800"
+                disabled={storyUploading}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={submitStoryCompose}
+                disabled={storyUploading}
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary-600 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-500 disabled:opacity-50"
+              >
+                {storyUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                Publicar story
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="rounded-xl border border-slate-700 bg-slate-800/50 overflow-hidden">
         <div className="flex items-center gap-4 p-6">
           {profile.thumbnail ? (
@@ -351,10 +492,11 @@ export default function DashboardClient() {
           </Link>
           <label className="flex flex-1 min-w-[120px] cursor-pointer items-center justify-center gap-2 py-4 text-slate-300 transition hover:bg-slate-700/30 hover:text-white">
             <input
+              ref={storyFileInputRef}
               type="file"
               accept="image/*,video/mp4,video/webm"
               className="hidden"
-              onChange={handleStoryUpload}
+              onChange={handleStoryFileSelect}
               disabled={storyUploading}
             />
             {storyUploading ? (

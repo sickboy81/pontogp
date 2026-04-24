@@ -6,7 +6,8 @@ const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cer
 export const dynamic = 'force-dynamic'
 
 /**
- * POST: cria denúncia de perfil. Body: { profileId, reason?, description? }.
+ * POST: cria denúncia de perfil. Body: { profileId, reason?, description?, storyId? }.
+ * Se storyId for enviado, a descrição guardada no PB inclui o id da story (moderadores).
  * Campos enviados ao PB devem bater com a coleção "reports" em pocketbase-schema.json (gerar com npm run schema).
  */
 export async function POST(request: NextRequest) {
@@ -16,9 +17,20 @@ export async function POST(request: NextRequest) {
   if (!userId) return Response.json({ error: 'Token inválido' }, { status: 401 })
 
   try {
-    const body = (await request.json()) as { profileId?: string; reason?: string; description?: string }
+    const body = (await request.json()) as {
+      profileId?: string
+      reason?: string
+      description?: string
+      storyId?: string
+    }
     const profileId = body.profileId
     if (!profileId) return Response.json({ error: 'profileId obrigatório' }, { status: 400 })
+
+    const userDesc = (body.description || '').trim()
+    const sid = (body.storyId || '').trim()
+    const description = sid
+      ? [`[Denúncia de story — ID: ${sid}]`, userDesc || undefined].filter(Boolean).join('\n\n')
+      : userDesc
 
     const res = await fetch(`${PB_URL}/api/collections/reports/records`, {
       method: 'POST',
@@ -30,7 +42,7 @@ export async function POST(request: NextRequest) {
         reported_profile: profileId,
         reported_by: userId,
         reason: (body.reason || '').trim() || 'Outro',
-        description: (body.description || '').trim() || '',
+        description,
         status: 'pending',
       }),
     })

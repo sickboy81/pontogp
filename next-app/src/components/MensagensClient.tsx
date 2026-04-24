@@ -6,17 +6,7 @@ import { MessageSquare, Search } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
 import type { Message } from '@/lib/types'
 import MessageThread from '@/components/MessageThread'
-
-function formatRelativeTime(dateStr: string): string {
-  const d = new Date(dateStr)
-  const now = new Date()
-  const sec = Math.floor((now.getTime() - d.getTime()) / 1000)
-  if (sec < 60) return 'agora'
-  if (sec < 3600) return `há ${Math.floor(sec / 60)} min`
-  if (sec < 86400) return `há ${Math.floor(sec / 3600)} h`
-  if (sec < 604800) return `há ${Math.floor(sec / 86400)} dias`
-  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
-}
+import { formatRelativeTime } from '@/utils/format'
 
 interface ConversationRow {
   otherUserId: string

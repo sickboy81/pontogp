@@ -1,5 +1,12 @@
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Evita aviso e raiz errada quando existe outro package-lock fora de next-app/
+  turbopack: { root: __dirname },
   reactStrictMode: true,
   serverExternalPackages: ['sharp', 'ffmpeg-static'],
   typescript: {

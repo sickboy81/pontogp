@@ -44,9 +44,23 @@ export async function generateMetadata({ params }: Props) {
 export default async function PerfilByIdPage({ params, searchParams }: Props) {
   const { id } = await params
   const sp = searchParams != null ? await searchParams : null
-  const openStories = sp?.stories === '1'
+  const storyParam = sp?.story
+  const initialStoryId =
+    typeof storyParam === 'string'
+      ? storyParam
+      : Array.isArray(storyParam)
+        ? storyParam[0]
+        : undefined
+  const openStories = sp?.stories === '1' || Boolean(initialStoryId)
   const profile = await getProfile(id)
   if (!profile) notFound()
   const profileUrl = `${SITE_URL}/perfil/${id}`
-  return <ProfileView profile={profile} profileUrl={profileUrl} openStories={openStories} />
+  return (
+    <ProfileView
+      profile={profile}
+      profileUrl={profileUrl}
+      openStories={openStories}
+      initialStoryId={initialStoryId}
+    />
+  )
 }
