@@ -12,18 +12,9 @@ import { CATEGORIES } from '@/utils/constants'
 import { useAuthStore } from '@/store/auth'
 import { useFavoritesStore } from '@/store/favorites'
 import { SEO_CITIES } from '@/lib/seo-cities'
+import { SEO_STATES } from '@/lib/seo-states'
 
 const LIMIT = 21
-const SEO_STATES = [
-  { uf: 'SP', label: 'São Paulo' },
-  { uf: 'RJ', label: 'Rio de Janeiro' },
-  { uf: 'MG', label: 'Minas Gerais' },
-  { uf: 'PR', label: 'Paraná' },
-  { uf: 'RS', label: 'Rio Grande do Sul' },
-  { uf: 'SC', label: 'Santa Catarina' },
-  { uf: 'DF', label: 'Distrito Federal' },
-  { uf: 'GO', label: 'Goiás' },
-]
 
 const SEO_QUICK_LINKS = [
   { href: '/?category=acompanhante&gender=mulher', label: 'Acompanhantes femininas' },
@@ -421,7 +412,26 @@ export default function HomeClient() {
           </h3>
           <p className="mt-4 max-w-3xl text-sm leading-relaxed text-slate-400 md:text-base">
             Use os filtros e atalhos para navegar por regiões do Brasil e refinar sua busca por tipo de serviço, gênero, faixa de preço e verificação.
-            A proposta da CerejaVIP e facilitar uma busca mais objetiva, com perfis completos e atualização frequente.
+            A proposta da CerejaVIP é facilitar uma busca mais objetiva, com perfis completos e atualização frequente.
+          </p>
+          <p className="mt-4 max-w-3xl text-sm leading-relaxed text-slate-500">
+            Para conteúdo local e atalhos prontos, abra as páginas de{' '}
+            <Link href="/cidade/sao-paulo-sp" className="text-primary-400 hover:text-primary-300">
+              São Paulo
+            </Link>
+            ,{' '}
+            <Link href="/cidade/rio-de-janeiro-rj" className="text-primary-400 hover:text-primary-300">
+              Rio de Janeiro
+            </Link>{' '}
+            ou{' '}
+            <Link href="/estado/minas-gerais-mg" className="text-primary-400 hover:text-primary-300">
+              Minas Gerais
+            </Link>
+            ; a{' '}
+            <Link href="/" className="text-primary-400 hover:text-primary-300">
+              busca geral
+            </Link>{' '}
+            continua nesta página inicial.
           </p>
 
           <div className="mt-8 grid gap-6 lg:grid-cols-2">
@@ -431,7 +441,7 @@ export default function HomeClient() {
                 {SEO_STATES.map((state) => (
                   <Link
                     key={state.uf}
-                    href={`/?state=${state.uf}&category=acompanhante&gender=mulher`}
+                    href={`/estado/${state.slug}`}
                     className="inline-flex items-center gap-2 rounded-lg border border-slate-700 px-3 py-2 text-xs text-slate-300 transition hover:border-primary-500 hover:text-white md:text-sm"
                   >
                     <span className="font-semibold">{state.uf}</span>

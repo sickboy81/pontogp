@@ -1,6 +1,16 @@
 /** “há X min”, “há 2 h” — pt-BR. */
 export function formatRelativeTime(dateStr: string): string {
-  const d = new Date(dateStr)
+  const raw = (dateStr || '').trim()
+  if (!raw) return ''
+
+  let d = new Date(raw)
+  // PocketBase costuma vir como "YYYY-MM-DD HH:mm:ss" (sem timezone).
+  if (isNaN(d.getTime()) && /^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}/.test(raw)) {
+    d = new Date(raw.replace(' ', 'T'))
+  }
+  if (isNaN(d.getTime()) && /^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}/.test(raw)) {
+    d = new Date(`${raw.replace(' ', 'T')}Z`)
+  }
   if (isNaN(d.getTime())) return ''
   const now = new Date()
   const sec = Math.floor((now.getTime() - d.getTime()) / 1000)

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { MapPin, Share2, Phone, MessageCircle, Flag, X } from 'lucide-react'
+import { MapPin, Share2, Phone, MessageCircle, Flag, X, Play } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
 import type { Profile } from '@/lib/types'
 import { formatPrice } from '@/utils/format'
@@ -34,6 +34,7 @@ export default function ProfileView({
   const [stories, setStories] = useState<StoryItem[]>([])
   const [storyViewerOpen, setStoryViewerOpen] = useState(false)
   const [storyStartIndex, setStoryStartIndex] = useState(0)
+  const [storiesLoaded, setStoriesLoaded] = useState(false)
   const canMessage = user && user.id !== profile.user_id
   const canReport = user && user.id !== profile.user_id
   const [lightboxIndex, setLightboxIndex] = useState(0)
@@ -47,20 +48,26 @@ export default function ProfileView({
     'inline-block rounded-lg border border-transparent bg-slate-700/50 px-3 py-1.5 text-sm text-slate-200 transition hover:border-primary-500/40 hover:bg-slate-600/80 hover:text-white'
 
   useEffect(() => {
-    const shouldOpen = openStories || Boolean(initialStoryId)
-    if (!shouldOpen || !profile.id) return
+    if (!profile.id) return
     fetch(`/api/stories?profileId=${encodeURIComponent(profile.id)}`)
       .then((r) => r.json())
       .then((data: StoryItem[]) => {
-        if (data?.length) {
-          const idx = initialStoryId ? data.findIndex((s) => s.id === initialStoryId) : 0
-          setStoryStartIndex(idx >= 0 ? idx : 0)
-          setStories(data)
-          setStoryViewerOpen(true)
-        }
+        setStories(Array.isArray(data) ? data : [])
+        setStoriesLoaded(true)
       })
-      .catch(() => {})
-  }, [openStories, initialStoryId, profile.id])
+      .catch(() => {
+        setStories([])
+        setStoriesLoaded(true)
+      })
+  }, [profile.id])
+
+  useEffect(() => {
+    const shouldOpen = openStories || Boolean(initialStoryId)
+    if (!shouldOpen || !storiesLoaded || stories.length === 0) return
+    const idx = initialStoryId ? stories.findIndex((s) => s.id === initialStoryId) : 0
+    setStoryStartIndex(idx >= 0 ? idx : 0)
+    setStoryViewerOpen(true)
+  }, [openStories, initialStoryId, storiesLoaded, stories])
 
   useEffect(() => {
     if (!profile.id) return
@@ -144,23 +151,47 @@ export default function ProfileView({
     profile.prices.forEach((p) => priceItems.push({ label: p.description, value: p.price }))
   }
 
+  const hasMobileContactBar = !contactExpired && !!(profile.whatsapp || profile.telegram || profile.phone)
+
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8">
+    <div className={`mx-auto max-w-4xl px-4 py-8 ${hasMobileContactBar ? 'pb-28 md:pb-8' : ''}`}>
       <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-6">
         <div className="mb-6 flex flex-col gap-6 sm:flex-row">
           <div className="shrink-0 space-y-4">
-            <div className="aspect-[3/4] w-full max-w-xs overflow-hidden rounded-lg bg-slate-700">
-              {profile.thumbnail ? (
-                <ProfileImageWithWatermark
-                  src={profile.thumbnail}
-                  alt={profile.name}
-                  className="h-full w-full rounded-lg"
-                  imgClassName="h-full w-full"
-                />
-              ) : (
-                <div className="flex h-full items-center justify-center text-slate-500">Sem foto</div>
+            <button
+              type="button"
+              onClick={() => {
+                if (stories.length > 0) {
+                  setStoryStartIndex(0)
+                  setStoryViewerOpen(true)
+                }
+              }}
+              className={`group relative block aspect-[3/4] w-full max-w-xs rounded-lg p-[3px] transition ${
+                stories.length > 0
+                  ? 'cursor-pointer bg-gradient-to-br from-pink-500 via-rose-500 to-orange-400 hover:brightness-110'
+                  : 'cursor-default bg-slate-700'
+              }`}
+              aria-label={stories.length > 0 ? 'Abrir stories ativas' : 'Sem stories ativas'}
+            >
+              <div className="h-full w-full overflow-hidden rounded-[7px] bg-slate-700">
+                {profile.thumbnail ? (
+                  <ProfileImageWithWatermark
+                    src={profile.thumbnail}
+                    alt={profile.name}
+                    className="h-full w-full rounded-[7px]"
+                    imgClassName="h-full w-full"
+                  />
+                ) : (
+                  <div className="flex h-full items-center justify-center text-slate-500">Sem foto</div>
+                )}
+              </div>
+              {stories.length > 0 && (
+                <span className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full bg-black/70 px-2 py-1 text-[11px] font-semibold text-white">
+                  <Play className="h-3 w-3" />
+                  Story
+                </span>
               )}
-            </div>
+            </button>
             {photos.length > 1 && (
               <div className="flex gap-2 overflow-x-auto pb-2">
                 {photos.slice(0, 8).map((src, i) => (
@@ -189,9 +220,6 @@ export default function ProfileView({
                 <p className="flex items-center gap-1 text-slate-400">
                   <MapPin className="h-4 w-4" />
                   {profile.city}, {profile.state} • {profile.age} anos
-                  {(profile.hair_color || profile.body_type || profile.height || profile.weight || profile.breast_type) && (
-                    <> • {[profile.hair_color, profile.body_type, profile.height ? `${profile.height} cm` : '', profile.weight, profile.breast_type].filter(Boolean).join(' • ')}</>
-                  )}
                 </p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {profile.verified && (
@@ -296,8 +324,8 @@ export default function ProfileView({
                 <h3 className="mb-2 text-sm font-bold uppercase tracking-wider text-slate-500">Locais de atendimento</h3>
                 <div className="flex flex-wrap gap-2">
                   {profile.service_locations!.map((loc) => (
-                    <Link key={loc} href={profileTagSearchPath(profile, 'service_locations', loc)} className={tagChipClass}>
-                      {loc}
+                    <Link key={loc === 'Hotel' ? 'Hotel/Motel' : loc} href={profileTagSearchPath(profile, 'service_locations', loc)} className={tagChipClass}>
+                      {loc === 'Hotel' ? 'Hotel/Motel' : loc}
                     </Link>
                   ))}
                 </div>
@@ -456,7 +484,7 @@ export default function ProfileView({
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={() => trackClick('whatsapp')}
-                      className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
+                      className="hidden items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 md:flex"
                     >
                       <MessageCircle className="h-4 w-4" />
                       WhatsApp
@@ -468,7 +496,7 @@ export default function ProfileView({
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={() => trackClick('telegram')}
-                      className="flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700"
+                      className="hidden items-center gap-2 rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700 md:flex"
                     >
                       Telegram
                     </a>
@@ -477,7 +505,7 @@ export default function ProfileView({
                     <a
                       href={`tel:${profile.phone}`}
                       onClick={() => trackClick('phone')}
-                      className="flex items-center gap-2 rounded-lg bg-slate-600 px-4 py-2 text-sm font-medium text-white hover:bg-slate-500"
+                      className="hidden items-center gap-2 rounded-lg bg-slate-600 px-4 py-2 text-sm font-medium text-white hover:bg-slate-500 md:flex"
                     >
                       <Phone className="h-4 w-4" />
                       Ligar
@@ -697,6 +725,50 @@ export default function ProfileView({
           ← Voltar à listagem
         </Link>
       </p>
+
+      {hasMobileContactBar && (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-700 bg-slate-900/95 px-3 pb-[max(0.6rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur md:hidden">
+          <div className="mx-auto grid max-w-4xl grid-cols-3 gap-2">
+            {profile.whatsapp ? (
+              <a
+                href={whatsAppContactHref(profile.whatsapp, profileUrl)}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => trackClick('whatsapp')}
+                className="flex items-center justify-center rounded-lg bg-green-600 px-2 py-2 text-xs font-semibold text-white"
+              >
+                WhatsApp
+              </a>
+            ) : (
+              <span className="rounded-lg bg-slate-800 px-2 py-2 text-center text-xs text-slate-500">—</span>
+            )}
+            {profile.telegram ? (
+              <a
+                href={telegramContactHref(profile.telegram, profileUrl)}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => trackClick('telegram')}
+                className="flex items-center justify-center rounded-lg bg-sky-600 px-2 py-2 text-xs font-semibold text-white"
+              >
+                Telegram
+              </a>
+            ) : (
+              <span className="rounded-lg bg-slate-800 px-2 py-2 text-center text-xs text-slate-500">—</span>
+            )}
+            {profile.phone ? (
+              <a
+                href={`tel:${profile.phone}`}
+                onClick={() => trackClick('phone')}
+                className="flex items-center justify-center rounded-lg bg-slate-600 px-2 py-2 text-xs font-semibold text-white"
+              >
+                Ligar
+              </a>
+            ) : (
+              <span className="rounded-lg bg-slate-800 px-2 py-2 text-center text-xs text-slate-500">—</span>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

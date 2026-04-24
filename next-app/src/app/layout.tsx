@@ -8,6 +8,19 @@ import './globals.css'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://cerejavip.com'
 
+const websiteJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: 'CerejaVIP',
+  url: APP_URL,
+  inLanguage: 'pt-BR',
+  potentialAction: {
+    '@type': 'SearchAction',
+    target: `${APP_URL}/?search={search_term_string}`,
+    'query-input': 'required name=search_term_string',
+  },
+}
+
 export const viewport: Viewport = {
   themeColor: [
     { media: '(prefers-color-scheme: dark)', color: '#0f172a' },
@@ -45,6 +58,10 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" suppressHydrationWarning>
       <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
+        />
         <script
           dangerouslySetInnerHTML={{
             __html: `(function(){var k='cerejavip_theme';try{var v=localStorage.getItem(k);if(v){var j=JSON.parse(v);var t=j&&j.state&&j.state.theme;}var theme=(typeof t==='string'&&(t==='light'||t==='dark'))?t:'dark';document.documentElement.classList.add(theme);}catch(e){document.documentElement.classList.add('dark');}})();`,

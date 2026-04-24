@@ -84,6 +84,9 @@ export default function StoryViewer({
   const story = stories[currentIndex]
   const hasNext = currentIndex < stories.length - 1
   const hasPrev = currentIndex > 0
+  const storyCreatedLabel = story?.created
+    ? formatRelativeTime(story.created) || new Date(story.created).toLocaleString('pt-BR')
+    : 'agora'
 
   const goNext = useCallback(() => {
     if (hasNext) {
@@ -574,11 +577,7 @@ export default function StoryViewer({
                 <span className="truncate text-sm font-semibold tracking-tight text-white drop-shadow-md">
                   {story.profile?.name || 'Story'}
                 </span>
-                {story.created && (
-                  <p className="text-xs text-white/60 drop-shadow-md">
-                    {formatRelativeTime(story.created) || '—'}
-                  </p>
-                )}
+                <p className="text-xs text-white/60 drop-shadow-md">{storyCreatedLabel}</p>
               </div>
             </div>
             <button
@@ -664,8 +663,7 @@ export default function StoryViewer({
                 Compartilhar
               </span>
             </button>
-            {canReport && story.profile?.id && (
-              <div className="relative z-[50]" ref={optionsMenuRef}>
+            <div className="relative z-[50]" ref={optionsMenuRef}>
                 <button
                   type="button"
                   onClick={(e) => {
@@ -697,6 +695,14 @@ export default function StoryViewer({
                           toast.error('Faça login para denunciar')
                           return
                         }
+                        if (!story.profile?.id) {
+                          toast.error('Não foi possível identificar o autor desta story')
+                          return
+                        }
+                        if (!canReport) {
+                          toast.error('Você não pode denunciar a própria story')
+                          return
+                        }
                         setReportOpen(true)
                         setIsPaused(true)
                       }}
@@ -706,7 +712,6 @@ export default function StoryViewer({
                   </div>
                 )}
               </div>
-            )}
           </div>
         </div>
 
@@ -744,7 +749,7 @@ export default function StoryViewer({
                       <p className="font-medium text-primary-300">{c.userName}</p>
                       {c.created && (
                         <span className="shrink-0 text-[10px] text-white/40">
-                          {formatRelativeTime(c.created)}
+                          {formatRelativeTime(c.created) || new Date(c.created).toLocaleString('pt-BR')}
                         </span>
                       )}
                     </div>

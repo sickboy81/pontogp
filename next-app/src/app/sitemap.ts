@@ -1,6 +1,7 @@
 import type { MetadataRoute } from 'next'
 import { getProfileSlugs } from '@/lib/api/profiles'
 import { SEO_CITIES } from '@/lib/seo-cities'
+import { SEO_STATES } from '@/lib/seo-states'
 
 const BASE = process.env.NEXT_PUBLIC_APP_URL || 'https://cerejavip.com'
 
@@ -30,5 +31,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.75,
   }))
 
-  return [...staticRoutes, ...cityEntries, ...profileEntries]
+  const stateEntries: MetadataRoute.Sitemap = SEO_STATES.map((item) => ({
+    url: `${BASE}/estado/${item.slug}`,
+    lastModified: new Date(),
+    changeFrequency: 'weekly' as const,
+    priority: 0.72,
+  }))
+
+  return [...staticRoutes, ...stateEntries, ...cityEntries, ...profileEntries]
 }

@@ -107,7 +107,7 @@ export const PAYMENT_METHOD_OPTIONS = [
 ]
 /** Locais de atendimento */
 export const SERVICE_LOCATION_OPTIONS = [
-  'A domicílio', 'Hotel', 'Clube de swing', 'Casa de massagem', 'Despedida de solteiro', 'Outros',
+  'Tenho local', 'A domicílio', 'Hotel', 'Clube de swing', 'Casa de massagem', 'Despedida de solteiro', 'Outros',
 ]
 /** Atende a (público) */
 export const SERVICE_TO_OPTIONS = [

@@ -19,6 +19,7 @@ import {
   Heart,
   MessageCircle,
   X,
+  Clock3,
 } from 'lucide-react'
 import VerificationRequestForm from '@/components/VerificationRequestForm'
 import type { Profile } from '@/lib/types'
@@ -56,6 +57,8 @@ type MyStoryRow = {
 }
 
 const STORY_CAPTION_MAX = 2000
+const STORY_DURATION_HOURS = 12
+const ONLINE_DURATION_OPTIONS = [1, 2, 4, 6, 8, 12, 24] as const
 
 function isVideoFile(f: File): boolean {
   const t = (f.type || '').toLowerCase()
@@ -80,6 +83,7 @@ export default function DashboardClient() {
   const [storyDeletingId, setStoryDeletingId] = useState<string | null>(null)
   const [editingStory, setEditingStory] = useState<{ id: string; text: string } | null>(null)
   const [storySaveLoading, setStorySaveLoading] = useState(false)
+  const [onlineDurationHours, setOnlineDurationHours] = useState<number>(24)
   const [bumpLoading, setBumpLoading] = useState(false)
   const [dailyBumps, setDailyBumps] = useState(0)
   const [currentPlanName, setCurrentPlanName] = useState<string | null>(null)
@@ -250,12 +254,18 @@ export default function DashboardClient() {
         credentials: 'include',
         body: JSON.stringify({
           is_online: !profile.is_online,
-          online_until: !profile.is_online ? new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 19).replace('T', ' ') : null,
+          online_until: !profile.is_online
+            ? new Date(Date.now() + onlineDurationHours * 60 * 60 * 1000).toISOString().slice(0, 19).replace('T', ' ')
+            : null,
         }),
       })
       if (!res.ok) throw new Error('Erro ao atualizar')
       setProfile({ ...profile, is_online: !profile.is_online })
-      toast.success(profile.is_online ? 'Você está offline' : 'Você está online')
+      toast.success(
+        profile.is_online
+          ? 'Você está offline'
+          : `Você está online por ${onlineDurationHours} hora${onlineDurationHours > 1 ? 's' : ''}`
+      )
     } catch {
       toast.error('Erro ao atualizar status')
     }
@@ -372,9 +382,14 @@ export default function DashboardClient() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b border-slate-700 px-4 py-3">
-              <h2 id="story-compose-title" className="text-lg font-semibold text-white">
-                Nova story
-              </h2>
+              <div>
+                <h2 id="story-compose-title" className="text-lg font-semibold text-white">
+                  Nova story
+                </h2>
+                <p className="text-xs text-slate-400">
+                  Disponível por {STORY_DURATION_HOURS} horas após a publicação.
+                </p>
+              </div>
               <button
                 type="button"
                 onClick={() => {
@@ -508,6 +523,10 @@ export default function DashboardClient() {
           </label>
         </div>
       </div>
+      <p className="mt-2 inline-flex items-center gap-1.5 text-xs text-slate-500">
+        <Clock3 className="h-3.5 w-3.5" />
+        Cada story fica ativa por {STORY_DURATION_HOURS} horas.
+      </p>
 
       {/* Os meus stories */}
       <div className="mt-6 rounded-xl border border-slate-700 bg-slate-800/50 p-4">
@@ -752,6 +771,20 @@ export default function DashboardClient() {
         <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-4">
           <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-400">Status</h3>
           <div className="flex flex-wrap items-center gap-4">
+            <label className="flex items-center gap-2 text-sm text-slate-300">
+              <span className="text-slate-400">Duração online:</span>
+              <select
+                value={onlineDurationHours}
+                onChange={(e) => setOnlineDurationHours(Number(e.target.value))}
+                className="rounded-lg border border-slate-600 bg-slate-800 px-2 py-1.5 text-sm text-white focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+              >
+                {ONLINE_DURATION_OPTIONS.map((h) => (
+                  <option key={h} value={h}>
+                    {h}h
+                  </option>
+                ))}
+              </select>
+            </label>
             <button
               type="button"
               onClick={handleToggleOnline}

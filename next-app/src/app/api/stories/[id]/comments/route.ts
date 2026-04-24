@@ -26,8 +26,9 @@ export async function GET(
       : userToken
         ? { Authorization: `Bearer ${userToken}` }
         : undefined
+    const filter = `(story="${storyId}" || story~"${storyId}" || story ?= "${storyId}")`
     const res = await fetch(
-      `${PB_URL}/api/collections/story_comments/records?filter=${encodeURIComponent(`story="${storyId}"`)}&perPage=50&sort=created&expand=user`,
+      `${PB_URL}/api/collections/story_comments/records?filter=${encodeURIComponent(filter)}&perPage=50&sort=created&expand=user`,
       { headers, cache: 'no-store' }
     )
     if (!res.ok) return Response.json({ items: [] })
@@ -68,6 +69,7 @@ export async function POST(
   if (content.length > 500) return Response.json({ error: 'Máximo 500 caracteres' }, { status: 400 })
 
   const pbBody = JSON.stringify({ story: storyId, user: userId, content })
+  const pbBodyMultiRel = JSON.stringify({ story: [storyId], user: [userId], content })
   const userHeaders = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` } as const
 
   try {
@@ -76,6 +78,15 @@ export async function POST(
       headers: userHeaders,
       body: pbBody,
     })
+    // Alguns ambientes criaram "story_comments" com relation multi-select (maxSelect=0).
+    // Nesse caso, tenta payload em array antes de retornar erro.
+    if (!res.ok && (res.status === 400 || res.status === 422)) {
+      res = await fetch(`${PB_URL}/api/collections/story_comments/records`, {
+        method: 'POST',
+        headers: userHeaders,
+        body: pbBodyMultiRel,
+      })
+    }
     if (!res.ok) {
       const adminToken = await getAdminToken()
       if (adminToken && (res.status === 403 || res.status === 401)) {
@@ -84,6 +95,13 @@ export async function POST(
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
           body: pbBody,
         })
+        if (!res.ok && (res.status === 400 || res.status === 422)) {
+          res = await fetch(`${PB_URL}/api/collections/story_comments/records`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+            body: pbBodyMultiRel,
+          })
+        }
       }
     }
     if (!res.ok) {

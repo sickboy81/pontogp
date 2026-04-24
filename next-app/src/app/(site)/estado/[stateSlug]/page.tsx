@@ -1,28 +1,28 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { findSeoCityBySlug, getCitiesInState, SEO_CITIES } from '@/lib/seo-cities'
-import { findSeoStateByUf } from '@/lib/seo-states'
+import { SEO_CITIES } from '@/lib/seo-cities'
+import { findSeoStateBySlug, SEO_STATES } from '@/lib/seo-states'
 import { getLocationFaq, getLocationHeroKicker, getLocationMetaDescription, getLocationMetaTitle, getLocationSeoCopy } from '@/lib/seo-copy'
 
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://cerejavip.com'
 
 type Props = {
-  params: Promise<{ citySlug: string }>
+  params: Promise<{ stateSlug: string }>
 }
 
 export async function generateStaticParams() {
-  return SEO_CITIES.map((item) => ({ citySlug: item.slug }))
+  return SEO_STATES.map((item) => ({ stateSlug: item.slug }))
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { citySlug } = await params
-  const city = findSeoCityBySlug(citySlug)
-  if (!city) return { title: 'Cidade não encontrada' }
+  const { stateSlug } = await params
+  const state = findSeoStateBySlug(stateSlug)
+  if (!state) return { title: 'Estado não encontrado' }
 
-  const title = getLocationMetaTitle(city.state, city.city, 'city')
-  const description = getLocationMetaDescription(city.state, city.city, 'city')
-  const canonical = `${SITE_URL}/cidade/${city.slug}`
+  const title = getLocationMetaTitle(state.uf, state.label, 'state')
+  const description = getLocationMetaDescription(state.uf, state.label, 'state')
+  const canonical = `${SITE_URL}/estado/${state.slug}`
 
   return {
     title,
@@ -42,20 +42,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
-export default async function CityLandingPage({ params }: Props) {
-  const { citySlug } = await params
-  const city = findSeoCityBySlug(citySlug)
-  if (!city) notFound()
+export default async function StateLandingPage({ params }: Props) {
+  const { stateSlug } = await params
+  const state = findSeoStateBySlug(stateSlug)
+  if (!state) notFound()
 
-  const filteredHref = `/?state=${city.state}&city=${encodeURIComponent(city.city)}&category=acompanhante&gender=mulher`
-  const copy = getLocationSeoCopy(city.state, city.city, { localSeoLine: city.localSeoLine })
-  const stateInfo = findSeoStateByUf(city.state)
-  const otherCities = getCitiesInState(city.state, city.slug)
-  const kicker = getLocationHeroKicker(city.state, city.city, 'city')
-  const faq = getLocationFaq(city.state, city.city, 'city')
-  const canonical = `${SITE_URL}/cidade/${city.slug}`
-  const pageTitle = getLocationMetaTitle(city.state, city.city, 'city')
-  const pageDescription = getLocationMetaDescription(city.state, city.city, 'city')
+  const filteredHref = `/?state=${state.uf}&category=acompanhante&gender=mulher`
+  const copy = getLocationSeoCopy(state.uf, state.label)
+  const citiesInState = SEO_CITIES.filter((c) => c.state === state.uf)
+  const kicker = getLocationHeroKicker(state.uf, state.label, 'state')
+  const faq = getLocationFaq(state.uf, state.label, 'state')
+  const canonical = `${SITE_URL}/estado/${state.slug}`
+  const pageTitle = getLocationMetaTitle(state.uf, state.label, 'state')
+  const pageDescription = getLocationMetaDescription(state.uf, state.label, 'state')
   const faqJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
@@ -81,7 +80,7 @@ export default async function CityLandingPage({ params }: Props) {
       {
         '@type': 'ListItem',
         position: 2,
-        name: `Acompanhantes em ${city.city}`,
+        name: `Acompanhantes em ${state.label}`,
         item: canonical,
       },
     ],
@@ -117,23 +116,18 @@ export default async function CityLandingPage({ params }: Props) {
       <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6 md:p-10">
         <p className="mb-2 text-xs font-bold uppercase tracking-widest text-primary-400">{kicker}</p>
         <h1 className="text-3xl font-bold text-white md:text-5xl">
-          Acompanhantes em {city.city} <span className="text-primary-500">({city.state})</span>
+          Acompanhantes em {state.label} <span className="text-primary-500">({state.uf})</span>
         </h1>
         <p className="mt-5 text-slate-300 md:text-lg">
           {copy.intro}
         </p>
-        {copy.localLine && (
-          <p className="mt-3 text-sm leading-relaxed text-slate-400 md:text-base">
-            {copy.localLine}
-          </p>
-        )}
 
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
           <Link
             href={filteredHref}
             className="inline-flex items-center justify-center rounded-lg bg-primary-600 px-6 py-3 font-semibold text-white transition hover:bg-primary-500"
           >
-            Ver resultados em {city.city}
+            Ver resultados em {state.label}
           </Link>
           <Link
             href="/anunciantes"
@@ -152,46 +146,33 @@ export default async function CityLandingPage({ params }: Props) {
           </p>
         </div>
 
-        {(stateInfo || otherCities.length > 0) && (
+        {citiesInState.length > 0 && (
           <nav
             className="mt-8 rounded-xl border border-slate-700/80 bg-slate-950/30 p-4 md:p-5"
-            aria-label={`Links relacionados a ${city.city}`}
+            aria-label={`Cidades em ${state.label}`}
           >
             <h2 className="text-sm font-semibold uppercase tracking-wide text-primary-300 md:text-base">
-              Explore na região
+              Cidades com guia em {state.label}
             </h2>
-            <div className="mt-3 flex flex-wrap gap-2 text-sm text-slate-300">
-              {stateInfo && (
+            <p className="mt-2 text-sm text-slate-400">
+              Atalhos para buscas e textos locais na CerejaVIP.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {citiesInState.map((c) => (
                 <Link
-                  href={`/estado/${stateInfo.slug}`}
-                  className="inline-flex items-center gap-1 rounded-lg border border-slate-600 px-3 py-2 transition hover:border-primary-500 hover:text-white"
+                  key={c.slug}
+                  href={`/cidade/${c.slug}`}
+                  className="inline-flex items-center gap-1 rounded-lg border border-slate-600 px-3 py-2 text-sm text-slate-300 transition hover:border-primary-500 hover:text-white"
                 >
-                  Guia {stateInfo.label} ({stateInfo.uf})
+                  {c.city} <span className="text-slate-500">({c.state})</span>
                 </Link>
-              )}
-              <Link
-                href="/"
-                className="inline-flex items-center gap-1 rounded-lg border border-slate-600 px-3 py-2 transition hover:border-primary-500 hover:text-white"
-              >
-                Busca geral
+              ))}
+            </div>
+            <div className="mt-3">
+              <Link href="/" className="text-sm text-primary-400 hover:text-primary-300">
+                Voltar à busca geral
               </Link>
             </div>
-            {otherCities.length > 0 && (
-              <div className="mt-4">
-                <p className="text-xs font-medium text-slate-500">Outras cidades no estado</p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {otherCities.map((c) => (
-                    <Link
-                      key={c.slug}
-                      href={`/cidade/${c.slug}`}
-                      className="inline-flex items-center gap-1 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs text-slate-300 transition hover:border-primary-500 hover:text-white md:text-sm"
-                    >
-                      {c.city}
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
           </nav>
         )}
 
@@ -214,7 +195,7 @@ export default async function CityLandingPage({ params }: Props) {
 
         <div className="mt-8 rounded-xl border border-slate-700/80 bg-slate-950/30 p-4 md:p-5">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-primary-300 md:text-base">
-            Perguntas frequentes em {city.city}
+            Perguntas frequentes em {state.label}
           </h2>
           <div className="mt-4 space-y-3">
             {faq.map((item) => (

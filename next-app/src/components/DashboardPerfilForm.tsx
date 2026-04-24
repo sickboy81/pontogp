@@ -469,31 +469,33 @@ export default function DashboardPerfilForm() {
         }))
         .filter((r) => r.description && Number.isFinite(r.price) && r.price >= 0)
 
+      const toTrimmed = (v: unknown) => String(v ?? '').trim()
+
       const body = {
-        name: form.name.trim(),
+        name: toTrimmed(form.name),
         age: Number(form.age) || 18,
-        city: form.city.trim(),
-        state: form.state.trim(),
-        bio_title: form.bio_title.trim() || null,
-        bio: form.bio.trim(),
+        city: toTrimmed(form.city),
+        state: toTrimmed(form.state),
+        bio_title: toTrimmed(form.bio_title) || null,
+        bio: toTrimmed(form.bio),
         category: form.category,
         gender: form.gender,
-        ethnicity: form.ethnicity.trim() || null,
-        whatsapp: form.whatsapp.trim() || null,
-        telegram: form.telegram.trim() || null,
-        phone: form.phone.trim() || null,
-        instagram: form.instagram.trim() || null,
-        twitter: form.twitter.trim() || null,
-        privacy: form.privacy.trim() || null,
-        slug: form.slug.trim() || null,
-        short_description: form.short_description.trim() || null,
+        ethnicity: toTrimmed(form.ethnicity) || null,
+        whatsapp: toTrimmed(form.whatsapp) || null,
+        telegram: toTrimmed(form.telegram) || null,
+        phone: toTrimmed(form.phone) || null,
+        instagram: toTrimmed(form.instagram) || null,
+        twitter: toTrimmed(form.twitter) || null,
+        privacy: toTrimmed(form.privacy) || null,
+        slug: toTrimmed(form.slug) || null,
+        short_description: toTrimmed(form.short_description) || null,
         hair_color: String(form.hair_color ?? '').trim() || null,
         body_type: String(form.body_type ?? '').trim() || null,
-        height: form.height.trim() ? Number(form.height) : null,
-        weight: form.weight.trim() || null,
-        height_exact: form.height_exact.trim() || null,
-        breast_type: form.breast_type.trim() || null,
-        pubis_type: form.pubis_type.trim() || null,
+        height: toTrimmed(form.height) ? Number(form.height) : null,
+        weight: toTrimmed(form.weight) || null,
+        height_exact: toTrimmed(form.height_exact) || null,
+        breast_type: toTrimmed(form.breast_type) || null,
+        pubis_type: toTrimmed(form.pubis_type) || null,
         services: form.category === 'acompanhante' && form.services?.length ? form.services : (form.category !== 'acompanhante' ? [] : form.services?.length ? form.services : null),
         massage_types: form.category === 'massagista' && form.massage_types?.length ? form.massage_types : (form.category !== 'massagista' ? [] : null),
         online_services: form.category === 'online' && form.online_services?.length ? form.online_services : (form.category !== 'online' ? [] : null),
@@ -507,10 +509,10 @@ export default function DashboardPerfilForm() {
         service_locations: form.category !== 'online' && form.service_locations?.length ? form.service_locations : (form.category === 'online' ? [] : form.service_locations?.length ? form.service_locations : null),
         service_to: form.category !== 'online' && form.service_to?.length ? form.service_to : (form.category === 'online' ? [] : form.service_to?.length ? form.service_to : null),
         special_services: (form.category === 'acompanhante' || form.category === 'massagista') && form.special_services?.length ? form.special_services : (form.category === 'online' ? [] : form.special_services?.length ? form.special_services : null),
-        onlyfans: form.onlyfans.trim() || null,
+        onlyfans: toTrimmed(form.onlyfans) || null,
         piercings: form.piercings,
         tattoos: form.tattoos,
-        smoker: form.smoker.trim() || null,
+        smoker: toTrimmed(form.smoker) || null,
         display_mode: form.display_mode || null,
         bio_theme: form.display_mode === 'link_bio' ? (form.bio_theme || 'dark') : null,
         bio_button_color: form.display_mode === 'link_bio' && form.bio_button_color ? form.bio_button_color : null,
@@ -671,17 +673,6 @@ export default function DashboardPerfilForm() {
 
         {form.category !== 'online' && (
           <>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className="mb-1 block text-sm font-medium text-slate-300">Latitude (opcional)</label>
-                <input type="number" step="any" value={form.location_lat} onChange={(e) => setForm((f) => ({ ...f, location_lat: e.target.value }))} placeholder="Ex: -23.5505" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white placeholder-slate-500 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-slate-300">Longitude (opcional)</label>
-                <input type="number" step="any" value={form.location_lng} onChange={(e) => setForm((f) => ({ ...f, location_lng: e.target.value }))} placeholder="Ex: -46.6333" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white placeholder-slate-500 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
-              </div>
-            </div>
-            <p className="text-xs text-slate-500">Preencha latitude e longitude para exibir um mapa no seu perfil. Você pode obter as coordenadas no Google Maps (clique com o botão direito no mapa).</p>
             <label className="flex cursor-pointer items-center gap-2">
               <input type="checkbox" checked={form.location_approximate} onChange={(e) => setForm((f) => ({ ...f, location_approximate: e.target.checked }))} className="h-4 w-4 rounded border-slate-600 bg-slate-800 text-primary-600 focus:ring-primary-500" />
               <span className="text-sm text-slate-300">Exibir como localização aproximada</span>
@@ -1007,9 +998,9 @@ export default function DashboardPerfilForm() {
               <h3 className="mb-3 font-medium text-slate-300">Locais de atendimento</h3>
               <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3">
                 {SERVICE_LOCATION_OPTIONS.map((loc) => (
-                  <label key={loc} className="flex cursor-pointer items-center gap-2">
+                  <label key={loc === 'Hotel' ? 'Hotel/Motel' : loc} className="flex cursor-pointer items-center gap-2">
                     <input type="checkbox" checked={form.service_locations.includes(loc)} onChange={(e) => setForm((f) => ({ ...f, service_locations: e.target.checked ? [...f.service_locations, loc] : f.service_locations.filter((x) => x !== loc) }))} className="h-4 w-4 rounded border-slate-600 bg-slate-800 text-primary-600 focus:ring-primary-500" />
-                    <span className="text-sm text-slate-300">{loc}</span>
+                    <span className="text-sm text-slate-300">{loc === 'Hotel' ? 'Hotel/Motel' : loc}</span>
                   </label>
                 ))}
               </div>
@@ -1153,20 +1144,20 @@ export default function DashboardPerfilForm() {
             <div>
               <label className="mb-1 block text-xs text-slate-500">Privacy</label>
               <input
-                type="url"
+                type="text"
                 value={form.privacy}
                 onChange={(e) => setForm((f) => ({ ...f, privacy: e.target.value }))}
-                placeholder="https://privacidade.me/…"
+                placeholder="@usuario ou URL"
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white placeholder-slate-600 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
               />
             </div>
             <div>
               <label className="mb-1 block text-xs text-slate-500">OnlyFans</label>
               <input
-                type="url"
+                type="text"
                 value={form.onlyfans}
                 onChange={(e) => setForm((f) => ({ ...f, onlyfans: e.target.value }))}
-                placeholder="https://onlyfans.com/…"
+                placeholder="@usuario ou URL"
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white placeholder-slate-600 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
               />
             </div>
