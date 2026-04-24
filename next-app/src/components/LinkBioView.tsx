@@ -2,6 +2,7 @@
 
 import { useEffect, useCallback } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { MessageCircle } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
@@ -76,7 +77,15 @@ export default function LinkBioView({ profile, profileUrl }: LinkBioViewProps) {
           theme === 'sunset' || theme === 'cherry' ? 'border-white/30 bg-white/20' : 'border-slate-600 bg-slate-700'
         }`}>
           {thumbnail ? (
-            <img src={thumbnail} alt={profile.name} className="h-full w-full object-cover" />
+            <div className="relative h-full w-full">
+              <Image
+                src={thumbnail}
+                alt={profile.name}
+                fill
+                sizes="128px"
+                className="object-cover"
+              />
+            </div>
           ) : (
             <div className={`flex h-full w-full items-center justify-center text-3xl font-bold ${theme === 'dark' ? 'text-slate-500' : theme === 'sunset' || theme === 'cherry' ? 'text-white/70' : 'text-slate-400'}`}>
               {profile.name?.charAt(0) || '?'}
@@ -256,7 +265,14 @@ export default function LinkBioView({ profile, profileUrl }: LinkBioViewProps) {
         <div className={`mt-8 flex flex-col items-center gap-1 ${theme === 'dark' ? 'text-slate-400' : theme === 'sunset' || theme === 'cherry' ? 'text-white/70' : 'text-slate-500'}`}>
           <p className="text-center text-sm">Faça parte do</p>
           <Link href="/" className="mt-1 block h-8 w-auto max-w-[140px]" title="Página inicial">
-            <img src="/logo-header.png" alt="CerejaVIP" className="h-8 w-auto object-contain" />
+            <Image
+              src="/logo-header.png"
+              alt="CerejaVIP"
+              width={140}
+              height={32}
+              sizes="140px"
+              className="h-8 w-auto object-contain"
+            />
           </Link>
           <p className="mt-3 text-center text-[10px] opacity-80">cerejavip.com © 2026</p>
         </div>

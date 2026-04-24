@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import {
   User,
   Plus,
@@ -459,9 +460,12 @@ export default function DashboardClient() {
                     playsInline
                   />
                 ) : (
-                  <img
+                  <Image
                     src={storyDraft.previewUrl}
                     alt="Pré-visualização do story"
+                    width={900}
+                    height={1200}
+                    unoptimized
                     className="max-h-[50vh] w-full object-contain"
                   />
                 )}
@@ -511,9 +515,12 @@ export default function DashboardClient() {
       <div className="rounded-xl border border-slate-700 bg-slate-800/50 overflow-hidden">
         <div className="flex items-center gap-4 p-6">
           {profile.thumbnail ? (
-            <img
+            <Image
               src={profile.thumbnail}
               alt={profile.name}
+              width={96}
+              height={96}
+              sizes="96px"
               className="h-24 w-24 rounded-xl object-cover"
             />
           ) : (
@@ -629,7 +636,14 @@ export default function DashboardClient() {
                       preload="metadata"
                     />
                   ) : s.file ? (
-                    <img src={s.file} alt="" className="h-28 w-full rounded-md object-cover sm:h-24 sm:w-24" />
+                    <Image
+                      src={s.file}
+                      alt=""
+                      width={112}
+                      height={112}
+                      sizes="(max-width: 640px) 112px, 96px"
+                      className="h-28 w-full rounded-md object-cover sm:h-24 sm:w-24"
+                    />
                   ) : (
                     <div className="flex h-28 items-center justify-center rounded-md bg-slate-700 text-xs text-slate-500 sm:h-24 sm:w-24">
                       Sem ficheiro

@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname, useSearchParams, useRouter } from 'next/navigation'
 import { Menu, X, MapPin, Heart, MessageCircle, Locate, Loader2 } from 'lucide-react'
 import { useAuthStore, isAdminRole } from '@/store/auth'
@@ -197,7 +198,15 @@ export default function SiteHeader() {
               }
             }}
           >
-            <img src="/logo-header.png" alt="CerejaVIP" className="h-11 w-auto max-h-12 object-contain md:h-14 md:max-h-16" />
+            <Image
+              src="/logo-header.png"
+              alt="CerejaVIP"
+              width={280}
+              height={80}
+              sizes="(max-width: 768px) 176px, 224px"
+              className="h-11 w-auto max-h-12 object-contain md:h-14 md:max-h-16"
+              priority
+            />
           </Link>
 
           {/* Direita: tema + ícones (no mobile só Favoritos e Notificação; no desktop todos) */}
