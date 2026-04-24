@@ -9,6 +9,9 @@ const nextConfig = {
   turbopack: { root: __dirname },
   poweredByHeader: false,
   reactStrictMode: true,
+  experimental: {
+    optimizeCss: true,
+  },
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: 'pocketbase.cerejavip.com' },
@@ -20,6 +23,22 @@ const nextConfig = {
   typescript: {
     // Mantém deploy estável no VPS enquanto saneamos tipagem gradualmente.
     ignoreBuildErrors: true,
+  },
+  async headers() {
+    return [
+      {
+        source: '/logo-header.png',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+        ],
+      },
+      {
+        source: '/logo-cerejavip.png',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+        ],
+      },
+    ]
   },
   async redirects() {
     return [

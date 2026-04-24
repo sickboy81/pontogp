@@ -6,8 +6,6 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { Search, Filter, X } from 'lucide-react'
 import ProfileCard from '@/components/ProfileCard'
-import StoriesSection from '@/components/StoriesSection'
-import FilterPanel from '@/components/FilterPanel'
 import type { Profile, FilterOptions } from '@/lib/types'
 import { CATEGORIES } from '@/utils/constants'
 import { useAuthStore } from '@/store/auth'
@@ -18,6 +16,14 @@ const LIMIT = 21
 const HomeSeoSection = dynamic(() => import('@/components/HomeSeoSection'), {
   ssr: false,
   loading: () => <div className="mt-16 h-24 rounded-2xl border border-slate-800 bg-slate-900/30" />,
+})
+const StoriesSection = dynamic(() => import('@/components/StoriesSection'), {
+  ssr: false,
+  loading: () => null,
+})
+const FilterPanel = dynamic(() => import('@/components/FilterPanel'), {
+  ssr: false,
+  loading: () => null,
 })
 
 type TagMatchScope = 'city' | 'state' | 'brasil'
@@ -350,12 +356,14 @@ export default function HomeClient() {
         )}
       </div>
 
-      <FilterPanel
-        filters={filters}
-        onChange={handleFilterChange}
-        isOpen={filtersOpen}
-        onClose={() => setFiltersOpen(false)}
-      />
+      {filtersOpen ? (
+        <FilterPanel
+          filters={filters}
+          onChange={handleFilterChange}
+          isOpen={filtersOpen}
+          onClose={() => setFiltersOpen(false)}
+        />
+      ) : null}
 
       <StoriesSection />
 
@@ -410,7 +418,7 @@ export default function HomeClient() {
                 profile={profile}
                 index={index}
                 planColor={planColorMap[profile.plan_slug ?? profile.plan] ?? '#dc2626'}
-                priority={index < 4}
+                priority={index === 0}
               />
             ))}
           </div>

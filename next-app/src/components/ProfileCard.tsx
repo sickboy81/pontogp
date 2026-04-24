@@ -56,6 +56,8 @@ export default function ProfileCard({ profile, index = 0, planColor, priority = 
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
               className="object-cover transition duration-300 group-hover:scale-105"
               priority={priority}
+              fetchPriority={priority ? 'high' : 'auto'}
+              loading={priority ? 'eager' : 'lazy'}
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-slate-700 to-slate-900">
