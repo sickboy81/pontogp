@@ -54,3 +54,10 @@ export function getTokenPayload(
 export function getUserIdFromToken(token: string): string | null {
   return getTokenPayload(token)?.id ?? null
 }
+
+/** true se o JWT tiver `exp` e já estiver vencido (margem 30s). */
+export function isAuthTokenExpired(token: string): boolean {
+  const p = getTokenPayload(token)
+  if (!p?.exp) return false
+  return p.exp * 1000 < Date.now() - 30_000
+}

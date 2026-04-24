@@ -21,6 +21,15 @@ const websiteJsonLd = {
   },
 }
 
+const organizationJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: 'CerejaVIP',
+  url: APP_URL,
+  logo: `${APP_URL}/logo-cerejavip.png`,
+  sameAs: [],
+}
+
 export const viewport: Viewport = {
   themeColor: [
     { media: '(prefers-color-scheme: dark)', color: '#0f172a' },
@@ -31,20 +40,42 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: { default: 'CerejaVIP - Acompanhantes Brasil', template: '%s | CerejaVIP' },
   description: 'Plataforma de classificados premium para profissionais de entretenimento. Encontre acompanhantes, massagistas e atendimento online com segurança e privacidade.',
+  applicationName: 'CerejaVIP',
+  keywords: [
+    'acompanhantes brasil',
+    'massagistas',
+    'acompanhantes verificados',
+    'atendimento online',
+    'classificados premium',
+  ],
+  authors: [{ name: 'CerejaVIP' }],
+  creator: 'CerejaVIP',
+  publisher: 'CerejaVIP',
   manifest: '/manifest.json',
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+      'max-video-preview': -1,
+    },
+  },
   openGraph: {
     type: 'website',
-    url: 'https://cerejavip.com',
+    url: APP_URL,
     siteName: 'CerejaVIP',
     title: 'CerejaVIP - Acompanhantes Brasil',
     description: 'Plataforma de classificados premium para profissionais de entretenimento.',
-    images: [{ url: `${APP_URL}/logo-cerejavip.png`, width: 512, height: 512 }],
+    images: [{ url: `${APP_URL}/opengraph-image`, width: 1200, height: 630, alt: 'CerejaVIP - Acompanhantes Brasil' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'CerejaVIP - Acompanhantes Brasil',
     description: 'Plataforma de classificados premium para profissionais de entretenimento.',
-    images: [`${APP_URL}/logo-cerejavip.png`],
+    images: [`${APP_URL}/twitter-image`],
   },
   icons: { icon: '/favicon.png' },
   metadataBase: new URL(APP_URL),
@@ -62,6 +93,12 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
         />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+        />
+        <link rel="preconnect" href={APP_URL} crossOrigin="" />
+        <link rel="dns-prefetch" href={APP_URL} />
         <script
           dangerouslySetInnerHTML={{
             __html: `(function(){var k='cerejavip_theme';try{var v=localStorage.getItem(k);if(v){var j=JSON.parse(v);var t=j&&j.state&&j.state.theme;}var theme=(typeof t==='string'&&(t==='light'||t==='dark'))?t:'dark';document.documentElement.classList.add(theme);}catch(e){document.documentElement.classList.add('dark');}})();`,

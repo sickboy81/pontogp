@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { getAuthCookieFromHeader, getUserIdFromToken } from '@/lib/auth-cookie'
+import { getAuthCookieFromHeader, getUserIdFromToken, isAuthTokenExpired } from '@/lib/auth-cookie'
 import { getProfileByUserId } from '@/lib/api/profiles'
 import { getAdminToken } from '@/lib/pocketbase-admin'
 
@@ -7,13 +7,16 @@ const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cer
 
 export const dynamic = 'force-dynamic'
 
-/** GET: perfil do usuário logado. Inclui clicks (contagem em profile_clicks) para o dashboard. */
+const NO_STORE = { 'Cache-Control': 'private, no-store' } as const
+
+/** GET: perfil do usuário logado. Inclui clicks (contagem em profile_clicks) para o dashboard. Sem sessão: 200 + null (evita 401 no browser em páginas públicas). */
 export async function GET(request: NextRequest) {
   const cookieHeader = request.headers.get('cookie')
   const token = getAuthCookieFromHeader(cookieHeader)
-  if (!token) return Response.json({ error: 'Não autorizado' }, { status: 401 })
+  if (!token) return Response.json(null, { headers: NO_STORE })
+  if (isAuthTokenExpired(token)) return Response.json(null, { headers: NO_STORE })
   const userId = getUserIdFromToken(token)
-  if (!userId) return Response.json({ error: 'Token inválido' }, { status: 401 })
+  if (!userId) return Response.json(null, { headers: NO_STORE })
 
   const profile = await getProfileByUserId(userId, token)
   if (!profile) return Response.json(null)

@@ -9,6 +9,13 @@ const nextConfig = {
   turbopack: { root: __dirname },
   poweredByHeader: false,
   reactStrictMode: true,
+  images: {
+    remotePatterns: [
+      { protocol: 'https', hostname: 'pocketbase.cerejavip.com' },
+      { protocol: 'https', hostname: 'cerejavip.com' },
+      { protocol: 'https', hostname: 'www.cerejavip.com' },
+    ],
+  },
   serverExternalPackages: ['sharp', 'ffmpeg-static'],
   typescript: {
     // Mantém deploy estável no VPS enquanto saneamos tipagem gradualmente.

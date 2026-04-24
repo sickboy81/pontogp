@@ -10,6 +10,7 @@ type Target = 'all' | 'guests' | 'logged_in' | 'advertiser'
 
 export default function AnnouncementBar() {
   const user = useAuthStore((s) => s.user)
+  const token = useAuthStore((s) => s.token)
   const [data, setData] = useState<{ enabled: boolean; message: string; target: Target } | null>(null)
   const [dismissed, setDismissed] = useState(false)
   const [isAdvertiser, setIsAdvertiser] = useState(false)
@@ -22,7 +23,7 @@ export default function AnnouncementBar() {
   }, [])
 
   useEffect(() => {
-    if (!user) {
+    if (!user || !token) {
       setIsAdvertiser(false)
       return
     }
@@ -34,7 +35,7 @@ export default function AnnouncementBar() {
       .then((r) => (r.ok ? r.json() : null))
       .then((p) => setIsAdvertiser(!!p && (Array.isArray(p) ? p.length > 0 : !!p.id)))
       .catch(() => setIsAdvertiser(false))
-  }, [user])
+  }, [user, token])
 
   useEffect(() => {
     if (typeof window === 'undefined') return

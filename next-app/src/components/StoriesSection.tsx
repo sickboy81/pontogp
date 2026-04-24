@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 
 interface Story {
   id: string
@@ -65,11 +66,15 @@ export default function StoriesSection() {
             <div className="relative">
               <div className="h-16 w-16 overflow-hidden rounded-full border-2 border-primary-500 p-0.5">
                 {g.thumbnail ? (
-                  <img
-                    src={g.thumbnail}
-                    alt={g.profileName}
-                    className="h-full w-full rounded-full object-cover"
-                  />
+                  <div className="relative h-full w-full">
+                    <Image
+                      src={g.thumbnail}
+                      alt={g.profileName}
+                      fill
+                      sizes="64px"
+                      className="rounded-full object-cover"
+                    />
+                  </div>
                 ) : (
                   <div className="flex h-full w-full items-center justify-center rounded-full bg-slate-700 text-xl font-bold text-slate-400">
                     {g.profileName.charAt(0).toUpperCase()}

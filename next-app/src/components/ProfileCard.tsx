@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { Heart, MapPin, CheckCircle, Star } from 'lucide-react'
 import type { Profile } from '@/lib/types'
 import { formatPrice } from '@/utils/format'
@@ -48,13 +49,13 @@ export default function ProfileCard({ profile, index = 0, planColor, priority = 
       >
         <div className="relative aspect-[3/4] overflow-hidden bg-slate-800">
           {mainPhoto ? (
-            <img
+            <Image
               src={mainPhoto}
               alt={profile.name}
-              className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
-              loading={priority ? 'eager' : 'lazy'}
-              decoding="async"
-              fetchPriority={priority ? 'high' : 'low'}
+              fill
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+              className="object-cover transition duration-300 group-hover:scale-105"
+              priority={priority}
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-slate-700 to-slate-900">

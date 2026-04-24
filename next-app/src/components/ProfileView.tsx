@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { MapPin, Share2, Phone, MessageCircle, Flag, X, Play } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
 import type { Profile } from '@/lib/types'
@@ -581,9 +582,15 @@ export default function ProfileView({
                   key={i}
                   type="button"
                   onClick={() => { setLightboxIndex(i); setLightboxOpen(true) }}
-                  className="aspect-[3/4] overflow-hidden rounded-lg border border-slate-600 bg-slate-700 transition hover:border-primary-500"
+                  className="relative aspect-[3/4] overflow-hidden rounded-lg border border-slate-600 bg-slate-700 transition hover:border-primary-500"
                 >
-                  <img src={src} alt="" className="h-full w-full object-cover" />
+                  <Image
+                    src={src}
+                    alt=""
+                    fill
+                    sizes="(max-width: 640px) 33vw, (max-width: 768px) 25vw, 20vw"
+                    className="object-cover"
+                  />
                 </button>
               ))}
             </div>

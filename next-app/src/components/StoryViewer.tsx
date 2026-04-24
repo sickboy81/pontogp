@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { X, Heart, MessageCircle, Volume2, VolumeX, MoreVertical, Share2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAuthStore } from '@/store/auth'
-import { formatRelativeTime } from '@/utils/format'
+import { formatRelativeTime, parsePocketBaseDateInput } from '@/utils/format'
 
 export interface StoryItem {
   id: string
@@ -13,7 +14,7 @@ export interface StoryItem {
   file: string
   type: string
   text: string
-  created: string
+  created?: string
 }
 
 interface StoryComment {
@@ -80,13 +81,22 @@ export default function StoryViewer({
   const touchStart = useRef<{ y: number; x: number; t: number } | null>(null)
   const lastTap = useRef<{ t: number; x: number; y: number } | null>(null)
   const optionsMenuRef = useRef<HTMLDivElement | null>(null)
+  const storyNavRef = useRef<HTMLDivElement | null>(null)
 
   const story = stories[currentIndex]
   const hasNext = currentIndex < stories.length - 1
   const hasPrev = currentIndex > 0
-  const storyCreatedLabel = story?.created
-    ? formatRelativeTime(story.created) || new Date(story.created).toLocaleString('pt-BR')
-    : 'agora'
+  const storyCreatedLabel = (() => {
+    const c = story?.created
+    if (c == null || String(c).trim() === '') return '—'
+    const d = parsePocketBaseDateInput(c)
+    if (d) {
+      const rel = formatRelativeTime(c)
+      if (rel) return rel
+      return d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+    }
+    return '—'
+  })()
 
   const goNext = useCallback(() => {
     if (hasNext) {
@@ -382,7 +392,13 @@ export default function StoryViewer({
         triggerDoubleTapLike()
         return
       }
-      setIsPaused((p) => !p)
+      const r = storyNavRef.current?.getBoundingClientRect()
+      if (r && p.clientX >= r.left && p.clientX <= r.right) {
+        const t = (p.clientX - r.left) / r.width
+        if (t < 1 / 3) goPrev()
+        else if (t < 2 / 3) setIsPaused((q) => !q)
+        else goNext()
+      }
       return
     }
 
@@ -533,20 +549,33 @@ export default function StoryViewer({
               onEnded={goNext}
             />
           ) : (
-            <img
+            <Image
               src={story.file}
               alt=""
-              className="h-full w-full object-cover"
+              fill
+              sizes="(max-width: 500px) 100vw, 500px"
+              className="object-cover"
               draggable={false}
+              priority
             />
           )}
 
-          {/* Toque único: pausar / retomar (área central; não cobre a rail direita) */}
-          <button
-            type="button"
-            aria-label={isPaused ? 'Retomar' : 'Pausar'}
-            className="absolute inset-y-0 left-0 right-[5.5rem] z-10 cursor-default bg-transparent md:right-24"
-            onClick={() => setIsPaused((p) => !p)}
+          {/* Terços: esq. = anterior, centro = pausar, dir. = próximo (não cobre a rail) */}
+          <div
+            ref={storyNavRef}
+            role="group"
+            aria-label="Story: toque esquerda anterior, centro pausar, direita próximo; duplo toque no centro curte"
+            className="absolute inset-y-0 left-0 right-[5.5rem] z-10 flex cursor-default touch-manipulation items-stretch bg-transparent md:right-24"
+            onTouchEnd={(e) => e.preventDefault()}
+            onClick={(e) => {
+              const r = (e.currentTarget as HTMLDivElement).getBoundingClientRect()
+              const x = e.clientX - r.left
+              const w = r.width
+              if (w <= 0) return
+              if (x < w / 3) goPrev()
+              else if (x < (2 * w) / 3) setIsPaused((p) => !p)
+              else goNext()
+            }}
           />
 
           {heartBurst && (
@@ -559,13 +588,20 @@ export default function StoryViewer({
           <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/70 to-transparent" />
           <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 
-          {/* Cabeçalho: avatar + nome */}
-          <div className="absolute left-0 right-0 top-0 z-30 flex items-center justify-between pl-3 pr-2 pt-[max(0.75rem,env(safe-area-inset-top))]">
+          {/* Cabeçalho: avatar + nome (gestos aqui não disparam terços de navegação) */}
+          <div
+            className="absolute left-0 right-0 top-0 z-30 flex items-center justify-between pl-3 pr-2 pt-[max(0.75rem,env(safe-area-inset-top))]"
+            onTouchStart={(e) => e.stopPropagation()}
+            onTouchEnd={(e) => e.stopPropagation()}
+          >
             <div className="flex min-w-0 flex-1 items-center gap-2.5 pr-2">
               {story.profile?.thumbnail ? (
-                <img
+                <Image
                   src={story.profile.thumbnail}
                   alt=""
+                  width={44}
+                  height={44}
+                  sizes="44px"
                   className="h-11 w-11 shrink-0 rounded-full border-2 border-white object-cover ring-2 ring-white/20"
                 />
               ) : (
@@ -592,7 +628,7 @@ export default function StoryViewer({
 
           {/* Legenda em baixo (estilo TikTok) */}
           {story.text ? (
-            <div className="absolute bottom-0 left-0 right-[5.5rem] z-30 px-4 pb-[max(5.5rem,env(safe-area-inset-bottom))] md:right-24">
+            <div className="pointer-events-none absolute bottom-0 left-0 right-[5.5rem] z-30 px-4 pb-[max(5.5rem,env(safe-area-inset-bottom))] md:right-24">
               <p className="text-sm leading-snug text-white drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)]">{story.text}</p>
             </div>
           ) : null}

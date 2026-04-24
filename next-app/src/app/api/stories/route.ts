@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
         file: fileUrl,
         type: r.type || 'image',
         text: r.text || '',
-        created: r.created,
+        created: (r.created as string) || (r.updated as string) || '',
         expires_at: r.expires_at,
       }
     })

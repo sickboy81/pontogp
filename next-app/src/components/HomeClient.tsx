@@ -295,6 +295,9 @@ export default function HomeClient() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 md:py-10">
+      <h1 className="sr-only">
+        CerejaVIP - acompanhantes, massagistas e atendimento online no Brasil
+      </h1>
       <div className="mb-6 flex gap-2 md:gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500 md:h-5 md:w-5" />
@@ -303,6 +306,9 @@ export default function HomeClient() {
             placeholder="Buscar..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            aria-label="Buscar anúncios"
+            name="search"
+            autoComplete="off"
             className="w-full rounded-xl border border-slate-800 bg-slate-900/50 py-3 pl-10 pr-4 text-white placeholder-slate-500 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 md:rounded-2xl md:py-4 md:pl-12"
           />
         </div>

@@ -9,6 +9,9 @@ const DEFAULT_TITLE = 'CerejaVIP - Acompanhantes Brasil'
 const DEFAULT_DESCRIPTION =
   'Plataforma de classificados premium para profissionais de entretenimento. Encontre acompanhantes, massagistas e atendimento online com segurança.'
 
+const HOME_OG_IMAGE = `${SITE_URL}/opengraph-image`
+const HOME_TWITTER_IMAGE = `${SITE_URL}/twitter-image`
+
 type Props = {
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }
@@ -30,12 +33,13 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
         description: DEFAULT_DESCRIPTION,
         url: `${SITE_URL}/`,
         type: 'website',
-        images: [{ url: `${SITE_URL}/logo-cerejavip.png` }],
+        images: [{ url: HOME_OG_IMAGE, width: 1200, height: 630, alt: 'CerejaVIP - Acompanhantes Brasil' }],
       },
       twitter: {
         card: 'summary_large_image',
         title: DEFAULT_TITLE,
         description: DEFAULT_DESCRIPTION,
+        images: [HOME_TWITTER_IMAGE],
       },
     }
   }
@@ -46,17 +50,38 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
       description: DEFAULT_DESCRIPTION,
       url: canonical,
       type: 'website',
-      images: [{ url: `${SITE_URL}/logo-cerejavip.png` }],
+      images: [{ url: HOME_OG_IMAGE, width: 1200, height: 630, alt: 'CerejaVIP - Acompanhantes Brasil' }],
     },
     twitter: {
       card: 'summary_large_image',
       title: DEFAULT_TITLE,
       description: DEFAULT_DESCRIPTION,
+      images: [HOME_TWITTER_IMAGE],
     },
   }
 }
 
 export default function HomePage() {
+  const homeJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    name: DEFAULT_TITLE,
+    description: DEFAULT_DESCRIPTION,
+    url: `${SITE_URL}/`,
+    inLanguage: 'pt-BR',
+    mainEntity: {
+      '@type': 'ItemList',
+      name: 'Categorias principais',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Acompanhantes femininas', url: `${SITE_URL}/?category=acompanhante&gender=mulher` },
+        { '@type': 'ListItem', position: 2, name: 'Acompanhantes masculinos', url: `${SITE_URL}/?category=acompanhante&gender=homem` },
+        { '@type': 'ListItem', position: 3, name: 'Acompanhantes trans', url: `${SITE_URL}/?category=acompanhante&gender=trans` },
+        { '@type': 'ListItem', position: 4, name: 'Massagistas', url: `${SITE_URL}/?category=massagista` },
+        { '@type': 'ListItem', position: 5, name: 'Atendimento online', url: `${SITE_URL}/?category=online` },
+      ],
+    },
+  }
+
   return (
     <Suspense
       fallback={
@@ -72,6 +97,10 @@ export default function HomePage() {
         </div>
       }
     >
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(homeJsonLd) }}
+      />
       <HomeClient />
     </Suspense>
   )

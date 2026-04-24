@@ -23,14 +23,28 @@ import {
 } from 'lucide-react'
 import VerificationRequestForm from '@/components/VerificationRequestForm'
 import type { Profile } from '@/lib/types'
-import { formatPrice } from '@/utils/format'
+import { formatPrice, parsePocketBaseDateInput } from '@/utils/format'
 import toast from 'react-hot-toast'
+import { useAuthStore } from '@/store/auth'
 
 function formatExpiresAt(iso: string | undefined): string | null {
   if (!iso) return null
   const d = new Date(iso)
   if (isNaN(d.getTime())) return null
   return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+}
+
+function formatExpiresAtDateTime(iso: string | undefined): string | null {
+  if (!iso) return null
+  const d = parsePocketBaseDateInput(iso) ?? new Date(iso)
+  if (isNaN(d.getTime())) return null
+  return d.toLocaleString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 }
 
 function daysUntil(iso: string | undefined): number | null {
@@ -54,6 +68,31 @@ type MyStoryRow = {
   active: boolean
   likesCount: number
   commentsCount: number
+}
+
+/** Texto de expiração no dashboard (inclui stories antigos sem `expires_at` no PB). */
+function storyExpiresLine(s: MyStoryRow, durationHours: number): { main: string; hint?: string } {
+  if (s.expires_at && String(s.expires_at).trim() !== '') {
+    const t = formatExpiresAtDateTime(s.expires_at)
+    if (t) return { main: `Até ${t}` }
+  }
+  const c = s.created != null && String(s.created).trim() !== '' ? parsePocketBaseDateInput(s.created) : null
+  if (c) {
+    const end = new Date(c.getTime() + durationHours * 60 * 60 * 1000)
+    if (!isNaN(end.getTime())) {
+      return {
+        main: `Até ${end.toLocaleString('pt-BR', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        })}`,
+        hint: `calculado (regra: ${durationHours}h após a publicação)`,
+      }
+    }
+  }
+  return { main: `Fica visível ${durationHours}h após publicar` }
 }
 
 const STORY_CAPTION_MAX = 2000
@@ -87,9 +126,15 @@ export default function DashboardClient() {
   const [bumpLoading, setBumpLoading] = useState(false)
   const [dailyBumps, setDailyBumps] = useState(0)
   const [currentPlanName, setCurrentPlanName] = useState<string | null>(null)
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
 
   useEffect(() => {
     let cancelled = false
+    if (!isAuthenticated) {
+      setProfile(null)
+      setLoading(false)
+      return
+    }
     fetch('/api/profiles/me', { credentials: 'include' })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
@@ -102,7 +147,7 @@ export default function DashboardClient() {
         if (!cancelled) setLoading(false)
       })
     return () => { cancelled = true }
-  }, [])
+  }, [isAuthenticated])
 
   useEffect(() => {
     if (!profile) return
@@ -180,7 +225,9 @@ export default function DashboardClient() {
         const data = await res.json().catch(() => ({}))
         throw new Error((data as { error?: string }).error || 'Erro ao enviar story')
       }
-      toast.success('Story publicada! Ela aparece na página inicial nas próximas horas.')
+      toast.success(
+        `Story publicada! Fica visível ${STORY_DURATION_HOURS}h (home e perfil) e some depois disso.`
+      )
       closeStoryCompose()
       loadMyStories()
     } catch (err) {
@@ -386,8 +433,9 @@ export default function DashboardClient() {
                 <h2 id="story-compose-title" className="text-lg font-semibold text-white">
                   Nova story
                 </h2>
-                <p className="text-xs text-slate-400">
-                  Disponível por {STORY_DURATION_HOURS} horas após a publicação.
+                <p className="mt-1 text-sm text-slate-200">
+                  Fica visível <strong className="text-white">{STORY_DURATION_HOURS} horas</strong> na
+                  home e no seu perfil; depois some automaticamente.
                 </p>
               </div>
               <button
@@ -523,13 +571,24 @@ export default function DashboardClient() {
           </label>
         </div>
       </div>
-      <p className="mt-2 inline-flex items-center gap-1.5 text-xs text-slate-500">
-        <Clock3 className="h-3.5 w-3.5" />
-        Cada story fica ativa por {STORY_DURATION_HOURS} horas.
-      </p>
+      <div
+        className="mt-3 flex gap-2 rounded-lg border border-primary-500/35 bg-primary-500/10 px-3 py-2.5 text-sm text-slate-200"
+        role="note"
+      >
+        <Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-primary-300" aria-hidden />
+        <p>
+          <span className="font-medium text-white">Duração:</span> cada story fica publicada na
+          home e no perfil <strong className="text-white">{STORY_DURATION_HOURS} horas</strong> a
+          partir do envio, depois deixa de aparecer.
+        </p>
+      </div>
 
       {/* Os meus stories */}
       <div className="mt-6 rounded-xl border border-slate-700 bg-slate-800/50 p-4">
+        <p className="mb-3 text-sm leading-relaxed text-slate-300">
+          As suas stories listadas abaixo mostram até quando estão (ou estiveram) disponíveis. Novas
+          publicações usam a regra de <strong className="text-white">{STORY_DURATION_HOURS}h</strong>.
+        </p>
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-slate-400">
             <ImagePlus className="h-4 w-4" />
@@ -587,11 +646,14 @@ export default function DashboardClient() {
                       {s.active ? 'Ativa' : 'Expirada / inativa'}
                     </span>
                     <span className="text-slate-500">{s.type === 'video' ? 'Vídeo' : 'Imagem'}</span>
-                    {s.expires_at && (
-                      <span className="text-slate-500">
-                        Expira: {formatExpiresAt(s.expires_at) ?? s.expires_at}
-                      </span>
-                    )}
+                    {(() => {
+                      const { main, hint } = storyExpiresLine(s, STORY_DURATION_HOURS)
+                      return (
+                        <span className="text-slate-400" title={hint || undefined}>
+                          {main}
+                        </span>
+                      )
+                    })()}
                   </div>
                   <div className="mt-2 flex flex-wrap gap-4 text-sm text-slate-300">
                     <span className="inline-flex items-center gap-1" title="Visualizações">

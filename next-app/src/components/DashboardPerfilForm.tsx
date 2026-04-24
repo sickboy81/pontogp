@@ -13,6 +13,8 @@ import {
 } from '@/utils/constants'
 import ScheduleManager from '@/components/ScheduleManager'
 import toast from 'react-hot-toast'
+import { useAuthStore } from '@/store/auth'
+import { parseOnlyfansUsername, parsePrivacyUsername } from '@/lib/social-links'
 
 type FormData = {
   name: string
@@ -153,7 +155,7 @@ function profileToForm(p: Profile | null): FormData {
     phone: p.phone ?? '',
     instagram: p.instagram ?? '',
     twitter: p.twitter ?? '',
-    privacy: p.privacy ?? '',
+    privacy: parsePrivacyUsername(p.privacy ?? ''),
     slug: p.slug ?? '',
     short_description: p.short_description ?? '',
     hair_color: p.hair_color != null ? String(p.hair_color) : '',
@@ -176,7 +178,7 @@ function profileToForm(p: Profile | null): FormData {
     service_locations: Array.isArray(p.service_locations) ? p.service_locations : [],
     service_to: Array.isArray(p.service_to) ? p.service_to : [],
     special_services: Array.isArray(p.special_services) ? p.special_services : [],
-    onlyfans: p.onlyfans ?? '',
+    onlyfans: parseOnlyfansUsername(p.onlyfans ?? ''),
     piercings: p.piercings ?? false,
     tattoos: p.tattoos ?? false,
     smoker: p.smoker ?? '',
@@ -197,6 +199,7 @@ type TabId = 'dados' | 'midia' | 'stats' | 'bio'
 export default function DashboardPerfilForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const [activeTab, setActiveTab] = useState<TabId>(() => {
     const t = searchParams.get('tab')
     if (t === 'midia' || t === 'stats' || t === 'bio' || t === 'dados') return t
@@ -219,16 +222,15 @@ export default function DashboardPerfilForm() {
 
   useEffect(() => {
     let cancelled = false
+    if (!isAuthenticated) {
+      router.replace(`/login?callbackUrl=${encodeURIComponent('/dashboard/perfil')}`)
+      setLoading(false)
+      return
+    }
     fetch('/api/profiles/me', { credentials: 'include' })
-      .then((res) => {
-        if (res.status === 401) {
-          router.replace(`/login?callbackUrl=${encodeURIComponent('/dashboard/perfil')}`)
-          return 'UNAUTHORIZED' as const
-        }
-        return res.ok ? res.json() : null
-      })
+      .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (cancelled || data === 'UNAUTHORIZED') return
+        if (cancelled) return
         setProfile(data)
         setForm(profileToForm(data))
       })
@@ -239,7 +241,7 @@ export default function DashboardPerfilForm() {
         if (!cancelled) setLoading(false)
       })
     return () => { cancelled = true }
-  }, [router])
+  }, [router, isAuthenticated])
 
   useEffect(() => {
     if (profile) {
@@ -486,7 +488,7 @@ export default function DashboardPerfilForm() {
         phone: toTrimmed(form.phone) || null,
         instagram: toTrimmed(form.instagram) || null,
         twitter: toTrimmed(form.twitter) || null,
-        privacy: toTrimmed(form.privacy) || null,
+        privacy: parsePrivacyUsername(form.privacy) || null,
         slug: toTrimmed(form.slug) || null,
         short_description: toTrimmed(form.short_description) || null,
         hair_color: String(form.hair_color ?? '').trim() || null,
@@ -509,7 +511,7 @@ export default function DashboardPerfilForm() {
         service_locations: form.category !== 'online' && form.service_locations?.length ? form.service_locations : (form.category === 'online' ? [] : form.service_locations?.length ? form.service_locations : null),
         service_to: form.category !== 'online' && form.service_to?.length ? form.service_to : (form.category === 'online' ? [] : form.service_to?.length ? form.service_to : null),
         special_services: (form.category === 'acompanhante' || form.category === 'massagista') && form.special_services?.length ? form.special_services : (form.category === 'online' ? [] : form.special_services?.length ? form.special_services : null),
-        onlyfans: toTrimmed(form.onlyfans) || null,
+        onlyfans: parseOnlyfansUsername(form.onlyfans) || null,
         piercings: form.piercings,
         tattoos: form.tattoos,
         smoker: toTrimmed(form.smoker) || null,
@@ -1118,7 +1120,8 @@ export default function DashboardPerfilForm() {
         <div className="border-t border-slate-700 pt-4">
           <h3 className="mb-1 font-medium text-slate-300">Redes sociais</h3>
           <p className="mb-3 text-xs text-slate-500">
-            Links públicos no seu perfil e no link na bio. Pode colar a URL completa ou só o utilizador (Instagram / X).
+            Links públicos no seu perfil e no link na bio. Instagram e X: pode colar URL ou @. OnlyFans e Privacy: só o
+            nome de utilizador (se colar o link, guardamos o nome automaticamente).
           </p>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
@@ -1143,23 +1146,49 @@ export default function DashboardPerfilForm() {
             </div>
             <div>
               <label className="mb-1 block text-xs text-slate-500">Privacy</label>
-              <input
-                type="text"
-                value={form.privacy}
-                onChange={(e) => setForm((f) => ({ ...f, privacy: e.target.value }))}
-                placeholder="@usuario ou URL"
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white placeholder-slate-600 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-              />
+              <p className="mb-1.5 text-[11px] leading-snug text-slate-600">
+                Só o nome do perfil no Privacy (Brasil). O link público será privacy.com.br/checkout/…
+              </p>
+              <div className="flex min-w-0 overflow-hidden rounded-lg border border-slate-600 bg-slate-800 focus-within:border-primary-500 focus-within:ring-1 focus-within:ring-primary-500">
+                <span className="shrink-0 select-none border-r border-slate-600 bg-slate-900/80 px-2 py-2 text-xs text-slate-500 sm:text-sm">
+                  privacy.com.br/checkout/
+                </span>
+                <input
+                  type="text"
+                  value={form.privacy}
+                  onChange={(e) => setForm((f) => ({ ...f, privacy: e.target.value }))}
+                  onBlur={() =>
+                    setForm((f) => ({ ...f, privacy: parsePrivacyUsername(f.privacy) }))
+                  }
+                  placeholder="utilizador"
+                  autoComplete="off"
+                  inputMode="text"
+                  className="min-w-0 flex-1 border-0 bg-transparent px-2 py-2 text-sm text-white placeholder:text-slate-600 focus:outline-none"
+                />
+              </div>
             </div>
             <div>
               <label className="mb-1 block text-xs text-slate-500">OnlyFans</label>
-              <input
-                type="text"
-                value={form.onlyfans}
-                onChange={(e) => setForm((f) => ({ ...f, onlyfans: e.target.value }))}
-                placeholder="@usuario ou URL"
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white placeholder-slate-600 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-              />
+              <p className="mb-1.5 text-[11px] leading-snug text-slate-600">
+                Só o nome de utilizador. O botão no perfil abre onlyfans.com/…
+              </p>
+              <div className="flex min-w-0 overflow-hidden rounded-lg border border-slate-600 bg-slate-800 focus-within:border-primary-500 focus-within:ring-1 focus-within:ring-primary-500">
+                <span className="shrink-0 select-none border-r border-slate-600 bg-slate-900/80 px-2 py-2 text-xs text-slate-500 sm:text-sm">
+                  onlyfans.com/
+                </span>
+                <input
+                  type="text"
+                  value={form.onlyfans}
+                  onChange={(e) => setForm((f) => ({ ...f, onlyfans: e.target.value }))}
+                  onBlur={() =>
+                    setForm((f) => ({ ...f, onlyfans: parseOnlyfansUsername(f.onlyfans) }))
+                  }
+                  placeholder="utilizador"
+                  autoComplete="off"
+                  inputMode="text"
+                  className="min-w-0 flex-1 border-0 bg-transparent px-2 py-2 text-sm text-white placeholder:text-slate-600 focus:outline-none"
+                />
+              </div>
             </div>
           </div>
         </div>
