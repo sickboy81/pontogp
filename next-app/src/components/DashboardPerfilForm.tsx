@@ -105,6 +105,19 @@ function buildSuggestedBioLinks(form: FormData): Array<{ label: string; url: str
   return links
 }
 
+function normalizeBioLinkUrl(url: string): string {
+  return url.trim().replace(/\/+$/, '').toLowerCase()
+}
+
+function completeBioLinksWithProfileContacts(form: FormData): FormData {
+  const existingTypes = new Set(form.bio_links.map((l) => l.type).filter(Boolean))
+  const existingUrls = new Set(form.bio_links.map((l) => normalizeBioLinkUrl(l.url)).filter(Boolean))
+  const suggested = buildSuggestedBioLinks(form).filter((link) => {
+    return !existingTypes.has(link.type) && !existingUrls.has(normalizeBioLinkUrl(link.url))
+  })
+  return suggested.length > 0 ? { ...form, bio_links: [...form.bio_links, ...suggested] } : form
+}
+
 const emptyForm: FormData = {
   name: '',
   age: 18,
@@ -175,7 +188,7 @@ function profilePriceRowsFromProfile(p: Profile): Array<{ description: string; p
 
 function profileToForm(p: Profile | null): FormData {
   if (!p) return emptyForm
-  return {
+  const form: FormData = {
     name: p.name ?? '',
     age: p.age ?? 18,
     city: p.city ?? '',
@@ -227,6 +240,7 @@ function profileToForm(p: Profile | null): FormData {
     location_lng: p.location_lng != null ? String(p.location_lng) : '',
     location_approximate: p.location_approximate ?? true,
   }
+  return completeBioLinksWithProfileContacts(form)
 }
 
 type TabId = 'dados' | 'midia' | 'stats' | 'bio'
@@ -1934,7 +1948,10 @@ export default function DashboardPerfilForm() {
                         setForm((f) => {
                           const suggested = buildSuggestedBioLinks(f)
                           const existingTypes = new Set(f.bio_links.map((l) => l.type || 'custom'))
-                          const next = suggested.filter((l) => !existingTypes.has(l.type))
+                          const existingUrls = new Set(f.bio_links.map((l) => normalizeBioLinkUrl(l.url)).filter(Boolean))
+                          const next = suggested.filter(
+                            (l) => !existingTypes.has(l.type) && !existingUrls.has(normalizeBioLinkUrl(l.url))
+                          )
                           if (next.length === 0) {
                             toast('Nenhum contato/rede novo para adicionar.')
                             return f
@@ -1970,8 +1987,9 @@ export default function DashboardPerfilForm() {
                     (l) => l.enabled !== false && l.label.trim() && l.url.trim()
                   )
                   const manualTypes = new Set(manualPreviewLinks.map((l) => l.type || 'custom'))
+                  const manualUrls = new Set(manualPreviewLinks.map((l) => normalizeBioLinkUrl(l.url)).filter(Boolean))
                   const automaticPreviewLinks = buildSuggestedBioLinks(form).filter(
-                    (l) => !manualTypes.has(l.type)
+                    (l) => !manualTypes.has(l.type) && !manualUrls.has(normalizeBioLinkUrl(l.url))
                   )
                   const previewLinks = [...manualPreviewLinks, ...automaticPreviewLinks]
                   return (
