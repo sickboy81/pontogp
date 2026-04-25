@@ -10,6 +10,10 @@ const nextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
   images: {
+    // Em VPS pequena, o otimizador runtime do Next pode gerar picos de CPU/RAM
+    // ao processar muitas imagens remotas do PocketBase. Mantemos <Image />,
+    // mas servimos os arquivos diretamente para preservar estabilidade.
+    unoptimized: true,
     remotePatterns: [
       { protocol: 'https', hostname: 'pocketbase.cerejavip.com' },
       { protocol: 'https', hostname: 'cerejavip.com' },

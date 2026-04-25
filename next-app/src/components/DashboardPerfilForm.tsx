@@ -14,7 +14,12 @@ import {
 import ScheduleManager from '@/components/ScheduleManager'
 import toast from 'react-hot-toast'
 import { useAuthStore } from '@/store/auth'
-import { parseOnlyfansUsername, parsePrivacyUsername } from '@/lib/social-links'
+import {
+  parseInstagramUsername,
+  parseOnlyfansUsername,
+  parsePrivacyUsername,
+  parseTwitterUsername,
+} from '@/lib/social-links'
 
 type FormData = {
   name: string
@@ -153,8 +158,8 @@ function profileToForm(p: Profile | null): FormData {
     whatsapp: p.whatsapp ?? '',
     telegram: p.telegram ?? '',
     phone: p.phone ?? '',
-    instagram: p.instagram ?? '',
-    twitter: p.twitter ?? '',
+    instagram: parseInstagramUsername(p.instagram ?? ''),
+    twitter: parseTwitterUsername(p.twitter ?? ''),
     privacy: parsePrivacyUsername(p.privacy ?? ''),
     slug: p.slug ?? '',
     short_description: p.short_description ?? '',
@@ -486,8 +491,8 @@ export default function DashboardPerfilForm() {
         whatsapp: toTrimmed(form.whatsapp) || null,
         telegram: toTrimmed(form.telegram) || null,
         phone: toTrimmed(form.phone) || null,
-        instagram: toTrimmed(form.instagram) || null,
-        twitter: toTrimmed(form.twitter) || null,
+        instagram: parseInstagramUsername(form.instagram) || null,
+        twitter: parseTwitterUsername(form.twitter) || null,
         privacy: parsePrivacyUsername(form.privacy) || null,
         slug: toTrimmed(form.slug) || null,
         short_description: toTrimmed(form.short_description) || null,
@@ -1120,38 +1125,63 @@ export default function DashboardPerfilForm() {
         <div className="border-t border-slate-700 pt-4">
           <h3 className="mb-1 font-medium text-slate-300">Redes sociais</h3>
           <p className="mb-3 text-xs text-slate-500">
-            Links públicos no seu perfil e no link na bio. Instagram e X: pode colar URL ou @. OnlyFans e Privacy: só o
-            nome de utilizador (se colar o link, guardamos o nome automaticamente).
+            Links públicos no seu perfil e no link na bio. Pode colar URL completa; guardamos apenas o username.
           </p>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label className="mb-1 block text-xs text-slate-500">Instagram</label>
-              <input
-                type="text"
-                value={form.instagram}
-                onChange={(e) => setForm((f) => ({ ...f, instagram: e.target.value }))}
-                placeholder="@usuario ou URL"
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white placeholder-slate-600 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-              />
+              <p className="mb-1.5 text-[11px] leading-snug text-slate-600">
+                Só o username. O botão no perfil abre instagram.com/…
+              </p>
+              <div className="flex min-w-0 overflow-hidden rounded-lg border border-slate-600 bg-slate-800 focus-within:border-primary-500 focus-within:ring-1 focus-within:ring-primary-500">
+                <span className="shrink-0 select-none border-r border-slate-600 bg-slate-900/80 px-2 py-2 text-xs text-slate-500 sm:text-sm">
+                  instagram.com/
+                </span>
+                <input
+                  type="text"
+                  value={form.instagram}
+                  onChange={(e) => setForm((f) => ({ ...f, instagram: e.target.value }))}
+                  onBlur={() =>
+                    setForm((f) => ({ ...f, instagram: parseInstagramUsername(f.instagram) }))
+                  }
+                  placeholder="utilizador"
+                  autoComplete="off"
+                  inputMode="text"
+                  className="min-w-0 flex-1 border-0 bg-transparent px-2 py-2 text-sm text-white placeholder:text-slate-600 focus:outline-none"
+                />
+              </div>
             </div>
             <div>
               <label className="mb-1 block text-xs text-slate-500">X (Twitter)</label>
-              <input
-                type="text"
-                value={form.twitter}
-                onChange={(e) => setForm((f) => ({ ...f, twitter: e.target.value }))}
-                placeholder="@usuario ou URL"
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white placeholder-slate-600 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-              />
+              <p className="mb-1.5 text-[11px] leading-snug text-slate-600">
+                Só o username. O botão no perfil abre x.com/…
+              </p>
+              <div className="flex min-w-0 overflow-hidden rounded-lg border border-slate-600 bg-slate-800 focus-within:border-primary-500 focus-within:ring-1 focus-within:ring-primary-500">
+                <span className="shrink-0 select-none border-r border-slate-600 bg-slate-900/80 px-2 py-2 text-xs text-slate-500 sm:text-sm">
+                  x.com/
+                </span>
+                <input
+                  type="text"
+                  value={form.twitter}
+                  onChange={(e) => setForm((f) => ({ ...f, twitter: e.target.value }))}
+                  onBlur={() =>
+                    setForm((f) => ({ ...f, twitter: parseTwitterUsername(f.twitter) }))
+                  }
+                  placeholder="utilizador"
+                  autoComplete="off"
+                  inputMode="text"
+                  className="min-w-0 flex-1 border-0 bg-transparent px-2 py-2 text-sm text-white placeholder:text-slate-600 focus:outline-none"
+                />
+              </div>
             </div>
             <div>
               <label className="mb-1 block text-xs text-slate-500">Privacy</label>
               <p className="mb-1.5 text-[11px] leading-snug text-slate-600">
-                Só o nome do perfil no Privacy (Brasil). O link público será privacy.com.br/checkout/…
+                Só o nome do perfil no Privacy (Brasil). O link público será privacy.com.br/profile/…
               </p>
               <div className="flex min-w-0 overflow-hidden rounded-lg border border-slate-600 bg-slate-800 focus-within:border-primary-500 focus-within:ring-1 focus-within:ring-primary-500">
                 <span className="shrink-0 select-none border-r border-slate-600 bg-slate-900/80 px-2 py-2 text-xs text-slate-500 sm:text-sm">
-                  privacy.com.br/checkout/
+                  privacy.com.br/profile/
                 </span>
                 <input
                   type="text"
@@ -1879,20 +1909,29 @@ export default function DashboardPerfilForm() {
                   const linkBtnStyle = buttonColor ? { backgroundColor: buttonColor, borderColor: buttonColor, color: '#fff' } : undefined
                   const linkBtnClass = linkBtnStyle ? 'border text-white' : defaultLinkBtnClass
                   const initialColor = theme === 'dark' ? 'text-slate-500' : theme === 'sunset' || theme === 'cherry' ? 'text-white/70' : 'text-slate-400'
+                  const photos = profile.photos?.length ? profile.photos : (profile.thumbnail ? [profile.thumbnail] : [])
+                  const avatarIndex =
+                    form.bio_avatar_index >= 0 && form.bio_avatar_index < photos.length
+                      ? form.bio_avatar_index
+                      : 0
+                  const previewAvatar = photos[avatarIndex] || profile.thumbnail || ''
+                  const previewLinks = form.bio_links.filter(
+                    (l) => l.enabled !== false && l.label.trim() && l.url.trim()
+                  )
                   return (
                   <div className="rounded-xl border border-slate-600 bg-slate-800/30 p-4">
                     <p className="mb-2 text-xs font-semibold uppercase text-slate-500">Pré-visualização</p>
                     <div className={`mx-auto max-w-[280px] overflow-hidden rounded-2xl border border-slate-600 shadow-xl ${previewBg}`}>
                       <div className="flex flex-col items-center p-6">
-                        {(profile.photos || [])[form.bio_avatar_index] ? (
-                          <img src={(profile.photos || [])[form.bio_avatar_index]} alt="" className={`mb-3 h-20 w-20 rounded-full border-2 object-cover ${avatarBorder}`} />
+                        {previewAvatar ? (
+                          <img src={previewAvatar} alt="" className={`mb-3 h-20 w-20 rounded-full border-2 object-cover ${avatarBorder}`} />
                         ) : (
                           <div className={`mb-3 flex h-20 w-20 items-center justify-center rounded-full border-2 ${avatarBorder} text-2xl font-bold ${initialColor}`}>{profile.name?.charAt(0)}</div>
                         )}
                         <p className={`font-semibold ${nameColor}`}>{profile.name}</p>
                         {form.short_description && <p className={`mt-1 text-center text-xs ${descColor}`}>{form.short_description}</p>}
                         <div className="mt-3 w-full space-y-2">
-                          {form.bio_links.filter((l) => l.enabled !== false && l.label).map((l, idx) => (
+                          {previewLinks.map((l, idx) => (
                             <div key={idx} className={`rounded-xl border py-2.5 text-center text-xs font-medium ${linkBtnClass}`} style={linkBtnStyle}>{l.label || 'Link'}</div>
                           ))}
                         </div>

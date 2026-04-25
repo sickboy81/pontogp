@@ -31,6 +31,54 @@ export function parseOnlyfansUsername(raw: string | null | undefined): string {
   return (part.split('?')[0] ?? '').trim()
 }
 
+/** Apenas username Instagram (sem @), aceitando URL completa ou texto livre. */
+export function parseInstagramUsername(raw: string | null | undefined): string {
+  if (raw == null) return ''
+  let s = String(raw).trim()
+  if (!s) return ''
+  s = s.replace(/^@+/, '')
+  if (/^https?:\/\//i.test(s) || /instagram\.com/i.test(s)) {
+    const withProto = /^https?:/i.test(s) ? s : `https://${s.replace(/^\/+/, '')}`
+    try {
+      const u = new URL(withProto)
+      const host = u.hostname.replace(/^www\./i, '').toLowerCase()
+      if (host === 'instagram.com') {
+        const first = u.pathname.split('/').filter(Boolean)[0] ?? ''
+        return (first.split('?')[0] ?? '').trim()
+      }
+    } catch {
+      // ignore
+    }
+  }
+  s = s.replace(/^(https?:\/\/)?(www\.)?instagram\.com\/?/i, '')
+  const part = s.split('/')[0] ?? s
+  return (part.split('?')[0] ?? '').trim()
+}
+
+/** Apenas username X/Twitter (sem @), aceitando URL completa ou texto livre. */
+export function parseTwitterUsername(raw: string | null | undefined): string {
+  if (raw == null) return ''
+  let s = String(raw).trim()
+  if (!s) return ''
+  s = s.replace(/^@+/, '')
+  if (/^https?:\/\//i.test(s) || /(x|twitter)\.com/i.test(s)) {
+    const withProto = /^https?:/i.test(s) ? s : `https://${s.replace(/^\/+/, '')}`
+    try {
+      const u = new URL(withProto)
+      const host = u.hostname.replace(/^www\./i, '').toLowerCase()
+      if (host === 'x.com' || host === 'twitter.com') {
+        const first = u.pathname.split('/').filter(Boolean)[0] ?? ''
+        return (first.split('?')[0] ?? '').trim()
+      }
+    } catch {
+      // ignore
+    }
+  }
+  s = s.replace(/^(https?:\/\/)?(www\.)?(x|twitter)\.com\/?/i, '')
+  const part = s.split('/')[0] ?? s
+  return (part.split('?')[0] ?? '').trim()
+}
+
 /** Apenas o slug, a partir de texto ou URL do Privacy (privacy.com.br). */
 export function parsePrivacyUsername(raw: string | null | undefined): string {
   if (raw == null) return ''
@@ -57,7 +105,7 @@ export function parsePrivacyUsername(raw: string | null | undefined): string {
 }
 
 function privacyHrefFromUsername(slug: string): string {
-  return `https://privacy.com.br/checkout/${encodeURIComponent(slug)}`
+  return `https://privacy.com.br/profile/${encodeURIComponent(slug)}`
 }
 
 export function socialProfileHref(
@@ -68,11 +116,13 @@ export function socialProfileHref(
   if (!t) return null
   if (/^https?:\/\//i.test(t)) return t
   if (kind === 'instagram') {
-    const u = t.replace(/^@/, '').replace(/^instagram\.com\/?/i, '')
+    const u = parseInstagramUsername(t)
+    if (!u) return null
     return `https://instagram.com/${u}`
   }
   if (kind === 'twitter') {
-    const u = t.replace(/^@/, '').replace(/^(x|twitter)\.com\/?/i, '')
+    const u = parseTwitterUsername(t)
+    if (!u) return null
     return `https://x.com/${u}`
   }
   if (kind === 'onlyfans') {
