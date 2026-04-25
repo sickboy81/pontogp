@@ -5,6 +5,14 @@ import { Loader2, MapPin } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 const TILE_SIZE = 256
+const TILE_FALLBACK_TEMPLATES = [
+  '/api/map-tiles/{z}/{x}/{y}',
+  'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+  'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png',
+  'https://b.tile.openstreetmap.org/{z}/{x}/{y}.png',
+  'https://c.tile.openstreetmap.org/{z}/{x}/{y}.png',
+  'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+]
 
 function lonToWorldX(lng: number, zoom: number): number {
   return ((lng + 180) / 360) * TILE_SIZE * 2 ** zoom
@@ -23,6 +31,13 @@ function worldXToLng(x: number, zoom: number): number {
 function worldYToLat(y: number, zoom: number): number {
   const n = Math.PI - (2 * Math.PI * y) / (TILE_SIZE * 2 ** zoom)
   return (180 / Math.PI) * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n)))
+}
+
+function tileUrlFromTemplate(template: string, z: number, x: number, y: number): string {
+  return template
+    .replace('{z}', String(z))
+    .replace('{x}', String(x))
+    .replace('{y}', String(y))
 }
 
 interface DashboardLocationMapPickerProps {
@@ -56,6 +71,7 @@ export default function DashboardLocationMapPicker({
   const [isSearching, setIsSearching] = useState(false)
   const [dragging, setDragging] = useState(false)
   const [tileFailCountByKey, setTileFailCountByKey] = useState<Record<string, number>>({})
+  const [tileLoadedByKey, setTileLoadedByKey] = useState<Record<string, boolean>>({})
   const zoom = approximate ? 13 : 15
   const hasCoords = lat != null && lng != null
 
@@ -83,11 +99,9 @@ export default function DashboardLocationMapPicker({
         const tileY = centerTileY + dy
         list.push({
           key: `${zoom}-${tileX}-${tileY}`,
-          urls: [
-            `/api/map-tiles/${zoom}/${tileX}/${tileY}.png`,
-            `https://tile.openstreetmap.org/${zoom}/${tileX}/${tileY}.png`,
-            `https://a.tile.openstreetmap.org/${zoom}/${tileX}/${tileY}.png`,
-          ],
+          urls: TILE_FALLBACK_TEMPLATES.map((template) =>
+            tileUrlFromTemplate(template, zoom, tileX, tileY)
+          ),
           x: tileX * TILE_SIZE - centerX,
           y: tileY * TILE_SIZE - centerY,
         })
@@ -98,6 +112,7 @@ export default function DashboardLocationMapPicker({
 
   useEffect(() => {
     setTileFailCountByKey({})
+    setTileLoadedByKey({})
   }, [center?.lat, center?.lng, zoom])
 
   useEffect(() => {
@@ -205,6 +220,13 @@ export default function DashboardLocationMapPicker({
             dragStartRef.current = null
           }}
         >
+          {tiles.length > 0 && !tiles.some((tile) => tileLoadedByKey[tile.key]) && (
+            <div className="pointer-events-none absolute inset-0 z-[5] flex items-center justify-center bg-slate-800/75">
+              <p className="rounded-md bg-slate-900/80 px-3 py-2 text-xs text-slate-300">
+                Carregando mapa...
+              </p>
+            </div>
+          )}
           <div className="absolute left-1/2 top-1/2 h-0 w-0">
             {tiles.map((tile) => (
               <img
@@ -212,8 +234,17 @@ export default function DashboardLocationMapPicker({
                 src={tile.urls[Math.min(tileFailCountByKey[tile.key] ?? 0, tile.urls.length - 1)]}
                 alt=""
                 draggable={false}
+                referrerPolicy="no-referrer"
+                loading="eager"
+                decoding="async"
                 className="absolute h-64 w-64 select-none"
                 style={{ left: tile.x, top: tile.y }}
+                onLoad={() =>
+                  setTileLoadedByKey((prev) => ({
+                    ...prev,
+                    [tile.key]: true,
+                  }))
+                }
                 onError={() =>
                   setTileFailCountByKey((prev) => ({
                     ...prev,
