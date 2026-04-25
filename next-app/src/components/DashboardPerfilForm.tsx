@@ -106,16 +106,16 @@ function buildSuggestedBioLinks(form: FormData): Array<{ label: string; url: str
 }
 
 function normalizeBioLinkUrl(url: string): string {
-  return url.trim().replace(/\/+$/, '').toLowerCase()
-}
-
-function completeBioLinksWithProfileContacts(form: FormData): FormData {
-  const existingTypes = new Set(form.bio_links.map((l) => l.type).filter(Boolean))
-  const existingUrls = new Set(form.bio_links.map((l) => normalizeBioLinkUrl(l.url)).filter(Boolean))
-  const suggested = buildSuggestedBioLinks(form).filter((link) => {
-    return !existingTypes.has(link.type) && !existingUrls.has(normalizeBioLinkUrl(link.url))
-  })
-  return suggested.length > 0 ? { ...form, bio_links: [...form.bio_links, ...suggested] } : form
+  const value = url.trim()
+  if (!value) return ''
+  if (/^(tel|mailto|sms):/i.test(value)) return value.replace(/\/+$/, '').toLowerCase()
+  const withProtocol = /^https?:\/\//i.test(value) ? value : `https://${value}`
+  try {
+    const parsed = new URL(withProtocol)
+    return `${parsed.protocol}//${parsed.host}${parsed.pathname.replace(/\/+$/, '')}`.toLowerCase()
+  } catch {
+    return value.replace(/\/+$/, '').toLowerCase()
+  }
 }
 
 const emptyForm: FormData = {
@@ -188,7 +188,7 @@ function profilePriceRowsFromProfile(p: Profile): Array<{ description: string; p
 
 function profileToForm(p: Profile | null): FormData {
   if (!p) return emptyForm
-  const form: FormData = {
+  return {
     name: p.name ?? '',
     age: p.age ?? 18,
     city: p.city ?? '',
@@ -240,7 +240,6 @@ function profileToForm(p: Profile | null): FormData {
     location_lng: p.location_lng != null ? String(p.location_lng) : '',
     location_approximate: p.location_approximate ?? true,
   }
-  return completeBioLinksWithProfileContacts(form)
 }
 
 type TabId = 'dados' | 'midia' | 'stats' | 'bio'
@@ -1983,15 +1982,25 @@ export default function DashboardPerfilForm() {
                       ? form.bio_avatar_index
                       : 0
                   const previewAvatar = photos[avatarIndex] || profile.thumbnail || ''
-                  const manualPreviewLinks = form.bio_links.filter(
+                  const previewLinks = form.bio_links.filter(
                     (l) => l.enabled !== false && l.label.trim() && l.url.trim()
                   )
-                  const manualTypes = new Set(manualPreviewLinks.map((l) => l.type || 'custom'))
-                  const manualUrls = new Set(manualPreviewLinks.map((l) => normalizeBioLinkUrl(l.url)).filter(Boolean))
-                  const automaticPreviewLinks = buildSuggestedBioLinks(form).filter(
-                    (l) => !manualTypes.has(l.type) && !manualUrls.has(normalizeBioLinkUrl(l.url))
-                  )
-                  const previewLinks = [...manualPreviewLinks, ...automaticPreviewLinks]
+                  const previewLinkUrls = new Set(previewLinks.map((l) => normalizeBioLinkUrl(l.url)).filter(Boolean))
+                  const hasPreviewLink = (url: string | null | undefined) => {
+                    const normalized = normalizeBioLinkUrl(url || '')
+                    return normalized ? previewLinkUrls.has(normalized) : false
+                  }
+                  const contactLinks = [
+                    { label: 'WhatsApp', url: whatsappHref(form.whatsapp) },
+                    { label: 'Telegram', url: telegramHref(form.telegram) },
+                    { label: 'Ligar', url: form.phone ? `tel:${form.phone.trim()}` : '' },
+                  ].filter((l) => l.url && !hasPreviewLink(l.url))
+                  const socialLinks = [
+                    { label: 'Instagram', url: socialProfileHref(form.instagram, 'instagram') },
+                    { label: 'X', url: socialProfileHref(form.twitter, 'twitter') },
+                    { label: 'Privacy', url: socialProfileHref(form.privacy, 'privacy') },
+                    { label: 'OnlyFans', url: socialProfileHref(form.onlyfans, 'onlyfans') },
+                  ].filter((l) => l.url && !hasPreviewLink(l.url))
                   return (
                   <div className="rounded-xl border border-slate-600 bg-slate-800/30 p-4">
                     <p className="mb-2 text-xs font-semibold uppercase text-slate-500">Pré-visualização</p>
@@ -2004,11 +2013,30 @@ export default function DashboardPerfilForm() {
                         )}
                         <p className={`font-semibold ${nameColor}`}>{profile.name}</p>
                         {form.short_description && <p className={`mt-1 text-center text-xs ${descColor}`}>{form.short_description}</p>}
-                        <div className="mt-3 w-full space-y-2">
-                          {previewLinks.map((l, idx) => (
-                            <div key={idx} className={`rounded-xl border py-2.5 text-center text-xs font-medium ${linkBtnClass}`} style={linkBtnStyle}>{l.label || 'Link'}</div>
-                          ))}
-                        </div>
+                        {previewLinks.length > 0 && (
+                          <div className="mt-4 w-full space-y-2">
+                            {previewLinks.map((l, idx) => (
+                              <div key={idx} className={`rounded-xl border py-2.5 text-center text-xs font-medium ${linkBtnClass}`} style={linkBtnStyle}>{l.label || 'Link'}</div>
+                            ))}
+                          </div>
+                        )}
+                        {contactLinks.length > 0 && (
+                          <div className="mt-4 w-full space-y-2">
+                            {contactLinks.map((l) => (
+                              <div key={l.label} className={`rounded-xl border py-2.5 text-center text-xs font-medium ${linkBtnClass}`} style={linkBtnStyle}>{l.label}</div>
+                            ))}
+                          </div>
+                        )}
+                        {socialLinks.length > 0 && (
+                          <div className="mt-4 w-full">
+                            <p className="mb-2 text-center text-[10px] font-semibold uppercase tracking-wider text-slate-500">Redes sociais</p>
+                            <div className="grid grid-cols-2 gap-2">
+                              {socialLinks.map((l) => (
+                                <div key={l.label} className={`rounded-xl border py-2.5 text-center text-xs font-medium ${linkBtnClass}`} style={linkBtnStyle}>{l.label}</div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>

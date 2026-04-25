@@ -15,6 +15,25 @@ interface LinkBioViewProps {
   profileUrl: string
 }
 
+function bioLinkHref(url: string): string {
+  const value = url.trim()
+  if (/^(https?:|tel:|mailto:|sms:)/i.test(value)) return value
+  return `https://${value}`
+}
+
+function normalizeLinkUrl(url: string): string {
+  const value = url.trim()
+  if (!value) return ''
+  if (/^(tel|mailto|sms):/i.test(value)) return value.replace(/\/+$/, '').toLowerCase()
+  const withProtocol = /^https?:\/\//i.test(value) ? value : `https://${value}`
+  try {
+    const parsed = new URL(withProtocol)
+    return `${parsed.protocol}//${parsed.host}${parsed.pathname.replace(/\/+$/, '')}`.toLowerCase()
+  } catch {
+    return value.replace(/\/+$/, '').toLowerCase()
+  }
+}
+
 /**
  * Visual compacto "link na bio": foto, nome, descrição e botões de contato.
  * Usado quando display_mode === 'link_bio' na rota por slug.
@@ -60,8 +79,32 @@ export default function LinkBioView({ profile, profileUrl }: LinkBioViewProps) {
   const description = profile.short_description?.trim() || profile.bio_title?.trim() || (profile.bio ? profile.bio.slice(0, 120) + (profile.bio.length > 120 ? '...' : '') : '')
   const theme = profile.bio_theme === 'light' ? 'light' : profile.bio_theme === 'minimal' ? 'minimal' : profile.bio_theme === 'sunset' ? 'sunset' : profile.bio_theme === 'cherry' ? 'cherry' : 'dark'
   const bioLinks = Array.isArray(profile.bio_links) ? profile.bio_links.filter((l) => l?.label && l?.url) : []
+  const bioLinkUrls = new Set(bioLinks.map((link) => normalizeLinkUrl(bioLinkHref(link.url))).filter(Boolean))
+  const hasBioLink = (url: string | null | undefined) => {
+    const normalized = normalizeLinkUrl(url || '')
+    return normalized ? bioLinkUrls.has(normalized) : false
+  }
+  const whatsappHref = profile.whatsapp ? whatsAppContactHref(profile.whatsapp, profileUrl) : ''
+  const telegramHref = profile.telegram ? telegramContactHref(profile.telegram, profileUrl) : ''
+  const phoneHref = profile.phone ? `tel:${profile.phone}` : ''
+  const instagramHref = socialProfileHref(profile.instagram, 'instagram')
+  const twitterHref = socialProfileHref(profile.twitter, 'twitter')
+  const privacyHref = socialProfileHref(profile.privacy, 'privacy')
+  const onlyfansHref = socialProfileHref(profile.onlyfans, 'onlyfans')
+  const visibleSocialLinks = [
+    instagramHref,
+    twitterHref,
+    privacyHref,
+    onlyfansHref,
+  ].filter((href) => href && !hasBioLink(href))
   const buttonColor = profile.bio_button_color?.trim()
   const linkButtonStyle = buttonColor ? { backgroundColor: buttonColor, borderColor: buttonColor, color: '#fff' } : undefined
+  const defaultLinkButtonClass = theme === 'dark'
+    ? 'border-slate-600 bg-slate-800 text-slate-200 hover:bg-slate-700'
+    : theme === 'sunset' || theme === 'cherry'
+      ? 'border-white/40 bg-white/20 text-white hover:bg-white/30'
+      : 'border-slate-300 bg-slate-100 text-slate-800 hover:bg-slate-200'
+  const linkButtonClass = linkButtonStyle ? 'border text-white' : defaultLinkButtonClass
 
   return (
     <div className={`min-h-screen px-4 py-12 ${
@@ -125,16 +168,10 @@ export default function LinkBioView({ profile, profileUrl }: LinkBioViewProps) {
             {bioLinks.map((link, i) => (
               <a
                 key={i}
-                href={link.url.startsWith('http') ? link.url : `https://${link.url}`}
+                href={bioLinkHref(link.url)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={`block w-full rounded-xl border py-3 text-center text-sm font-medium transition hover:opacity-90 ${
-                  linkButtonStyle ? 'text-white' : theme === 'dark'
-                    ? 'border-slate-600 bg-slate-800 text-slate-200 hover:bg-slate-700'
-                    : theme === 'sunset' || theme === 'cherry'
-                    ? 'border-white/40 bg-white/20 text-white hover:bg-white/30'
-                    : 'border-slate-300 bg-slate-100 text-slate-800 hover:bg-slate-200'
-                }`}
+                className={`block w-full rounded-xl border py-3 text-center text-sm font-medium transition hover:opacity-90 ${linkButtonClass}`}
                 style={linkButtonStyle}
               >
                 {link.label}
@@ -153,40 +190,44 @@ export default function LinkBioView({ profile, profileUrl }: LinkBioViewProps) {
                 <Link
                   href={`/mensagens?with=${encodeURIComponent(profile.user_id)}`}
                   onClick={() => trackClick('message')}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary-600 py-3.5 font-medium text-white transition hover:bg-primary-500"
+                  className={`flex w-full items-center justify-center gap-2 rounded-xl border py-3.5 font-medium transition hover:opacity-90 ${linkButtonClass}`}
+                  style={linkButtonStyle}
                 >
                   <MessageCircle className="h-5 w-5" />
                   Enviar mensagem
                 </Link>
               )}
-              {profile.whatsapp && (
+              {profile.whatsapp && !hasBioLink(whatsappHref) && (
                 <a
-                  href={whatsAppContactHref(profile.whatsapp, profileUrl)}
+                  href={whatsappHref}
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() => trackClick('whatsapp')}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 py-3.5 font-medium text-white transition hover:bg-green-500"
+                  className={`flex w-full items-center justify-center gap-2 rounded-xl border py-3.5 font-medium transition hover:opacity-90 ${linkButtonClass}`}
+                  style={linkButtonStyle}
                 >
                   <MessageCircle className="h-5 w-5" />
                   WhatsApp
                 </a>
               )}
-              {profile.telegram && (
+              {profile.telegram && !hasBioLink(telegramHref) && (
                 <a
-                  href={telegramContactHref(profile.telegram, profileUrl)}
+                  href={telegramHref}
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() => trackClick('telegram')}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-sky-600 py-3.5 font-medium text-white transition hover:bg-sky-500"
+                  className={`flex w-full items-center justify-center gap-2 rounded-xl border py-3.5 font-medium transition hover:opacity-90 ${linkButtonClass}`}
+                  style={linkButtonStyle}
                 >
                   Telegram
                 </a>
               )}
-              {profile.phone && (
+              {profile.phone && !hasBioLink(phoneHref) && (
                 <a
-                  href={`tel:${profile.phone}`}
+                  href={phoneHref}
                   onClick={() => trackClick('phone')}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-600 bg-slate-800 py-3.5 font-medium text-slate-200 transition hover:bg-slate-700"
+                  className={`flex w-full items-center justify-center gap-2 rounded-xl border py-3.5 font-medium transition hover:opacity-90 ${linkButtonClass}`}
+                  style={linkButtonStyle}
                 >
                   Ligar
                 </a>
@@ -196,55 +237,56 @@ export default function LinkBioView({ profile, profileUrl }: LinkBioViewProps) {
         </div>
 
         {!contactExpired &&
-          (socialProfileHref(profile.instagram, 'instagram') ||
-            socialProfileHref(profile.twitter, 'twitter') ||
-            socialProfileHref(profile.privacy, 'privacy') ||
-            socialProfileHref(profile.onlyfans, 'onlyfans')) && (
+          visibleSocialLinks.length > 0 && (
             <div className="mt-6 w-full max-w-sm">
               <p className="mb-2 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">
                 Redes sociais
               </p>
               <div className="grid grid-cols-2 gap-2">
-                {socialProfileHref(profile.instagram, 'instagram') && (
+                {instagramHref && !hasBioLink(instagramHref) && (
                   <a
-                    href={socialProfileHref(profile.instagram, 'instagram')!}
+                    href={instagramHref}
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={() => trackClick('instagram')}
-                    className="flex items-center justify-center rounded-xl bg-pink-600 py-3 text-sm font-medium text-white transition hover:bg-pink-500"
+                    className={`flex items-center justify-center rounded-xl border py-3 text-sm font-medium transition hover:opacity-90 ${linkButtonClass}`}
+                    style={linkButtonStyle}
                   >
                     Instagram
                   </a>
                 )}
-                {socialProfileHref(profile.twitter, 'twitter') && (
+                {twitterHref && !hasBioLink(twitterHref) && (
                   <a
-                    href={socialProfileHref(profile.twitter, 'twitter')!}
+                    href={twitterHref}
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={() => trackClick('twitter')}
-                    className="flex items-center justify-center rounded-xl bg-slate-600 py-3 text-sm font-medium text-white transition hover:bg-slate-500"
+                    className={`flex items-center justify-center rounded-xl border py-3 text-sm font-medium transition hover:opacity-90 ${linkButtonClass}`}
+                    style={linkButtonStyle}
                   >
                     X
                   </a>
                 )}
-                {socialProfileHref(profile.privacy, 'privacy') && (
+                {privacyHref && !hasBioLink(privacyHref) && (
                   <a
-                    href={socialProfileHref(profile.privacy, 'privacy')!}
+                    href={privacyHref}
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={() => trackClick('privacy')}
-                    className="flex items-center justify-center rounded-xl bg-orange-500 py-3 text-sm font-medium text-white transition hover:bg-orange-400"
+                    className={`flex items-center justify-center rounded-xl border py-3 text-sm font-medium transition hover:opacity-90 ${linkButtonClass}`}
+                    style={linkButtonStyle}
                   >
                     Privacy
                   </a>
                 )}
-                {socialProfileHref(profile.onlyfans, 'onlyfans') && (
+                {onlyfansHref && !hasBioLink(onlyfansHref) && (
                   <a
-                    href={socialProfileHref(profile.onlyfans, 'onlyfans')!}
+                    href={onlyfansHref}
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={() => trackClick('onlyfans')}
-                    className="flex items-center justify-center rounded-xl bg-cyan-500 py-3 text-sm font-medium text-white transition hover:bg-cyan-400"
+                    className={`flex items-center justify-center rounded-xl border py-3 text-sm font-medium transition hover:opacity-90 ${linkButtonClass}`}
+                    style={linkButtonStyle}
                   >
                     OnlyFans
                   </a>
