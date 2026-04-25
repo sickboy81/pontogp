@@ -19,6 +19,7 @@ import {
   parseOnlyfansUsername,
   parsePrivacyUsername,
   parseTwitterUsername,
+  socialProfileHref,
 } from '@/lib/social-links'
 
 type FormData = {
@@ -73,6 +74,35 @@ type FormData = {
   location_lat: string
   location_lng: string
   location_approximate: boolean
+}
+
+function telegramHref(raw: string): string {
+  const value = raw.trim()
+  if (!value) return ''
+  if (/^https?:\/\//i.test(value)) return value
+  const username = value.replace(/^@+/, '').replace(/^t(elegram)?\.me\/?/i, '').split('/')[0]
+  return username ? `https://t.me/${username}` : ''
+}
+
+function whatsappHref(raw: string): string {
+  const digits = raw.replace(/\D/g, '')
+  return digits ? `https://wa.me/${digits}` : ''
+}
+
+function buildSuggestedBioLinks(form: FormData): Array<{ label: string; url: string; type: string; enabled: boolean }> {
+  const links: Array<{ label: string; url: string; type: string; enabled: boolean }> = []
+  const add = (type: string, label: string, url: string | null | undefined) => {
+    const clean = (url || '').trim()
+    if (clean) links.push({ type, label, url: clean, enabled: true })
+  }
+  add('whatsapp', 'WhatsApp', whatsappHref(form.whatsapp))
+  add('telegram', 'Telegram', telegramHref(form.telegram))
+  add('phone', 'Ligar agora', form.phone ? `tel:${form.phone.trim()}` : '')
+  add('instagram', 'Instagram', socialProfileHref(form.instagram, 'instagram'))
+  add('twitter', 'X', socialProfileHref(form.twitter, 'twitter'))
+  add('privacy', 'Privacy', socialProfileHref(form.privacy, 'privacy'))
+  add('onlyfans', 'OnlyFans', socialProfileHref(form.onlyfans, 'onlyfans'))
+  return links
 }
 
 const emptyForm: FormData = {
@@ -1820,7 +1850,10 @@ export default function DashboardPerfilForm() {
 
                 <div>
                   <label className="mb-2 block text-sm font-medium text-slate-300">Gerenciar links e botões</label>
-                  <p className="mb-2 text-xs text-slate-500">Arraste pelo ícone ≡ para reordenar.</p>
+                  <p className="mb-2 text-xs text-slate-500">
+                    A prévia também mostra seus contatos e redes sociais. Para editar/reordenar esses botões aqui,
+                    adicione-os à lista.
+                  </p>
                   <div className="space-y-3">
                     {form.bio_links.map((link, i) => (
                       <div
@@ -1895,6 +1928,24 @@ export default function DashboardPerfilForm() {
                     >
                       + Add link extra
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setForm((f) => {
+                          const suggested = buildSuggestedBioLinks(f)
+                          const existingTypes = new Set(f.bio_links.map((l) => l.type || 'custom'))
+                          const next = suggested.filter((l) => !existingTypes.has(l.type))
+                          if (next.length === 0) {
+                            toast('Nenhum contato/rede novo para adicionar.')
+                            return f
+                          }
+                          return { ...f, bio_links: [...f.bio_links, ...next] }
+                        })
+                      }}
+                      className="ml-2 rounded-lg border border-primary-500/50 px-4 py-2 text-sm text-primary-200 hover:bg-primary-500/10"
+                    >
+                      + Adicionar contatos/redes atuais
+                    </button>
                   </div>
                 </div>
 
@@ -1915,9 +1966,14 @@ export default function DashboardPerfilForm() {
                       ? form.bio_avatar_index
                       : 0
                   const previewAvatar = photos[avatarIndex] || profile.thumbnail || ''
-                  const previewLinks = form.bio_links.filter(
+                  const manualPreviewLinks = form.bio_links.filter(
                     (l) => l.enabled !== false && l.label.trim() && l.url.trim()
                   )
+                  const manualTypes = new Set(manualPreviewLinks.map((l) => l.type || 'custom'))
+                  const automaticPreviewLinks = buildSuggestedBioLinks(form).filter(
+                    (l) => !manualTypes.has(l.type)
+                  )
+                  const previewLinks = [...manualPreviewLinks, ...automaticPreviewLinks]
                   return (
                   <div className="rounded-xl border border-slate-600 bg-slate-800/30 p-4">
                     <p className="mb-2 text-xs font-semibold uppercase text-slate-500">Pré-visualização</p>
