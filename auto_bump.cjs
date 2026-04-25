@@ -10,6 +10,10 @@ const pb = new PocketBase(PB_URL);
 const LOCK_FILE = '/tmp/cerejavip-auto-bump.lock';
 const LOCK_STALE_MS = 15 * 60 * 1000; // 15 min
 
+function todayBR() {
+    return new Date().toLocaleDateString('fr-ca', { timeZone: 'America/Sao_Paulo' });
+}
+
 function acquireLock() {
     const now = Date.now();
     try {
@@ -59,28 +63,29 @@ async function runAutoBump() {
         const plans = await pb.collection('plans').getFullList({
             fields: 'id,slug,daily_bumps'
         });
-        const plansMap = Object.fromEntries(plans.map(p => [p.slug, p]));
+        const plansMap = new Map();
+        for (const plan of plans) {
+            if (plan.id) plansMap.set(plan.id, plan);
+            if (plan.slug) plansMap.set(plan.slug, plan);
+        }
 
-        // 2. Get all active profiles (campos mínimos para reduzir payload)
+        // 2. Get active profiles with auto bump enabled (campos mínimos para reduzir payload)
         const profiles = await pb.collection('profiles').getFullList({
-            filter: 'status = "active"',
+            filter: 'status = "active" && auto_bump = true',
             sort: '-last_bump_at',
-            fields: 'id,name,plan,last_bump_at'
+            fields: 'id,name,plan,last_bump_at,auto_bump'
         });
 
-        console.log(`Found ${profiles.length} active profiles.`);
+        console.log(`Found ${profiles.length} active profiles with auto-bump enabled.`);
 
-        // Use Brazil/Sao_Paulo timezone (UTC-3) for date consistency
-        const now = new Date();
-        const brazilOffset = 3 * 60 * 60 * 1000; // 3 hours in ms
-        const brazilDate = new Date(now.getTime() - brazilOffset);
-        const today = brazilDate.toISOString().split('T')[0];
+        // Use the same Brazil/Sao_Paulo date used by the Next.js bump APIs.
+        const today = todayBR();
 
         // 3. Pré-carrega bumps do dia para evitar N+1 queries.
         const dailyMap = new Map();
         try {
             const dailyRecords = await pb.collection('profile_daily_bumps').getFullList({
-                filter: `date ~ "${today}"`,
+                filter: `date = "${today}"`,
                 fields: 'id,profile,bumps_used'
             });
             for (const rec of dailyRecords) {
@@ -91,9 +96,9 @@ async function runAutoBump() {
         }
 
         for (const profile of profiles) {
-            const plan = plansMap[profile.plan];
+            const plan = plansMap.get(profile.plan);
             if (!plan || !plan.daily_bumps || plan.daily_bumps <= 0) {
-                console.log(`Profile ${profile.id} has no valid plan for bumps.`);
+                console.log(`Profile ${profile.id} has no valid plan for bumps (plan ref: ${profile.plan || 'empty'}).`);
                 continue;
             }
 

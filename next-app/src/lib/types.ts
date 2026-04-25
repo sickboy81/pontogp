@@ -53,6 +53,7 @@ export interface Profile {
   bio_button_color?: string
   bio_links?: Array<{ label: string; url: string }>
   bio_avatar_index?: number
+  bio_show_full_profile?: boolean
   hair_color?: string
   body_type?: string
   height?: number

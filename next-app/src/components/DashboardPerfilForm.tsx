@@ -69,6 +69,7 @@ type FormData = {
   bio_button_color: string
   bio_links: Array<{ label: string; url: string; type?: string; enabled?: boolean }>
   bio_avatar_index: number
+  bio_show_full_profile: boolean
   /** Linhas livres: o que oferece + valor (R$). */
   price_rows: Array<{ description: string; price: string }>
   location_lat: string
@@ -165,6 +166,7 @@ const emptyForm: FormData = {
   bio_button_color: '',
   bio_links: [],
   bio_avatar_index: 0,
+  bio_show_full_profile: true,
   price_rows: [{ description: '', price: '' }],
   location_lat: '',
   location_lng: '',
@@ -235,6 +237,7 @@ function profileToForm(p: Profile | null): FormData {
     bio_button_color: p.bio_button_color ?? '',
     bio_links: Array.isArray(p.bio_links) ? p.bio_links.map((l) => ({ label: l?.label ?? '', url: l?.url ?? '', type: (l as { type?: string })?.type ?? 'custom', enabled: (l as { enabled?: boolean })?.enabled !== false })) : [],
     bio_avatar_index: p.bio_avatar_index != null ? p.bio_avatar_index : 0,
+    bio_show_full_profile: p.bio_show_full_profile !== false,
     price_rows: profilePriceRowsFromProfile(p),
     location_lat: p.location_lat != null ? String(p.location_lat) : '',
     location_lng: p.location_lng != null ? String(p.location_lng) : '',
@@ -568,6 +571,7 @@ export default function DashboardPerfilForm() {
         bio_button_color: form.display_mode === 'link_bio' && form.bio_button_color ? form.bio_button_color : null,
         bio_links: form.display_mode === 'link_bio' && form.bio_links.length > 0 ? form.bio_links.filter((l) => l.enabled !== false && l.label.trim() && l.url.trim()).map((l) => ({ label: l.label.trim(), url: l.url.trim() })) : null,
         bio_avatar_index: form.display_mode === 'link_bio' ? form.bio_avatar_index : null,
+        bio_show_full_profile: form.display_mode === 'link_bio' ? form.bio_show_full_profile : null,
         prices: pricesPayload.length > 0 ? pricesPayload : null,
         price_30min: null,
         price_1h: null,
@@ -1778,6 +1782,21 @@ export default function DashboardPerfilForm() {
                   </div>
                 </div>
 
+                <label className="flex items-start gap-3 rounded-xl border border-slate-700 bg-slate-800/40 p-4">
+                  <input
+                    type="checkbox"
+                    checked={form.bio_show_full_profile}
+                    onChange={(e) => setForm((f) => ({ ...f, bio_show_full_profile: e.target.checked }))}
+                    className="mt-0.5 rounded border-slate-600 bg-slate-800 text-primary-600"
+                  />
+                  <span>
+                    <span className="block text-sm font-medium text-slate-200">Mostrar link para o perfil completo</span>
+                    <span className="mt-1 block text-xs text-slate-500">
+                      Exibe o botão “Ver perfil completo” no final da página do Link Bio.
+                    </span>
+                  </span>
+                </label>
+
                 <div>
                   <label className="mb-2 block text-sm font-medium text-slate-300">Tema visual</label>
                   <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
@@ -2035,6 +2054,11 @@ export default function DashboardPerfilForm() {
                                 <div key={l.label} className={`rounded-xl border py-2.5 text-center text-xs font-medium ${linkBtnClass}`} style={linkBtnStyle}>{l.label}</div>
                               ))}
                             </div>
+                          </div>
+                        )}
+                        {form.bio_show_full_profile && (
+                          <div className={`mt-4 text-center text-xs underline ${descColor}`}>
+                            Ver perfil completo
                           </div>
                         )}
                       </div>

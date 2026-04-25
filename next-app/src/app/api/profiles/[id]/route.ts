@@ -23,7 +23,7 @@ const ALLOWED_KEYS = new Set([
   'price_30min', 'price_1h', 'price_2h', 'price_overnight', 'prices',
   'short_description', 'slug', 'is_online', 'online_until', 'status',
   'plan', 'visual_highlight', 'auto_bump',
-  'hair_color', 'body_type', 'height', 'display_mode', 'bio_theme', 'bio_button_color', 'bio_links', 'bio_avatar_index',
+  'hair_color', 'body_type', 'height', 'display_mode', 'bio_theme', 'bio_button_color', 'bio_links', 'bio_avatar_index', 'bio_show_full_profile',
 ])
 
 function prepareUpdateBody(data: Record<string, unknown>): Record<string, unknown> {

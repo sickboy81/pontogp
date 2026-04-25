@@ -15,9 +15,9 @@ Nao use dois mecanismos de bump ao mesmo tempo.
 
 ## Regras de negócio do bump atual
 
-- O `auto_bump.cjs` percorre perfis `status = "active"`.
+- O `auto_bump.cjs` percorre perfis `status = "active"` com `auto_bump = true`.
 - Para cada perfil:
-  - valida plano com `daily_bumps > 0`;
+  - valida plano com `daily_bumps > 0`, aceitando `profiles.plan` como `id` ou `slug`;
   - consulta uso do dia em `profile_daily_bumps`;
   - respeita intervalo `24h / daily_bumps`;
   - incrementa `bumps_used` e atualiza `last_bump_at`.

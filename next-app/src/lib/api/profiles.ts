@@ -108,6 +108,7 @@ export function mapProfile(record: Record<string, unknown> & { expand?: Record<s
     bio_button_color: record.bio_button_color as string | undefined,
     bio_links: Array.isArray(record.bio_links) ? (record.bio_links as Array<{ label: string; url: string }>) : undefined,
     bio_avatar_index: record.bio_avatar_index != null ? Number(record.bio_avatar_index) : undefined,
+    bio_show_full_profile: record.bio_show_full_profile !== false,
     plan_slug,
   } as Profile
 }

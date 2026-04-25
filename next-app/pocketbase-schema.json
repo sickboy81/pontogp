@@ -1633,6 +1633,15 @@
           "type": "number"
         },
         {
+          "hidden": false,
+          "id": "bool1745585480",
+          "name": "bio_show_full_profile",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "bool"
+        },
+        {
           "autogeneratePattern": "",
           "hidden": false,
           "id": "text1093766688",

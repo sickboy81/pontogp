@@ -295,14 +295,16 @@ export default function LinkBioView({ profile, profileUrl }: LinkBioViewProps) {
             </div>
           )}
 
-        <Link
-          href={pathname ? `${pathname}?view=full` : '#'}
-          className={`mt-6 text-center text-sm underline transition ${
-            theme === 'dark' ? 'text-slate-400 hover:text-slate-300' : theme === 'sunset' || theme === 'cherry' ? 'text-white/80 hover:text-white' : 'text-slate-500 hover:text-slate-700'
-          }`}
-        >
-          Ver perfil completo
-        </Link>
+        {profile.bio_show_full_profile !== false && (
+          <Link
+            href={pathname ? `${pathname}?view=full` : '#'}
+            className={`mt-6 text-center text-sm underline transition ${
+              theme === 'dark' ? 'text-slate-400 hover:text-slate-300' : theme === 'sunset' || theme === 'cherry' ? 'text-white/80 hover:text-white' : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            Ver perfil completo
+          </Link>
+        )}
 
         <div className={`mt-8 flex flex-col items-center gap-1 ${theme === 'dark' ? 'text-slate-400' : theme === 'sunset' || theme === 'cherry' ? 'text-white/70' : 'text-slate-500'}`}>
           <p className="text-center text-sm">Faça parte do</p>
