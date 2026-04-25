@@ -82,7 +82,7 @@ export default function DashboardLocationMapPicker({
         const tileY = centerTileY + dy
         list.push({
           key: `${zoom}-${tileX}-${tileY}`,
-          url: `https://tile.openstreetmap.org/${zoom}/${tileX}/${tileY}.png`,
+          url: `/api/map-tiles/${zoom}/${tileX}/${tileY}.png`,
           x: tileX * TILE_SIZE - centerX,
           y: tileY * TILE_SIZE - centerY,
         })
