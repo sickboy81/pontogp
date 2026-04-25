@@ -303,6 +303,11 @@ export default function DashboardClient() {
   const searchExpired = searchDays !== null && searchDays <= 0
   const contactExpired = contactDays !== null && contactDays <= 0
   const hasAnyExpirationIssue = searchExpired || contactExpired
+  const activeStories = myStories.filter((s) => s.active)
+  const inactiveStories = myStories.filter((s) => !s.active)
+  const recentStoryCount = 3
+  const recentStories = myStories.slice(0, recentStoryCount)
+  const hiddenStoryCount = Math.max(0, myStories.length - recentStories.length)
 
   const handleToggleOnline = async () => {
     if (!profile) return
@@ -604,8 +609,8 @@ export default function DashboardClient() {
       {/* Os meus stories */}
       <div className="mt-6 rounded-xl border border-slate-700 bg-slate-800/50 p-4">
         <p className="mb-3 text-sm leading-relaxed text-slate-300">
-          As suas stories listadas abaixo mostram até quando estão (ou estiveram) disponíveis. Novas
-          publicações usam a regra de <strong className="text-white">{STORY_DURATION_HOURS}h</strong>.
+          Para evitar uma lista gigante no dashboard, mostramos apenas as stories mais recentes aqui.
+          O histórico completo fica numa página separada.
         </p>
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-slate-400">
@@ -621,6 +626,24 @@ export default function DashboardClient() {
             {storiesLoading ? 'A carregar…' : 'Atualizar lista'}
           </button>
         </div>
+        {myStories.length > 0 && (
+          <div className="mb-4 grid gap-2 sm:grid-cols-3">
+            <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2">
+              <p className="text-lg font-bold text-emerald-200">{activeStories.length}</p>
+              <p className="text-xs uppercase tracking-wider text-emerald-300/80">Ativas agora</p>
+            </div>
+            <div className="rounded-lg border border-slate-600 bg-slate-900/40 px-3 py-2">
+              <p className="text-lg font-bold text-white">{inactiveStories.length}</p>
+              <p className="text-xs uppercase tracking-wider text-slate-500">No histórico</p>
+            </div>
+            <div className="rounded-lg border border-slate-600 bg-slate-900/40 px-3 py-2">
+              <p className="text-lg font-bold text-white">
+                {myStories.reduce((sum, s) => sum + (Number(s.views) || 0), 0)}
+              </p>
+              <p className="text-xs uppercase tracking-wider text-slate-500">Views totais</p>
+            </div>
+          </div>
+        )}
         {storiesLoading && myStories.length === 0 ? (
           <div className="flex items-center gap-2 py-6 text-slate-400">
             <Loader2 className="h-5 w-5 animate-spin" />
@@ -631,12 +654,18 @@ export default function DashboardClient() {
             Ainda não tem stories publicadas. Use &quot;Nova story&quot; acima para publicar.
           </p>
         ) : (
-          <ul className="space-y-3">
-            {myStories.map((s) => (
-              <li
-                key={s.id}
-                className="flex flex-col gap-3 rounded-lg border border-slate-600/80 bg-slate-900/40 p-3 sm:flex-row sm:items-stretch"
-              >
+          <>
+            {hiddenStoryCount > 0 && (
+              <p className="mb-3 rounded-lg border border-slate-700 bg-slate-900/40 px-3 py-2 text-sm text-slate-400">
+                Mostrando as {recentStories.length} mais recentes. Existem mais {hiddenStoryCount} no histórico completo.
+              </p>
+            )}
+            <ul className="space-y-3">
+              {recentStories.map((s) => (
+                <li
+                  key={s.id}
+                  className="flex flex-col gap-3 rounded-lg border border-slate-600/80 bg-slate-900/40 p-3 sm:flex-row sm:items-stretch"
+                >
                 <div className="shrink-0 sm:w-24">
                   {s.file && s.type === 'video' ? (
                     <video
@@ -757,9 +786,20 @@ export default function DashboardClient() {
                     </>
                   )}
                 </div>
-              </li>
-            ))}
-          </ul>
+                </li>
+              ))}
+            </ul>
+            {hiddenStoryCount > 0 && (
+              <div className="mt-4 flex justify-center">
+                <Link
+                  href="/dashboard/stories"
+                  className="rounded-lg border border-slate-600 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-slate-700"
+                >
+                  Ver todos os stories
+                </Link>
+              </div>
+            )}
+          </>
         )}
       </div>
 
