@@ -84,9 +84,12 @@ export default function LinkBioView({ profile, profileUrl }: LinkBioViewProps) {
     const normalized = normalizeLinkUrl(url || '')
     return normalized ? bioLinkUrls.has(normalized) : false
   }
-  const whatsappHref = profile.whatsapp ? whatsAppContactHref(profile.whatsapp, profileUrl) : ''
-  const telegramHref = profile.telegram ? telegramContactHref(profile.telegram, profileUrl) : ''
-  const phoneHref = profile.phone ? `tel:${profile.phone}` : ''
+  const visibleWhatsapp = profile.show_whatsapp !== false ? profile.whatsapp : ''
+  const visibleTelegram = profile.show_telegram !== false ? profile.telegram : ''
+  const visiblePhone = profile.show_phone !== false ? profile.phone : ''
+  const whatsappHref = visibleWhatsapp ? whatsAppContactHref(visibleWhatsapp, profileUrl) : ''
+  const telegramHref = visibleTelegram ? telegramContactHref(visibleTelegram, profileUrl) : ''
+  const phoneHref = visiblePhone ? `tel:${visiblePhone}` : ''
   const instagramHref = socialProfileHref(profile.instagram, 'instagram')
   const twitterHref = socialProfileHref(profile.twitter, 'twitter')
   const privacyHref = socialProfileHref(profile.privacy, 'privacy')
@@ -197,7 +200,7 @@ export default function LinkBioView({ profile, profileUrl }: LinkBioViewProps) {
                   Enviar mensagem
                 </Link>
               )}
-              {profile.whatsapp && !hasBioLink(whatsappHref) && (
+              {visibleWhatsapp && !hasBioLink(whatsappHref) && (
                 <a
                   href={whatsappHref}
                   target="_blank"
@@ -210,7 +213,7 @@ export default function LinkBioView({ profile, profileUrl }: LinkBioViewProps) {
                   WhatsApp
                 </a>
               )}
-              {profile.telegram && !hasBioLink(telegramHref) && (
+              {visibleTelegram && !hasBioLink(telegramHref) && (
                 <a
                   href={telegramHref}
                   target="_blank"
@@ -222,7 +225,7 @@ export default function LinkBioView({ profile, profileUrl }: LinkBioViewProps) {
                   Telegram
                 </a>
               )}
-              {profile.phone && !hasBioLink(phoneHref) && (
+              {visiblePhone && !hasBioLink(phoneHref) && (
                 <a
                   href={phoneHref}
                   onClick={() => trackClick('phone')}

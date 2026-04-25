@@ -9,9 +9,11 @@ import {
   CATEGORIES, GENDERS, STATES, ETHNICITIES, HAIR_COLORS, BODY_TYPES, BREAST_TYPES, PUBIS_TYPES,
   PAYMENT_METHOD_OPTIONS, SERVICE_LOCATION_OPTIONS, SERVICE_TO_OPTIONS,
   SMOKER_OPTIONS, getCitiesByState, getServicesByCategory, getSpecialServicesByCategory,
+  getNeighborhoodsByCity,
   OTHER_SERVICES_MASSAGIST, FOR_SALE_ONLINE, MASSAGE_CERTIFICATIONS,
 } from '@/utils/constants'
 import ScheduleManager from '@/components/ScheduleManager'
+import DashboardLocationMapPicker from '@/components/DashboardLocationMapPicker'
 import toast from 'react-hot-toast'
 import { useAuthStore } from '@/store/auth'
 import {
@@ -35,6 +37,9 @@ type FormData = {
   whatsapp: string
   telegram: string
   phone: string
+  show_whatsapp: boolean
+  show_telegram: boolean
+  show_phone: boolean
   instagram: string
   twitter: string
   privacy: string
@@ -96,9 +101,9 @@ function buildSuggestedBioLinks(form: FormData): Array<{ label: string; url: str
     const clean = (url || '').trim()
     if (clean) links.push({ type, label, url: clean, enabled: true })
   }
-  add('whatsapp', 'WhatsApp', whatsappHref(form.whatsapp))
-  add('telegram', 'Telegram', telegramHref(form.telegram))
-  add('phone', 'Ligar agora', form.phone ? `tel:${form.phone.trim()}` : '')
+  if (form.show_whatsapp) add('whatsapp', 'WhatsApp', whatsappHref(form.whatsapp))
+  if (form.show_telegram) add('telegram', 'Telegram', telegramHref(form.telegram))
+  if (form.show_phone) add('phone', 'Ligar agora', form.phone ? `tel:${form.phone.trim()}` : '')
   add('instagram', 'Instagram', socialProfileHref(form.instagram, 'instagram'))
   add('twitter', 'X', socialProfileHref(form.twitter, 'twitter'))
   add('privacy', 'Privacy', socialProfileHref(form.privacy, 'privacy'))
@@ -119,6 +124,13 @@ function normalizeBioLinkUrl(url: string): string {
   }
 }
 
+function parseCoordinate(value: string, min: number, max: number): number | null {
+  const normalized = value.trim().replace(',', '.')
+  if (!normalized) return null
+  const parsed = Number(normalized)
+  return Number.isFinite(parsed) && parsed >= min && parsed <= max ? parsed : null
+}
+
 const emptyForm: FormData = {
   name: '',
   age: 18,
@@ -132,6 +144,9 @@ const emptyForm: FormData = {
   whatsapp: '',
   telegram: '',
   phone: '',
+  show_whatsapp: true,
+  show_telegram: true,
+  show_phone: true,
   instagram: '',
   twitter: '',
   privacy: '',
@@ -203,6 +218,9 @@ function profileToForm(p: Profile | null): FormData {
     whatsapp: p.whatsapp ?? '',
     telegram: p.telegram ?? '',
     phone: p.phone ?? '',
+    show_whatsapp: p.show_whatsapp !== false,
+    show_telegram: p.show_telegram !== false,
+    show_phone: p.show_phone !== false,
     instagram: parseInstagramUsername(p.instagram ?? ''),
     twitter: parseTwitterUsername(p.twitter ?? ''),
     privacy: parsePrivacyUsername(p.privacy ?? ''),
@@ -247,6 +265,25 @@ function profileToForm(p: Profile | null): FormData {
 
 type TabId = 'dados' | 'midia' | 'stats' | 'bio'
 
+type ProfileStats = {
+  totals: {
+    views: number
+    clicks: number
+    favorites: number
+    stories: number
+    storyViews: number
+  }
+  periods: {
+    viewsLast7Days: number
+    viewsLast30Days: number
+    clicksLast7Days: number
+    clicksLast30Days: number
+  }
+  clickCountsByType: Record<string, number>
+  daily: Array<{ date: string; views: number; clicks: number }>
+  peakHour: { hour: number; events: number } | null
+}
+
 export default function DashboardPerfilForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -270,6 +307,8 @@ export default function DashboardPerfilForm() {
   const [audioUploading, setAudioUploading] = useState(false)
   const [audioDeleting, setAudioDeleting] = useState(false)
   const [schedule, setSchedule] = useState<Schedule[]>([])
+  const [stats, setStats] = useState<ProfileStats | null>(null)
+  const [statsLoading, setStatsLoading] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -305,7 +344,38 @@ export default function DashboardPerfilForm() {
     }
   }, [profile])
 
+  useEffect(() => {
+    if (!profile || activeTab !== 'stats') return
+    let cancelled = false
+    setStatsLoading(true)
+    fetch('/api/profiles/me/stats', { credentials: 'include' })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!cancelled) setStats(data)
+      })
+      .catch(() => {
+        if (!cancelled) setStats(null)
+      })
+      .finally(() => {
+        if (!cancelled) setStatsLoading(false)
+      })
+    return () => { cancelled = true }
+  }, [profile, activeTab])
+
   const cities = getCitiesByState(form.state)
+  const cityNeighborhoodOptions = getNeighborhoodsByCity(form.city)
+  const selectedNeighborhoods = new Set(form.neighborhoods)
+  const mapLat = parseCoordinate(form.location_lat, -90, 90)
+  const mapLng = parseCoordinate(form.location_lng, -180, 180)
+
+  const toggleNeighborhood = (neighborhood: string, checked: boolean) => {
+    setForm((f) => ({
+      ...f,
+      neighborhoods: checked
+        ? Array.from(new Set([...f.neighborhoods, neighborhood]))
+        : f.neighborhoods.filter((item) => item !== neighborhood),
+    }))
+  }
 
   const setTab = (tab: TabId) => {
     setActiveTab(tab)
@@ -537,6 +607,9 @@ export default function DashboardPerfilForm() {
         whatsapp: toTrimmed(form.whatsapp) || null,
         telegram: toTrimmed(form.telegram) || null,
         phone: toTrimmed(form.phone) || null,
+        show_whatsapp: form.show_whatsapp,
+        show_telegram: form.show_telegram,
+        show_phone: form.show_phone,
         instagram: parseInstagramUsername(form.instagram) || null,
         twitter: parseTwitterUsername(form.twitter) || null,
         privacy: parsePrivacyUsername(form.privacy) || null,
@@ -577,8 +650,8 @@ export default function DashboardPerfilForm() {
         price_1h: null,
         price_2h: null,
         price_overnight: null,
-        location_lat: form.location_lat ? Number(form.location_lat) : null,
-        location_lng: form.location_lng ? Number(form.location_lng) : null,
+        location_lat: mapLat,
+        location_lng: mapLng,
         location_approximate: form.location_approximate,
         schedule: schedule.length > 0 ? schedule : null,
       }
@@ -698,6 +771,33 @@ export default function DashboardPerfilForm() {
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
+            <label className="mb-1 block text-sm font-medium text-slate-300">Categoria</label>
+            <select
+              value={form.category}
+              onChange={(e) => setForm((f) => ({ ...f, category: e.target.value as FormData['category'] }))}
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+            >
+              {CATEGORIES.map((c) => (
+                <option key={c.value} value={c.value}>{c.label}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-300">Gênero</label>
+            <select
+              value={form.gender}
+              onChange={(e) => setForm((f) => ({ ...f, gender: e.target.value as FormData['gender'] }))}
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+            >
+              {GENDERS.map((g) => (
+                <option key={g.value} value={g.value}>{g.label}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
             <label className="mb-1 block text-sm font-medium text-slate-300">Estado</label>
             <select
               value={form.state}
@@ -720,49 +820,6 @@ export default function DashboardPerfilForm() {
               <option value="">Selecione</option>
               {cities.map((c) => (
                 <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {form.category !== 'online' && (
-          <>
-            <label className="flex cursor-pointer items-center gap-2">
-              <input type="checkbox" checked={form.location_approximate} onChange={(e) => setForm((f) => ({ ...f, location_approximate: e.target.checked }))} className="h-4 w-4 rounded border-slate-600 bg-slate-800 text-primary-600 focus:ring-primary-500" />
-              <span className="text-sm text-slate-300">Exibir como localização aproximada</span>
-            </label>
-          </>
-        )}
-
-        {profile && (
-          <>
-            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400">Horários de atendimento</h3>
-            <ScheduleManager schedule={schedule} onChange={setSchedule} />
-          </>
-        )}
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <label className="mb-1 block text-sm font-medium text-slate-300">Categoria</label>
-            <select
-              value={form.category}
-              onChange={(e) => setForm((f) => ({ ...f, category: e.target.value as FormData['category'] }))}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-            >
-              {CATEGORIES.map((c) => (
-                <option key={c.value} value={c.value}>{c.label}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-slate-300">Gênero</label>
-            <select
-              value={form.gender}
-              onChange={(e) => setForm((f) => ({ ...f, gender: e.target.value as FormData['gender'] }))}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-            >
-              {GENDERS.map((g) => (
-                <option key={g.value} value={g.value}>{g.label}</option>
               ))}
             </select>
           </div>
@@ -1072,9 +1129,90 @@ export default function DashboardPerfilForm() {
             </div>
             <div className="border-t border-slate-700 pt-4">
               <h3 className="mb-3 font-medium text-slate-300">Bairros / regiões de atendimento</h3>
-              <input type="text" value={form.neighborhoods.join(', ')} onChange={(e) => setForm((f) => ({ ...f, neighborhoods: e.target.value.split(',').map((s) => s.trim()).filter(Boolean) }))} placeholder="Ex: Copacabana, Ipanema, Leblon" className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white placeholder-slate-500 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
+              {cityNeighborhoodOptions.length > 0 ? (
+                <div className="grid max-h-64 gap-2 overflow-y-auto rounded-lg border border-slate-700 bg-slate-900/30 p-3 sm:grid-cols-2 md:grid-cols-3">
+                  {cityNeighborhoodOptions.map((neighborhood) => (
+                    <label key={neighborhood} className="flex cursor-pointer items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={selectedNeighborhoods.has(neighborhood)}
+                        onChange={(e) => toggleNeighborhood(neighborhood, e.target.checked)}
+                        className="h-4 w-4 rounded border-slate-600 bg-slate-800 text-primary-600 focus:ring-primary-500"
+                      />
+                      <span className="text-sm text-slate-300">{neighborhood}</span>
+                    </label>
+                  ))}
+                </div>
+              ) : (
+                <p className="rounded-lg border border-slate-700 bg-slate-800/50 px-3 py-2 text-xs text-slate-500">
+                  Selecione uma cidade com lista de bairros disponível ou adicione regiões manualmente abaixo.
+                </p>
+              )}
+              <div className="mt-3">
+                <label className="mb-1 block text-xs font-medium text-slate-500">Adicionar bairros/regiões extras</label>
+                <input
+                  type="text"
+                  onKeyDown={(e) => {
+                    if (e.key !== 'Enter' && e.key !== ',') return
+                    e.preventDefault()
+                    const value = e.currentTarget.value.trim().replace(/,$/, '')
+                    if (!value) return
+                    toggleNeighborhood(value, true)
+                    e.currentTarget.value = ''
+                  }}
+                  onBlur={(e) => {
+                    const value = e.currentTarget.value.trim().replace(/,$/, '')
+                    if (!value) return
+                    toggleNeighborhood(value, true)
+                    e.currentTarget.value = ''
+                  }}
+                  placeholder="Digite e pressione Enter. Ex: Zona Sul"
+                  className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white placeholder-slate-500 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                />
+              </div>
+              {form.neighborhoods.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {form.neighborhoods.map((neighborhood) => (
+                    <button
+                      key={neighborhood}
+                      type="button"
+                      onClick={() => toggleNeighborhood(neighborhood, false)}
+                      className="rounded-full border border-primary-500/40 bg-primary-500/10 px-3 py-1 text-xs text-primary-100 hover:bg-primary-500/20"
+                    >
+                      {neighborhood} ×
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="border-t border-slate-700 pt-4">
+              <label className="mb-3 flex cursor-pointer items-center gap-2">
+                <input type="checkbox" checked={form.location_approximate} onChange={(e) => setForm((f) => ({ ...f, location_approximate: e.target.checked }))} className="h-4 w-4 rounded border-slate-600 bg-slate-800 text-primary-600 focus:ring-primary-500" />
+                <span className="text-sm text-slate-300">Usar localização aproximada por segurança</span>
+              </label>
+              <DashboardLocationMapPicker
+                lat={mapLat}
+                lng={mapLng}
+                city={form.city}
+                state={form.state}
+                neighborhoods={form.neighborhoods}
+                approximate={form.location_approximate}
+                onChange={({ lat, lng }) => setForm((f) => ({
+                  ...f,
+                  location_lat: lat.toFixed(6),
+                  location_lng: lng.toFixed(6),
+                }))}
+                onClear={() => setForm((f) => ({ ...f, location_lat: '', location_lng: '' }))}
+              />
             </div>
           </>
+        )}
+
+        {profile && (
+          <div className="border-t border-slate-700 pt-4">
+            <h3 className="mb-3 font-medium text-slate-300">Horários de atendimento</h3>
+            <ScheduleManager schedule={schedule} onChange={setSchedule} />
+          </div>
         )}
 
         {/* Serviços especiais – apenas Acompanhante (massagista usa "Final feliz" acima) */}
@@ -1147,6 +1285,15 @@ export default function DashboardPerfilForm() {
                 onChange={(e) => setForm((f) => ({ ...f, whatsapp: e.target.value }))}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
               />
+              <label className="mt-2 flex cursor-pointer items-center gap-2 text-xs text-slate-400">
+                <input
+                  type="checkbox"
+                  checked={form.show_whatsapp}
+                  onChange={(e) => setForm((f) => ({ ...f, show_whatsapp: e.target.checked }))}
+                  className="rounded border-slate-600 bg-slate-800 text-primary-600"
+                />
+                Mostrar no perfil público
+              </label>
             </div>
             <div>
               <label className="mb-1 block text-xs text-slate-500">Telegram</label>
@@ -1156,6 +1303,15 @@ export default function DashboardPerfilForm() {
                 onChange={(e) => setForm((f) => ({ ...f, telegram: e.target.value }))}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
               />
+              <label className="mt-2 flex cursor-pointer items-center gap-2 text-xs text-slate-400">
+                <input
+                  type="checkbox"
+                  checked={form.show_telegram}
+                  onChange={(e) => setForm((f) => ({ ...f, show_telegram: e.target.checked }))}
+                  className="rounded border-slate-600 bg-slate-800 text-primary-600"
+                />
+                Mostrar no perfil público
+              </label>
             </div>
             <div>
               <label className="mb-1 block text-xs text-slate-500">Telefone</label>
@@ -1165,6 +1321,15 @@ export default function DashboardPerfilForm() {
                 onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
               />
+              <label className="mt-2 flex cursor-pointer items-center gap-2 text-xs text-slate-400">
+                <input
+                  type="checkbox"
+                  checked={form.show_phone}
+                  onChange={(e) => setForm((f) => ({ ...f, show_phone: e.target.checked }))}
+                  className="rounded border-slate-600 bg-slate-800 text-primary-600"
+                />
+                Mostrar no perfil público
+              </label>
             </div>
           </div>
         </div>
@@ -1521,19 +1686,38 @@ export default function DashboardPerfilForm() {
         {profile && activeTab === 'stats' && (() => {
           const plan = (profile.plan_slug ?? profile.plan ?? 'gratis').toLowerCase()
           const hasAdvancedStatsAccess = plan === 'prata' || plan === 'ouro'
-          const views = profile.views ?? 0
-          const clicks = profile.clicks ?? 0
-          const favorites = profile.favorites_count ?? 0
+          const views = stats?.totals.views ?? profile.views ?? 0
+          const clicks = stats?.totals.clicks ?? profile.clicks ?? 0
+          const favorites = stats?.totals.favorites ?? profile.favorites_count ?? 0
           const ctr = views > 0 ? Math.round((clicks / views) * 1000) / 10 : 0
           const favRate = views > 0 ? Math.round((favorites / views) * 1000) / 10 : 0
+          const maxDaily = Math.max(1, ...(stats?.daily ?? []).map((row) => Math.max(row.views, row.clicks)))
+          const topClicks = Object.entries(stats?.clickCountsByType ?? {})
+            .filter(([, value]) => value > 0)
+            .sort((a, b) => b[1] - a[1])
+          const clickLabels: Record<string, string> = {
+            whatsapp: 'WhatsApp',
+            telegram: 'Telegram',
+            phone: 'Telefone',
+            message: 'Mensagem',
+            instagram: 'Instagram',
+            twitter: 'X / Twitter',
+            privacy: 'Privacy',
+            onlyfans: 'OnlyFans',
+          }
 
           const resumoBasico = (
             <div className="mb-6 rounded-xl border border-slate-600 bg-slate-800/50 p-5">
-              <h3 className="mb-1 font-medium text-white">Resumo do seu anúncio</h3>
-              <p className="mb-4 text-sm text-slate-500">
-                Disponível em <strong className="text-slate-400">todos os planos</strong>. Abaixo, funil detalhado,
-                tendência e dicas avançadas são extras para <strong className="text-slate-400">Prata e Ouro</strong>.
-              </p>
+              <div className="mb-4 flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="mb-1 font-medium text-white">Resumo do seu anúncio</h3>
+                  <p className="text-sm text-slate-500">
+                    Disponível em <strong className="text-slate-400">todos os planos</strong>. Os dados detalhados usam
+                    registros reais de visualizações, cliques, stories e favoritos.
+                  </p>
+                </div>
+                {statsLoading && <Loader2 className="h-5 w-5 animate-spin text-slate-500" />}
+              </div>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 <div className="rounded-lg border border-slate-700/80 bg-slate-900/40 px-3 py-3 text-center">
                   <p className="text-2xl font-bold text-white">{views}</p>
@@ -1541,7 +1725,7 @@ export default function DashboardPerfilForm() {
                 </div>
                 <div className="rounded-lg border border-slate-700/80 bg-slate-900/40 px-3 py-3 text-center">
                   <p className="text-2xl font-bold text-white">{clicks}</p>
-                  <p className="text-xs uppercase tracking-wider text-slate-500">Cliques em contacto</p>
+                  <p className="text-xs uppercase tracking-wider text-slate-500">Cliques</p>
                 </div>
                 <div className="rounded-lg border border-slate-700/80 bg-slate-900/40 px-3 py-3 text-center">
                   <p className="text-2xl font-bold text-white">{favorites}</p>
@@ -1549,12 +1733,11 @@ export default function DashboardPerfilForm() {
                 </div>
                 <div className="rounded-lg border border-slate-700/80 bg-slate-900/40 px-3 py-3 text-center">
                   <p className="text-2xl font-bold text-primary-400">{views > 0 ? `${ctr}%` : '—'}</p>
-                  <p className="text-xs uppercase tracking-wider text-slate-500">Cliques / visualizações (CTR)</p>
+                  <p className="text-xs uppercase tracking-wider text-slate-500">CTR</p>
                 </div>
               </div>
               <p className="mt-3 text-center text-sm text-slate-500">
-                Favoritos / visualizações: <strong className="text-slate-400">{favRate}%</strong> — quanto mais alto,
-                mais pessoas salvam o seu perfil.
+                Favoritos / visualizações: <strong className="text-slate-400">{favRate}%</strong>.
               </p>
             </div>
           )
@@ -1563,19 +1746,17 @@ export default function DashboardPerfilForm() {
             <div className="space-y-6 border-t border-slate-700 pt-4">
               <h3 className="font-medium text-slate-300">Estatísticas avançadas</h3>
 
-              {/* Meta de performance */}
               <div className="rounded-xl border border-slate-600 bg-slate-800/50 p-4 text-center">
                 <Target className="mx-auto h-8 w-8 text-primary-500" />
                 <p className="mt-2 text-2xl font-bold text-white">
-                  {views >= 10 ? `${Math.min(190, 100 + (views > 0 ? Math.round((clicks / views) * 100) : 0))}% DA META` : '—'}
+                  {views > 0 ? `${ctr}% de CTR` : 'Sem dados suficientes'}
                 </p>
                 <p className="text-sm text-slate-400">
-                  {plan === 'ouro' ? 'Excelente! Você está no topo com o plano Ouro.' : plan === 'prata' ? 'Muito bem! Estatísticas completas no plano Prata.' : 'Atualize para Prata ou Ouro para ver sua meta.'}
+                  {stats ? `${stats.periods.viewsLast30Days} visualizações e ${stats.periods.clicksLast30Days} cliques nos últimos 30 dias.` : 'Carregando dados reais do período.'}
                 </p>
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
-                {/* Funil de conversão */}
                 <div className="rounded-xl border border-slate-600 bg-slate-800/50 p-4">
                   <h4 className="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-400">Funil de conversão</h4>
                   <div className="space-y-2 text-sm">
@@ -1584,110 +1765,76 @@ export default function DashboardPerfilForm() {
                       <span className="font-medium text-white">{views} pessoas</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-300">Cliques de contato</span>
-                      <span className="font-medium text-white">{clicks} interessados ({views > 0 ? Math.round((clicks / views) * 100) : 0}% retenção)</span>
+                      <span className="text-slate-300">Cliques</span>
+                      <span className="font-medium text-white">{clicks} ações ({views > 0 ? Math.round((clicks / views) * 100) : 0}%)</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-300">Conversões (WhatsApp/Telegram)</span>
-                      <span className="font-medium text-white">{clicks} cliques ({clicks > 0 && views > 0 ? Math.round((clicks / views) * 100) : 0}% conversão)</span>
+                      <span className="text-slate-300">Favoritos</span>
+                      <span className="font-medium text-white">{favorites} salvos ({favRate}%)</span>
                     </div>
                   </div>
                 </div>
 
-                {/* Origem dos contatos (simplificado; detalhes por tipo viriam da API) */}
                 <div className="rounded-xl border border-slate-600 bg-slate-800/50 p-4">
-                  <h4 className="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-400">Resumo de engajamento</h4>
+                  <h4 className="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-400">Cliques por canal</h4>
                   <div className="space-y-3">
-                    <div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-slate-300">Visualizações</span>
-                        <span className="text-white">{views}</span>
+                    {topClicks.length > 0 ? topClicks.map(([type, value]) => (
+                      <div key={type}>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-slate-300">{clickLabels[type] ?? type}</span>
+                          <span className="text-white">{value}</span>
+                        </div>
+                        <div className="mt-1 h-2 rounded-full bg-slate-700">
+                          <div className="h-full rounded-full bg-emerald-500" style={{ width: `${clicks > 0 ? Math.min(100, (value / clicks) * 100) : 0}%` }} />
+                        </div>
                       </div>
-                      <div className="mt-1 h-2 rounded-full bg-slate-700">
-                        <div className="h-full rounded-full bg-primary-500" style={{ width: `${views > 0 ? Math.min(100, (views / 100) * 100) : 0}%` }} />
-                      </div>
-                    </div>
-                    <div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-slate-300">Cliques</span>
-                        <span className="text-white">{clicks}</span>
-                      </div>
-                      <div className="mt-1 h-2 rounded-full bg-slate-700">
-                        <div className="h-full rounded-full bg-emerald-500" style={{ width: `${views > 0 ? Math.min(100, (clicks / views) * 100) : 0}%` }} />
-                      </div>
-                    </div>
-                    <div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-slate-300">Favoritos</span>
-                        <span className="text-white">{favorites}</span>
-                      </div>
-                      <div className="mt-1 h-2 rounded-full bg-slate-700">
-                        <div className="h-full rounded-full bg-amber-500" style={{ width: `${views > 0 ? Math.min(100, (favorites / views) * 100) : 0}%` }} />
-                      </div>
-                    </div>
+                    )) : (
+                      <p className="text-sm text-slate-500">Ainda não há cliques registrados por canal.</p>
+                    )}
                   </div>
                 </div>
               </div>
 
-              {/* Tendência semanal (placeholder) */}
               <div className="rounded-xl border border-slate-600 bg-slate-800/50 p-4">
                 <h4 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-slate-400">
                   <TrendingUp className="h-4 w-4" />
-                  Tendência (últimos 7 dias)
+                  Tendência real dos últimos 7 dias
                 </h4>
-                <div className="flex h-24 items-end justify-between gap-1 rounded-lg bg-slate-800/50 px-2 py-2">
-                  {['SEX', 'SÁB', 'DOM', 'SEG', 'TER', 'QUA', 'QUI'].map((d, i) => (
-                    <div key={d} className="flex flex-1 flex-col items-center gap-1">
-                      <div className="h-8 w-full rounded-t bg-slate-600/50" style={{ height: `${(i % 3) * 15 + 20}%` }} />
-                      <span className="text-xs text-slate-500">{d}</span>
+                <div className="flex h-28 items-end justify-between gap-1 rounded-lg bg-slate-800/50 px-2 py-2">
+                  {(stats?.daily ?? []).map((row) => (
+                    <div key={row.date} className="flex flex-1 flex-col items-center gap-1">
+                      <div className="flex h-20 w-full items-end justify-center gap-0.5">
+                        <div className="w-1/2 rounded-t bg-primary-500" style={{ height: `${Math.max(6, (row.views / maxDaily) * 100)}%` }} title={`${row.views} visualizações`} />
+                        <div className="w-1/2 rounded-t bg-emerald-500" style={{ height: `${Math.max(6, (row.clicks / maxDaily) * 100)}%` }} title={`${row.clicks} cliques`} />
+                      </div>
+                      <span className="text-xs text-slate-500">{row.date.slice(5).replace('-', '/')}</span>
                     </div>
                   ))}
                 </div>
-                <p className="mt-2 text-xs text-slate-500">Dados de tendência disponíveis no plano Prata/Ouro.</p>
+                <p className="mt-2 text-xs text-slate-500">Azul = visualizações. Verde = cliques.</p>
               </div>
 
-              {/* Horário de pico */}
-              <div className="rounded-xl border border-slate-600 bg-slate-800/50 p-4">
-                <h4 className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-400">
-                  <Clock className="h-4 w-4" />
-                  Horário de pico
-                </h4>
-                <p className="text-sm text-slate-500">Dados insuficientes para calcular horário.</p>
-              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="rounded-xl border border-slate-600 bg-slate-800/50 p-4">
+                  <h4 className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-400">
+                    <Clock className="h-4 w-4" />
+                    Horário de pico
+                  </h4>
+                  <p className="text-2xl font-bold text-white">
+                    {stats?.peakHour ? `${String(stats.peakHour.hour).padStart(2, '0')}:00` : '—'}
+                  </p>
+                  <p className="text-sm text-slate-500">
+                    {stats?.peakHour ? `${stats.peakHour.events} eventos registrados nesse horário nos últimos 30 dias.` : 'Dados insuficientes para calcular horário.'}
+                  </p>
+                </div>
 
-              {/* Performance dos stories */}
-              <div className="rounded-xl border border-slate-600 bg-slate-800/50 p-4">
-                <h4 className="mb-2 text-sm font-semibold text-slate-400">Performance dos Stories</h4>
-                <p className="text-2xl font-bold text-white">0 views acumuladas</p>
-                <p className="mt-1 text-xs text-slate-500">Stories aumentam seu engajamento em média 2.5x. Continue postando!</p>
-              </div>
-
-              {/* Retenção */}
-              <div className="rounded-xl border border-slate-600 bg-slate-800/50 p-4">
-                <h4 className="mb-3 text-sm font-semibold text-slate-400">Resumo do perfil</h4>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-slate-300">Visualizações</span>
-                      <span className="text-white">{views}</span>
-                    </div>
-                    <div className="mt-1 h-2 rounded-full bg-slate-700">
-                      <div className="h-full max-w-full rounded-full bg-blue-500" style={{ width: `${views > 0 ? Math.min(100, views) : 0}%` }} />
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-slate-300">Favoritos</span>
-                      <span className="text-white">{favorites}</span>
-                    </div>
-                    <div className="mt-1 h-2 rounded-full bg-slate-700">
-                      <div className="h-full rounded-full bg-purple-500" style={{ width: `${views > 0 ? Math.min(100, (favorites / Math.max(views, 1)) * 100) : 0}%` }} />
-                    </div>
-                  </div>
+                <div className="rounded-xl border border-slate-600 bg-slate-800/50 p-4">
+                  <h4 className="mb-2 text-sm font-semibold text-slate-400">Performance dos Stories</h4>
+                  <p className="text-2xl font-bold text-white">{stats?.totals.storyViews ?? 0} views acumuladas</p>
+                  <p className="mt-1 text-xs text-slate-500">{stats?.totals.stories ?? 0} stories publicados no histórico deste perfil.</p>
                 </div>
               </div>
 
-              {/* Dicas */}
               <div className="rounded-xl border border-slate-600 bg-slate-800/50 p-4">
                 <h4 className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-400">
                   <Lightbulb className="h-4 w-4" />
@@ -1696,11 +1843,11 @@ export default function DashboardPerfilForm() {
                 <ul className="space-y-2 text-sm text-slate-300">
                   <li className="flex gap-2">
                     <span className="text-emerald-500">✓</span>
-                    Mantenha fotos atualizadas: perfis com fotos novas recebem 40% mais cliques.
+                    Mantenha fotos e stories atualizados para aumentar a chance de cliques.
                   </li>
                   <li className="flex gap-2">
                     <span className="text-emerald-500">✓</span>
-                    Use os Stories: poste agora para aparecer no topo da página inicial!
+                    Compare os canais com mais cliques e deixe visíveis os contatos que convertem melhor.
                   </li>
                 </ul>
               </div>
@@ -1718,7 +1865,7 @@ export default function DashboardPerfilForm() {
                   <div className="absolute inset-0 flex min-h-[240px] flex-col items-center justify-center rounded-xl border border-slate-600 bg-slate-900/90 p-4 backdrop-blur-sm">
                     <p className="text-center text-lg font-medium text-white">Estatísticas avançadas</p>
                     <p className="mt-1 max-w-sm text-center text-sm text-slate-300">
-                      Funil detalhado, barras de tendência (placeholder) e dicas de performance estão incluídos nos
+                      Funil detalhado, tendência real, canais de clique e horário de pico estão incluídos nos
                       planos <strong className="text-primary-400">Prata</strong> e <strong className="text-primary-400">Ouro</strong>.
                     </p>
                     <Link
@@ -2010,9 +2157,9 @@ export default function DashboardPerfilForm() {
                     return normalized ? previewLinkUrls.has(normalized) : false
                   }
                   const contactLinks = [
-                    { label: 'WhatsApp', url: whatsappHref(form.whatsapp) },
-                    { label: 'Telegram', url: telegramHref(form.telegram) },
-                    { label: 'Ligar', url: form.phone ? `tel:${form.phone.trim()}` : '' },
+                    { label: 'WhatsApp', url: form.show_whatsapp ? whatsappHref(form.whatsapp) : '' },
+                    { label: 'Telegram', url: form.show_telegram ? telegramHref(form.telegram) : '' },
+                    { label: 'Ligar', url: form.show_phone && form.phone ? `tel:${form.phone.trim()}` : '' },
                   ].filter((l) => l.url && !hasPreviewLink(l.url))
                   const socialLinks = [
                     { label: 'Instagram', url: socialProfileHref(form.instagram, 'instagram') },

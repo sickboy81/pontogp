@@ -142,6 +142,9 @@ export default function ProfileView({
 
   const contactExpired =
     !!profile.contact_expires_at && new Date(profile.contact_expires_at) <= new Date()
+  const visibleWhatsapp = profile.show_whatsapp !== false ? profile.whatsapp : ''
+  const visibleTelegram = profile.show_telegram !== false ? profile.telegram : ''
+  const visiblePhone = profile.show_phone !== false ? profile.phone : ''
 
   const priceItems: { label: string; value: number }[] = []
   if (profile.price_30min) priceItems.push({ label: '30 min', value: profile.price_30min })
@@ -152,7 +155,7 @@ export default function ProfileView({
     profile.prices.forEach((p) => priceItems.push({ label: p.description, value: p.price }))
   }
 
-  const hasMobileContactBar = !contactExpired && !!(profile.whatsapp || profile.telegram || profile.phone)
+  const hasMobileContactBar = !contactExpired && !!(visibleWhatsapp || visibleTelegram || visiblePhone)
 
   return (
     <div className={`mx-auto max-w-4xl px-4 py-8 ${hasMobileContactBar ? 'pb-28 md:pb-8' : ''}`}>
@@ -479,9 +482,9 @@ export default function ProfileView({
                       Enviar mensagem
                     </Link>
                   )}
-                  {profile.whatsapp && (
+                  {visibleWhatsapp && (
                     <a
-                      href={whatsAppContactHref(profile.whatsapp, profileUrl)}
+                      href={whatsAppContactHref(visibleWhatsapp, profileUrl)}
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={() => trackClick('whatsapp')}
@@ -491,9 +494,9 @@ export default function ProfileView({
                       WhatsApp
                     </a>
                   )}
-                  {profile.telegram && (
+                  {visibleTelegram && (
                     <a
-                      href={telegramContactHref(profile.telegram, profileUrl)}
+                      href={telegramContactHref(visibleTelegram, profileUrl)}
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={() => trackClick('telegram')}
@@ -502,9 +505,9 @@ export default function ProfileView({
                       Telegram
                     </a>
                   )}
-                  {profile.phone && (
+                  {visiblePhone && (
                     <a
-                      href={`tel:${profile.phone}`}
+                      href={`tel:${visiblePhone}`}
                       onClick={() => trackClick('phone')}
                       className="hidden items-center gap-2 rounded-lg bg-slate-600 px-4 py-2 text-sm font-medium text-white hover:bg-slate-500 md:flex"
                     >
@@ -736,9 +739,9 @@ export default function ProfileView({
       {hasMobileContactBar && (
         <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-700 bg-slate-900/95 px-3 pb-[max(0.6rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur md:hidden">
           <div className="mx-auto grid max-w-4xl grid-cols-3 gap-2">
-            {profile.whatsapp ? (
+            {visibleWhatsapp ? (
               <a
-                href={whatsAppContactHref(profile.whatsapp, profileUrl)}
+                href={whatsAppContactHref(visibleWhatsapp, profileUrl)}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => trackClick('whatsapp')}
@@ -749,9 +752,9 @@ export default function ProfileView({
             ) : (
               <span className="rounded-lg bg-slate-800 px-2 py-2 text-center text-xs text-slate-500">—</span>
             )}
-            {profile.telegram ? (
+            {visibleTelegram ? (
               <a
-                href={telegramContactHref(profile.telegram, profileUrl)}
+                href={telegramContactHref(visibleTelegram, profileUrl)}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => trackClick('telegram')}
@@ -762,9 +765,9 @@ export default function ProfileView({
             ) : (
               <span className="rounded-lg bg-slate-800 px-2 py-2 text-center text-xs text-slate-500">—</span>
             )}
-            {profile.phone ? (
+            {visiblePhone ? (
               <a
-                href={`tel:${profile.phone}`}
+                href={`tel:${visiblePhone}`}
                 onClick={() => trackClick('phone')}
                 className="flex items-center justify-center rounded-lg bg-slate-600 px-2 py-2 text-xs font-semibold text-white"
               >

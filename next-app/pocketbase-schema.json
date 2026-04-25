@@ -655,6 +655,33 @@
           "type": "text"
         },
         {
+          "hidden": false,
+          "id": "bool2825865321",
+          "name": "show_whatsapp",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "bool"
+        },
+        {
+          "hidden": false,
+          "id": "bool1896256824",
+          "name": "show_telegram",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "bool"
+        },
+        {
+          "hidden": false,
+          "id": "bool3849446927",
+          "name": "show_phone",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "bool"
+        },
+        {
           "autogeneratePattern": "",
           "hidden": false,
           "id": "text2849095986",

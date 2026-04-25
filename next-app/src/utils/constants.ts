@@ -26,6 +26,128 @@ export function getCitiesByState(state?: string): string[] {
   return CITIES_BY_STATE[state] || []
 }
 
+export const NEIGHBORHOODS_BY_CITY: Record<string, string[]> = {
+  'São Paulo': [
+    'Centro', 'Vila Madalena', 'Pinheiros', 'Jardins', 'Itaim Bibi', 'Vila Olímpia',
+    'Moema', 'Brooklin', 'Campo Belo', 'Santo Amaro', 'Vila Mariana', 'Paraíso',
+    'Bela Vista', 'Consolação', 'Jardim Paulista', 'Alto de Pinheiros', 'Lapa',
+    'Perdizes', 'Pompeia', 'Vila Leopoldina', 'Barra Funda', 'Bom Retiro',
+    'Liberdade', 'Aclimação', 'Cambuci', 'Tatuapé', 'Mooca', 'Brás', 'Belém',
+    'Água Rasa', 'Carrão', 'Penha', 'Ipiranga', 'Sé', 'República', 'Santa Cecília',
+    'Higienópolis', 'Pacaembu', 'Sumaré', 'Butantã',
+  ],
+  'Rio de Janeiro': [
+    'Copacabana', 'Ipanema', 'Leblon', 'Barra da Tijuca', 'Botafogo', 'Flamengo',
+    'Lagoa', 'Tijuca', 'Jardim Botânico', 'Urca', 'Laranjeiras', 'Catete', 'Glória',
+    'Centro', 'Santa Teresa', 'São Conrado', 'Recreio dos Bandeirantes', 'Méier',
+    'Guaratiba', 'Campo Grande', 'Santa Cruz', 'Sepetiba', 'Madureira', 'Bangu',
+    'Vila Valqueire', 'Piedade', 'Abolição', 'Quintino', 'Pilares', 'Vila Isabel',
+    'Rio Comprido', 'Maracanã', 'Andaraí', 'Grajaú', 'Jacarepaguá', 'Taquara',
+    'Rocinha', 'Vidigal', 'Gávea', 'Leme', 'Cosme Velho', 'Paquetá',
+  ],
+  'Belo Horizonte': [
+    'Centro', 'Savassi', 'Funcionários', 'Lourdes', 'Santo Antônio', 'Boa Viagem',
+    'Santa Efigênia', 'Floresta', 'Prado', 'Cidade Nova', 'Barro Preto', 'São Pedro',
+    'Belvedere', 'Gutierrez', 'Sion', 'Serra', 'Mangabeiras', 'Alto Barroca',
+    'Santa Tereza', 'Sagrada Família', 'Carlos Prates', 'Coração Eucarístico',
+    'União', 'Nova Suíça', 'Cidade Jardim', 'Estoril', 'Luxemburgo', 'Anchieta',
+    'Buritis', 'Castelo', 'Ouro Preto', 'Caiçara',
+  ],
+  'Brasília': [
+    'Asa Norte', 'Asa Sul', 'Sudoeste', 'Noroeste', 'Lago Sul', 'Lago Norte',
+    'Águas Claras', 'Taguatinga', 'Gama', 'Guará', 'Ceilândia', 'Plano Piloto',
+    'Sobradinho', 'Cruzeiro', 'Octogonal', 'Samambaia', 'São Sebastião', 'Paranoá',
+    'Brazlândia', 'Planaltina', 'Santa Maria', 'Riacho Fundo', 'Vicente Pires',
+  ],
+  'Salvador': [
+    'Barra', 'Ondina', 'Rio Vermelho', 'Pituba', 'Caminho das Árvores', 'Imbuí',
+    'Stiep', 'Graça', 'Garcia', 'Federação', 'Centro', 'Pelourinho', 'Comércio',
+    'Campo Grande', 'Vitória', 'Itapuã', 'Piatã', 'Boca do Rio', 'Armação',
+    'Costa Azul', 'Patamares', 'Paralela', 'Iguatemi', 'Bonfim', 'Nazaré',
+  ],
+  'Curitiba': [
+    'Centro', 'Batel', 'Água Verde', 'Bigorrilho', 'Bom Retiro', 'Juvevê', 'Mercês',
+    'Jardim Botânico', 'Bacacheri', 'Boa Vista', 'Cristo Rei', 'São Francisco',
+    'Rebouças', 'Parolin', 'Cabral', 'Centro Cívico', 'Campo Comprido',
+    'Vila Izabel', 'Santa Felicidade', 'Pilarzinho', 'Ahú', 'São Lourenço',
+  ],
+  'Fortaleza': [
+    'Meireles', 'Aldeota', 'Praia de Iracema', 'Dionísio Torres', 'Montese',
+    'Parquelândia', 'Papicu', 'Sabiaguaba', 'Varjota', 'Centro', 'Benfica',
+    'Rodolfo Teófilo', 'Fátima', 'Parangaba', 'Mucuripe', 'Cocó', 'Cidade 2000',
+    'Engenheiro Luciano Cavalcante', 'Pici', 'Mondubim', 'Praia do Futuro',
+    'Edson Queiroz', 'Joaquim Távora',
+  ],
+  'Recife': [
+    'Boa Viagem', 'Pina', 'Parnamirim', 'Espinheiro', 'Graças', 'Casa Forte',
+    "Ponte d'Uchoa", 'Derby', 'Torre', 'Ilha do Leite', 'Santo Antônio', 'São José',
+    'Centro', 'Boa Vista', 'Campo Grande', 'Casa Amarela', 'Apipucos', 'Monteiro',
+    'Poço da Panela', 'Rosarinho', 'Cordeiro', 'Madalena', 'Jaqueira', 'Setúbal',
+  ],
+  'Porto Alegre': [
+    'Moinhos de Vento', 'Bela Vista', 'Bom Fim', 'Centro', 'Cidade Baixa',
+    'Floresta', 'Menino Deus', 'Petrópolis', 'Tristeza', 'Vila Conceição',
+    'Auxiliadora', 'Santa Cecília', 'Rio Branco', 'Independência', 'Santana',
+    'Partenon', 'Cristal', 'Mont Serrat',
+  ],
+  'Goiânia': [
+    'Centro', 'Mara Rosa', 'Setor Bueno', 'Setor Oeste', 'Setor Sul', 'Marista',
+    'Jardim América', 'Campinas', 'Vila Nova', 'Setor Universitário',
+    'Parque Amazônia', 'Alto da Glória', 'Setor Jaó', 'Jardim Goiás',
+    'Setor Aeroporto', 'Setor Central', 'Setor Pedro Ludovico',
+  ],
+  'Manaus': [
+    'Centro', 'Adrianópolis', 'Aleixo', 'Cachoeirinha', 'Coroado', 'Educandos',
+    'Flores', 'Japiim', 'Nossa Senhora das Graças', 'Parque 10 de Novembro',
+    'São Raimundo', 'Tarumã', 'Ponta Negra', 'Cidade Nova', 'Compensa',
+  ],
+  'Belém': [
+    'Centro', 'Batista Campos', 'Campina', 'Cidade Velha', 'Condor', 'Cremação',
+    'Fátima', 'Guamá', 'Jurunas', 'Marco', 'Nazaré', 'Pedreira', 'Reduto',
+    'São Brás', 'Umarizal', 'Val-de-Cans', 'Marambaia',
+  ],
+  'Vitória': [
+    'Centro', 'Bento Ferreira', 'Enseada do Suá', 'Ilha do Boi', 'Jucutuquara',
+    'Maruípe', 'Praia do Canto', 'Praia do Suá', 'Santa Lúcia', 'Santo Antônio',
+    'Tabuazeiro', 'Vila Rubim',
+  ],
+  'Florianópolis': [
+    'Centro', 'Agronômica', 'Barra da Lagoa', 'Campeche', 'Canasvieiras',
+    'Coqueiros', 'Ingleses', 'Jurerê', 'Jurerê Internacional', 'Lagoa da Conceição',
+    'Pantanal', 'Santo Antônio de Lisboa', 'Trindade', 'Itacorubi',
+  ],
+  'Natal': [
+    'Centro', 'Alecrim', 'Areia Preta', 'Barro Vermelho', 'Candelária',
+    'Capim Macio', 'Cidade Alta', 'Lagoa Nova', 'Neópolis', 'Petrópolis',
+    'Ponta Negra', 'Praia do Meio', 'Tirol',
+  ],
+  'Campo Grande': [
+    'Centro', 'Amambaí', 'Bandeirantes', 'Carandá Bosque', 'Guanandi',
+    'Jardim América', 'Jardim dos Estados', 'Nova Lima', 'Santa Fé',
+  ],
+  'João Pessoa': [
+    'Centro', 'Bessa', 'Cabo Branco', 'Castelo Branco', 'Cristo Redentor',
+    'Jardim Oceania', 'Mangabeira', 'Miramar', 'Tambiá', 'Torre',
+  ],
+  'Maceió': [
+    'Centro', 'Barro Duro', 'Cruz das Almas', 'Farol', 'Jatiúca', 'Jaraguá',
+    'Mangabeiras', 'Pajuçara', 'Ponta Verde', 'Tabuleiro do Martins',
+  ],
+  'Aracaju': [
+    'Centro', 'Atalaia', 'Coroa do Meio', 'Farolândia', 'Grageru', 'Jardins',
+    'Luzia', 'Salgado Filho', 'Santo Antônio', 'São Conrado',
+  ],
+  'Teresina': [
+    'Centro', 'Aeroporto', 'Cidade Nova', 'Dirceu Arcoverde', 'Fátima', 'Ininga',
+    'Itararé', 'Mocambinho', 'Parque Piauí', 'São Cristóvão',
+  ],
+}
+
+export function getNeighborhoodsByCity(city?: string): string[] {
+  if (!city) return []
+  return NEIGHBORHOODS_BY_CITY[city] || []
+}
+
 export const STATES = [
   'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA',
   'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN',

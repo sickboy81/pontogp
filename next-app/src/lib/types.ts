@@ -30,6 +30,9 @@ export interface Profile {
   whatsapp?: string
   telegram?: string
   phone?: string
+  show_whatsapp?: boolean
+  show_telegram?: boolean
+  show_phone?: boolean
   instagram?: string
   twitter?: string
   /** Link Privacy (privacidade.me, etc.) */

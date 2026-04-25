@@ -19,7 +19,7 @@ const ALLOWED_KEYS = new Set([
   'service_locations', 'service_to', 'special_services', 'onlyfans', 'privacy',
   'massage_types', 'online_services', 'other_services', 'for_sale', 'virtual_fantasies', 'certified', 'offers_happy_ending',
   'weight', 'height_exact', 'breast_type', 'pubis_type', 'piercings', 'tattoos', 'smoker',
-  'whatsapp', 'telegram', 'phone', 'instagram', 'twitter',
+  'whatsapp', 'telegram', 'phone', 'show_whatsapp', 'show_telegram', 'show_phone', 'instagram', 'twitter',
   'price_30min', 'price_1h', 'price_2h', 'price_overnight', 'prices',
   'short_description', 'slug', 'is_online', 'online_until', 'status',
   'plan', 'visual_highlight', 'auto_bump',
