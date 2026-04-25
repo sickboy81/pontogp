@@ -55,7 +55,7 @@ function loadLeaflet(): Promise<LeafletNamespace> {
   if (window.L) return Promise.resolve(window.L)
   if (window.__cerejaLeafletLoading) return window.__cerejaLeafletLoading
 
-  window.__cerejaLeafletLoading = new Promise<LeafletNamespace>((resolve, reject) => {
+  const promise = new Promise<LeafletNamespace>((resolve, reject) => {
     if (!document.querySelector(`link[href="${LEAFLET_CSS_URL}"]`)) {
       const link = document.createElement('link')
       link.rel = 'stylesheet'
@@ -67,31 +67,39 @@ function loadLeaflet(): Promise<LeafletNamespace> {
     const existingScript = document.querySelector<HTMLScriptElement>(
       `script[src="${LEAFLET_JS_URL}"]`
     )
-    if (existingScript && window.L) {
-      resolve(window.L)
-      return
+    // Script no DOM sem window.L: carga falhou ou ficou inconsistente — remove para nova tentativa.
+    if (existingScript && !window.L) {
+      existingScript.remove()
     }
 
-    const script = existingScript ?? document.createElement('script')
-    if (!existingScript) {
-      script.src = LEAFLET_JS_URL
-      script.async = true
-      script.crossOrigin = ''
-      document.body.appendChild(script)
+    const script = document.createElement('script')
+    script.src = LEAFLET_JS_URL
+    script.async = true
+    script.crossOrigin = ''
+    document.body.appendChild(script)
+
+    const fail = (err: Error) => {
+      script.remove()
+      reject(err)
     }
 
     const onReady = () => {
       if (window.L) {
         resolve(window.L)
       } else {
-        reject(new Error('Leaflet carregou mas window.L está indefinido'))
+        fail(new Error('Leaflet carregou mas window.L está indefinido'))
       }
     }
     script.addEventListener('load', onReady)
-    script.addEventListener('error', () => reject(new Error('Falha ao carregar Leaflet')))
+    script.addEventListener('error', () => fail(new Error('Falha ao carregar Leaflet')))
   })
 
-  return window.__cerejaLeafletLoading
+  promise.catch(() => {
+    delete window.__cerejaLeafletLoading
+  })
+
+  window.__cerejaLeafletLoading = promise
+  return promise
 }
 
 interface DashboardLocationMapPickerProps {
@@ -120,11 +128,17 @@ export default function DashboardLocationMapPicker({
   const markerRef = useRef<ReturnType<LeafletNamespace['marker']> | null>(null)
   const tileLayerRef = useRef<ReturnType<LeafletNamespace['tileLayer']> | null>(null)
   const onChangeRef = useRef(onChange)
+  /** Sempre o último lat/lng/zoom — usado ao resolver loadLeaflet para evitar valores obsoletos no closure. */
+  const mapViewRef = useRef({ lat: 0, lng: 0, zoom: 15 })
   const [isSearching, setIsSearching] = useState(false)
   const [mapReady, setMapReady] = useState(false)
   const [mapError, setMapError] = useState<string | null>(null)
   const zoom = approximate ? 13 : 15
   const hasCoords = lat != null && lng != null
+
+  if (lat != null && lng != null) {
+    mapViewRef.current = { lat, lng, zoom }
+  }
 
   useEffect(() => {
     onChangeRef.current = onChange
@@ -139,6 +153,7 @@ export default function DashboardLocationMapPicker({
     if (!hasCoords) return
     if (!containerRef.current) return
     let cancelled = false
+    setMapError(null)
 
     loadLeaflet()
       .then((L) => {
@@ -147,12 +162,13 @@ export default function DashboardLocationMapPicker({
         if (!container) return
 
         if (!mapRef.current) {
+          const { lat: curLat, lng: curLng, zoom: curZoom } = mapViewRef.current
           const map = L.map(container, {
             zoomControl: true,
             attributionControl: true,
             scrollWheelZoom: true,
           })
-          map.setView([lat as number, lng as number], zoom)
+          map.setView([curLat, curLng], curZoom)
 
           const tile = L.tileLayer(TILE_URL, {
             maxZoom: 19,
@@ -187,7 +203,7 @@ export default function DashboardLocationMapPicker({
             shadowSize: [41, 41],
           })
 
-          const marker = L.marker([lat as number, lng as number], {
+          const marker = L.marker([curLat, curLng], {
             draggable: true,
             icon,
           })
@@ -226,8 +242,7 @@ export default function DashboardLocationMapPicker({
     return () => {
       cancelled = true
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasCoords])
+  }, [hasCoords, lat, lng, zoom])
 
   useEffect(() => {
     if (!mapRef.current || !markerRef.current) return
