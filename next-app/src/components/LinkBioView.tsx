@@ -8,7 +8,7 @@ import { MessageCircle } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
 import type { Profile } from '@/lib/types'
 import { socialProfileHref } from '@/lib/social-links'
-import { telegramContactHref, whatsAppContactHref } from '@/lib/contact-prefill'
+import { buildContactPrefillMessage, telegramContactHref, whatsAppContactHref } from '@/lib/contact-prefill'
 
 interface LinkBioViewProps {
   profile: Profile
@@ -19,6 +19,39 @@ function bioLinkHref(url: string): string {
   const value = url.trim()
   if (/^(https?:|tel:|mailto:|sms:)/i.test(value)) return value
   return `https://${value}`
+}
+
+function withContactPrefillIfNeeded(url: string, profileUrl: string): string {
+  const href = bioLinkHref(url)
+  const text = buildContactPrefillMessage(profileUrl)
+  const encodedText = new URLSearchParams({ text }).toString()
+
+  try {
+    const parsed = new URL(href)
+    const host = parsed.hostname.replace(/^www\./, '').toLowerCase()
+    const path = parsed.pathname
+    const currentText = parsed.searchParams.get('text')?.trim()
+    if (currentText) return href
+
+    if (host === 'wa.me' && /^\/\d+\/?$/.test(path)) {
+      parsed.searchParams.set('text', text)
+      return parsed.toString()
+    }
+
+    if ((host === 'api.whatsapp.com' || host === 'web.whatsapp.com') && path === '/send') {
+      parsed.searchParams.set('text', text)
+      return parsed.toString()
+    }
+
+    if ((host === 't.me' || host === 'telegram.me') && /^\/[^/]+\/?$/.test(path)) {
+      const joiner = parsed.search ? '&' : '?'
+      return `${href}${joiner}${encodedText}`
+    }
+  } catch {
+    // mantém href original se não for URL parseável
+  }
+
+  return href
 }
 
 function normalizeLinkUrl(url: string): string {
@@ -171,7 +204,7 @@ export default function LinkBioView({ profile, profileUrl }: LinkBioViewProps) {
             {bioLinks.map((link, i) => (
               <a
                 key={i}
-                href={bioLinkHref(link.url)}
+                href={withContactPrefillIfNeeded(link.url, profileUrl)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className={`block w-full rounded-xl border py-3 text-center text-sm font-medium transition hover:opacity-90 ${linkButtonClass}`}
