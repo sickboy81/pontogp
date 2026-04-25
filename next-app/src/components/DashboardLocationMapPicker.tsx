@@ -1,43 +1,97 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Loader2, MapPin } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
-const TILE_SIZE = 256
-const TILE_FALLBACK_TEMPLATES = [
-  '/api/map-tiles/{z}/{x}/{y}',
-  'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-  'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png',
-  'https://b.tile.openstreetmap.org/{z}/{x}/{y}.png',
-  'https://c.tile.openstreetmap.org/{z}/{x}/{y}.png',
-  'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
-]
+const LEAFLET_CSS_URL = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
+const LEAFLET_JS_URL = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
+const TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
+const TILE_FALLBACK_URL = '/api/map-tiles/{z}/{x}/{y}'
 
-function lonToWorldX(lng: number, zoom: number): number {
-  return ((lng + 180) / 360) * TILE_SIZE * 2 ** zoom
+type LeafletNamespace = {
+  map: (
+    el: HTMLElement,
+    options?: Record<string, unknown>
+  ) => {
+    setView: (latlng: [number, number], zoom: number) => unknown
+    addLayer: (layer: unknown) => unknown
+    removeLayer: (layer: unknown) => unknown
+    remove: () => void
+    invalidateSize: () => void
+    on: (event: string, handler: (...args: unknown[]) => void) => void
+  }
+  tileLayer: (
+    url: string,
+    options?: Record<string, unknown>
+  ) => {
+    addTo: (map: unknown) => unknown
+    on: (event: string, handler: (...args: unknown[]) => void) => void
+  }
+  marker: (
+    latlng: [number, number],
+    options?: Record<string, unknown>
+  ) => {
+    addTo: (map: unknown) => unknown
+    setLatLng: (latlng: [number, number]) => void
+    getLatLng: () => { lat: number; lng: number }
+    on: (event: string, handler: (...args: unknown[]) => void) => void
+    remove: () => void
+  }
+  icon: (options: Record<string, unknown>) => unknown
 }
 
-function latToWorldY(lat: number, zoom: number): number {
-  const safeLat = Math.max(-85.05112878, Math.min(85.05112878, lat))
-  const rad = (safeLat * Math.PI) / 180
-  return ((1 - Math.log(Math.tan(rad) + 1 / Math.cos(rad)) / Math.PI) / 2) * TILE_SIZE * 2 ** zoom
+declare global {
+  interface Window {
+    L?: LeafletNamespace
+    __cerejaLeafletLoading?: Promise<LeafletNamespace>
+  }
 }
 
-function worldXToLng(x: number, zoom: number): number {
-  return (x / (TILE_SIZE * 2 ** zoom)) * 360 - 180
-}
+function loadLeaflet(): Promise<LeafletNamespace> {
+  if (typeof window === 'undefined') {
+    return Promise.reject(new Error('window indisponível'))
+  }
+  if (window.L) return Promise.resolve(window.L)
+  if (window.__cerejaLeafletLoading) return window.__cerejaLeafletLoading
 
-function worldYToLat(y: number, zoom: number): number {
-  const n = Math.PI - (2 * Math.PI * y) / (TILE_SIZE * 2 ** zoom)
-  return (180 / Math.PI) * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n)))
-}
+  window.__cerejaLeafletLoading = new Promise<LeafletNamespace>((resolve, reject) => {
+    if (!document.querySelector(`link[href="${LEAFLET_CSS_URL}"]`)) {
+      const link = document.createElement('link')
+      link.rel = 'stylesheet'
+      link.href = LEAFLET_CSS_URL
+      link.crossOrigin = ''
+      document.head.appendChild(link)
+    }
 
-function tileUrlFromTemplate(template: string, z: number, x: number, y: number): string {
-  return template
-    .replace('{z}', String(z))
-    .replace('{x}', String(x))
-    .replace('{y}', String(y))
+    const existingScript = document.querySelector<HTMLScriptElement>(
+      `script[src="${LEAFLET_JS_URL}"]`
+    )
+    if (existingScript && window.L) {
+      resolve(window.L)
+      return
+    }
+
+    const script = existingScript ?? document.createElement('script')
+    if (!existingScript) {
+      script.src = LEAFLET_JS_URL
+      script.async = true
+      script.crossOrigin = ''
+      document.body.appendChild(script)
+    }
+
+    const onReady = () => {
+      if (window.L) {
+        resolve(window.L)
+      } else {
+        reject(new Error('Leaflet carregou mas window.L está indefinido'))
+      }
+    }
+    script.addEventListener('load', onReady)
+    script.addEventListener('error', () => reject(new Error('Falha ao carregar Leaflet')))
+  })
+
+  return window.__cerejaLeafletLoading
 }
 
 interface DashboardLocationMapPickerProps {
@@ -61,59 +115,148 @@ export default function DashboardLocationMapPicker({
   onChange,
   onClear,
 }: DashboardLocationMapPickerProps) {
-  const mapRef = useRef<HTMLDivElement | null>(null)
-  const dragStartRef = useRef<{
-    pointerX: number
-    pointerY: number
-    worldX: number
-    worldY: number
-  } | null>(null)
+  const containerRef = useRef<HTMLDivElement | null>(null)
+  const mapRef = useRef<ReturnType<LeafletNamespace['map']> | null>(null)
+  const markerRef = useRef<ReturnType<LeafletNamespace['marker']> | null>(null)
+  const tileLayerRef = useRef<ReturnType<LeafletNamespace['tileLayer']> | null>(null)
+  const onChangeRef = useRef(onChange)
   const [isSearching, setIsSearching] = useState(false)
-  const [dragging, setDragging] = useState(false)
-  const [tileFailCountByKey, setTileFailCountByKey] = useState<Record<string, number>>({})
-  const [tileLoadedByKey, setTileLoadedByKey] = useState<Record<string, boolean>>({})
+  const [mapReady, setMapReady] = useState(false)
+  const [mapError, setMapError] = useState<string | null>(null)
   const zoom = approximate ? 13 : 15
   const hasCoords = lat != null && lng != null
+
+  useEffect(() => {
+    onChangeRef.current = onChange
+  }, [onChange])
 
   const searchLabel = useMemo(() => {
     const neighborhood = neighborhoods[0]?.trim()
     return [neighborhood, city, state, 'Brasil'].filter(Boolean).join(', ')
   }, [city, neighborhoods, state])
 
-  const center = useMemo(() => {
-    if (hasCoords) return { lat, lng }
-    return null
-  }, [hasCoords, lat, lng])
+  useEffect(() => {
+    if (!hasCoords) return
+    if (!containerRef.current) return
+    let cancelled = false
 
-  const tiles = useMemo(() => {
-    if (!center) return []
-    const centerX = lonToWorldX(center.lng, zoom)
-    const centerY = latToWorldY(center.lat, zoom)
-    const centerTileX = Math.floor(centerX / TILE_SIZE)
-    const centerTileY = Math.floor(centerY / TILE_SIZE)
-    const list: Array<{ key: string; urls: string[]; x: number; y: number }> = []
+    loadLeaflet()
+      .then((L) => {
+        if (cancelled) return
+        const container = containerRef.current
+        if (!container) return
 
-    for (let dx = -1; dx <= 1; dx++) {
-      for (let dy = -1; dy <= 1; dy++) {
-        const tileX = centerTileX + dx
-        const tileY = centerTileY + dy
-        list.push({
-          key: `${zoom}-${tileX}-${tileY}`,
-          urls: TILE_FALLBACK_TEMPLATES.map((template) =>
-            tileUrlFromTemplate(template, zoom, tileX, tileY)
-          ),
-          x: tileX * TILE_SIZE - centerX,
-          y: tileY * TILE_SIZE - centerY,
-        })
-      }
+        if (!mapRef.current) {
+          const map = L.map(container, {
+            zoomControl: true,
+            attributionControl: true,
+            scrollWheelZoom: true,
+          })
+          map.setView([lat as number, lng as number], zoom)
+
+          const tile = L.tileLayer(TILE_URL, {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap',
+            crossOrigin: true,
+          })
+          tile.addTo(map)
+          tile.on('tileerror', () => {
+            if (tileLayerRef.current === tile) {
+              try {
+                map.removeLayer(tile)
+              } catch {
+                /* noop */
+              }
+              const fallback = L.tileLayer(TILE_FALLBACK_URL, {
+                maxZoom: 19,
+                attribution: '© OpenStreetMap',
+              })
+              fallback.addTo(map)
+              tileLayerRef.current = fallback
+            }
+          })
+          tileLayerRef.current = tile
+
+          const icon = L.icon({
+            iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+            iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+            shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowSize: [41, 41],
+          })
+
+          const marker = L.marker([lat as number, lng as number], {
+            draggable: true,
+            icon,
+          })
+          marker.addTo(map)
+          marker.on('dragend', () => {
+            const next = marker.getLatLng()
+            onChangeRef.current({ lat: next.lat, lng: next.lng })
+          })
+          markerRef.current = marker
+
+          map.on('click', (...args: unknown[]) => {
+            const event = args[0] as { latlng?: { lat: number; lng: number } }
+            if (!event?.latlng || !markerRef.current) return
+            markerRef.current.setLatLng([event.latlng.lat, event.latlng.lng])
+            onChangeRef.current({ lat: event.latlng.lat, lng: event.latlng.lng })
+          })
+
+          mapRef.current = map
+          setMapReady(true)
+          setMapError(null)
+
+          requestAnimationFrame(() => {
+            try {
+              map.invalidateSize()
+            } catch {
+              /* noop */
+            }
+          })
+        }
+      })
+      .catch((err) => {
+        console.error('[DashboardLocationMapPicker] falha ao iniciar Leaflet', err)
+        if (!cancelled) setMapError('Não foi possível carregar a biblioteca de mapas.')
+      })
+
+    return () => {
+      cancelled = true
     }
-    return list
-  }, [center, zoom])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasCoords])
 
   useEffect(() => {
-    setTileFailCountByKey({})
-    setTileLoadedByKey({})
-  }, [center?.lat, center?.lng, zoom])
+    if (!mapRef.current || !markerRef.current) return
+    if (!hasCoords) return
+    markerRef.current.setLatLng([lat as number, lng as number])
+    mapRef.current.setView([lat as number, lng as number], zoom)
+  }, [lat, lng, zoom, hasCoords])
+
+  useEffect(() => {
+    return () => {
+      if (markerRef.current) {
+        try {
+          markerRef.current.remove()
+        } catch {
+          /* noop */
+        }
+        markerRef.current = null
+      }
+      if (mapRef.current) {
+        try {
+          mapRef.current.remove()
+        } catch {
+          /* noop */
+        }
+        mapRef.current = null
+      }
+      tileLayerRef.current = null
+    }
+  }, [])
 
   useEffect(() => {
     if (hasCoords || !city || !state) return
@@ -136,9 +279,10 @@ export default function DashboardLocationMapPicker({
         addressdetails: '0',
         countrycodes: 'br',
       })
-      const res = await fetch(`https://nominatim.openstreetmap.org/search?${params.toString()}`, {
-        headers: { Accept: 'application/json' },
-      })
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?${params.toString()}`,
+        { headers: { Accept: 'application/json' } }
+      )
       if (!res.ok) throw new Error('geocode failed')
       const data = (await res.json()) as Array<{ lat?: string; lon?: string }>
       const first = data[0]
@@ -157,24 +301,13 @@ export default function DashboardLocationMapPicker({
     }
   }
 
-  const updateFromPointer = (clientX: number, clientY: number) => {
-    const start = dragStartRef.current
-    if (!start) return
-    const worldX = start.worldX + clientX - start.pointerX
-    const worldY = start.worldY + clientY - start.pointerY
-    onChange({
-      lat: worldYToLat(worldY, zoom),
-      lng: worldXToLng(worldX, zoom),
-    })
-  }
-
   return (
     <div className="rounded-xl border border-slate-700 bg-slate-900/30 p-4">
       <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h3 className="text-sm font-medium text-slate-200">Mapa de localização</h3>
           <p className="text-xs text-slate-500">
-            O mapa usa bairro, cidade e estado. Arraste o pin para ajustar o ponto.
+            Busque pelo bairro/cidade ou clique no mapa para reposicionar. Você também pode arrastar o pin.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -199,80 +332,22 @@ export default function DashboardLocationMapPicker({
         </div>
       </div>
 
-      {center ? (
-        <div
-          ref={mapRef}
-          className="relative h-72 overflow-hidden rounded-lg border border-slate-600 bg-slate-800"
-          onPointerMove={(e) => {
-            if (!dragging) return
-            e.preventDefault()
-            updateFromPointer(e.clientX, e.clientY)
-          }}
-          onPointerUp={(e) => {
-            if (!dragging) return
-            e.currentTarget.releasePointerCapture(e.pointerId)
-            setDragging(false)
-            updateFromPointer(e.clientX, e.clientY)
-            dragStartRef.current = null
-          }}
-          onPointerCancel={() => {
-            setDragging(false)
-            dragStartRef.current = null
-          }}
-        >
-          {tiles.length > 0 && !tiles.some((tile) => tileLoadedByKey[tile.key]) && (
-            <div className="pointer-events-none absolute inset-0 z-[5] flex items-center justify-center bg-slate-800/75">
+      {hasCoords ? (
+        <div className="relative h-72 overflow-hidden rounded-lg border border-slate-600 bg-slate-800">
+          <div ref={containerRef} className="absolute inset-0 z-0" />
+          {!mapReady && !mapError && (
+            <div className="pointer-events-none absolute inset-0 z-[400] flex items-center justify-center bg-slate-800/80">
               <p className="rounded-md bg-slate-900/80 px-3 py-2 text-xs text-slate-300">
                 Carregando mapa...
               </p>
             </div>
           )}
-          <div className="absolute left-1/2 top-1/2 h-0 w-0">
-            {tiles.map((tile) => (
-              <img
-                key={tile.key}
-                src={tile.urls[Math.min(tileFailCountByKey[tile.key] ?? 0, tile.urls.length - 1)]}
-                alt=""
-                draggable={false}
-                referrerPolicy="no-referrer"
-                loading="eager"
-                decoding="async"
-                className="absolute h-64 w-64 select-none"
-                style={{ left: tile.x, top: tile.y }}
-                onLoad={() =>
-                  setTileLoadedByKey((prev) => ({
-                    ...prev,
-                    [tile.key]: true,
-                  }))
-                }
-                onError={() =>
-                  setTileFailCountByKey((prev) => ({
-                    ...prev,
-                    [tile.key]: (prev[tile.key] ?? 0) + 1,
-                  }))
-                }
-              />
-            ))}
-          </div>
-          <button
-            type="button"
-            className={`absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-full cursor-grab text-primary-500 drop-shadow-lg active:cursor-grabbing ${dragging ? 'scale-110' : ''}`}
-            onPointerDown={(e) => {
-              if (!center) return
-              dragStartRef.current = {
-                pointerX: e.clientX,
-                pointerY: e.clientY,
-                worldX: lonToWorldX(center.lng, zoom),
-                worldY: latToWorldY(center.lat, zoom),
-              }
-              e.currentTarget.parentElement?.setPointerCapture(e.pointerId)
-              setDragging(true)
-            }}
-            aria-label="Arrastar localização no mapa"
-          >
-            <MapPin className="h-10 w-10 fill-primary-500/30" />
-          </button>
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-slate-950/75 px-3 py-2 text-xs text-slate-300">
+          {mapError && (
+            <div className="absolute inset-0 z-[400] flex items-center justify-center bg-slate-900/85 px-4 text-center">
+              <p className="text-xs text-rose-300">{mapError}</p>
+            </div>
+          )}
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[401] bg-slate-950/75 px-3 py-2 text-xs text-slate-300">
             {approximate
               ? 'Localização aproximada: o perfil público mostra uma área maior para proteger o endereço.'
               : 'Localização exata: use somente se for seguro mostrar esse ponto.'}
