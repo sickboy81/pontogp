@@ -11,7 +11,8 @@ const LOCK_FILE = '/tmp/cerejavip-auto-bump.lock';
 const LOCK_STALE_MS = 15 * 60 * 1000; // 15 min
 
 function todayBR() {
-    return new Date().toLocaleDateString('fr-ca', { timeZone: 'America/Sao_Paulo' });
+    const saoPauloOffsetMs = 3 * 60 * 60 * 1000;
+    return new Date(Date.now() - saoPauloOffsetMs).toISOString().split('T')[0];
 }
 
 function acquireLock() {
