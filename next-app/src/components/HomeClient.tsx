@@ -49,8 +49,9 @@ function buildQuery(
   params.set('offset', String((page - 1) * LIMIT))
   if (filters.category) params.set('category', filters.category)
   if (filters.gender) params.set('gender', filters.gender)
-  if (filters.state) params.set('state', filters.state)
-  if (filters.city) params.set('city', filters.city)
+  const usesGeoFilters = filters.category !== 'online'
+  if (usesGeoFilters && filters.state) params.set('state', filters.state)
+  if (usesGeoFilters && filters.city) params.set('city', filters.city)
   if (filters.min_age != null) params.set('min_age', String(filters.min_age))
   if (filters.max_age != null) params.set('max_age', String(filters.max_age))
   if (filters.min_price != null) params.set('min_price', String(filters.min_price))
@@ -307,7 +308,12 @@ export default function HomeClient() {
   }, [router])
 
   const hasActiveFilters =
-    Object.keys(filters).filter((k) => !['category', 'gender'].includes(k) && filters[k as keyof FilterOptions] != null).length > 0 ||
+    Object.keys(filters)
+      .filter((k) => {
+        if (['category', 'gender'].includes(k)) return false
+        if (filters.category === 'online' && (k === 'state' || k === 'city')) return false
+        return filters[k as keyof FilterOptions] != null
+      }).length > 0 ||
     searchQuery.length > 0 ||
     (tagFromUrl.length > 0 && tagFieldFromUrl.length > 0)
 
@@ -436,3 +442,4 @@ export default function HomeClient() {
     </div>
   )
 }
+

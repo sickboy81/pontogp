@@ -789,16 +789,14 @@ export default function DashboardClient() {
                 </li>
               ))}
             </ul>
-            {hiddenStoryCount > 0 && (
-              <div className="mt-4 flex justify-center">
-                <Link
-                  href="/dashboard/stories"
-                  className="rounded-lg border border-slate-600 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-slate-700"
-                >
-                  Ver todos os stories
-                </Link>
-              </div>
-            )}
+            <div className="mt-4 flex justify-center">
+              <Link
+                href="/dashboard/stories"
+                className="rounded-lg border border-slate-600 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-slate-700"
+              >
+                Ver todos os stories
+              </Link>
+            </div>
           </>
         )}
       </div>
@@ -964,3 +962,4 @@ export default function DashboardClient() {
     </div>
   )
 }
+

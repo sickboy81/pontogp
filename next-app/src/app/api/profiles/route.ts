@@ -39,11 +39,13 @@ export async function GET(request: NextRequest) {
   const tag_scope = searchParams.get('tag_scope') as TagMatchScope | null
   const exclude_profile = searchParams.get('exclude_profile')
 
+  const isOnlineCategory = category === 'online'
+
   const filters: Record<string, string | number | boolean> = {}
   if (category) filters.category = category
   if (gender) filters.gender = gender
-  if (state) filters.state = state
-  if (city) filters.city = city
+  if (!isOnlineCategory && state) filters.state = state
+  if (!isOnlineCategory && city) filters.city = city
   if (min_age) filters.min_age = Number(min_age)
   if (max_age) filters.max_age = Number(max_age)
   if (min_price != null && min_price !== '') filters.min_price = Number(min_price)
@@ -61,7 +63,10 @@ export async function GET(request: NextRequest) {
 
     const fetchScoped = (scope: TagMatchScope) => {
       const f: Record<string, string | number | boolean> = { ...filters }
-      if (scope === 'state') delete f.city
+      if (isOnlineCategory) {
+        delete f.city
+        delete f.state
+      } else if (scope === 'state') delete f.city
       if (scope === 'brasil') {
         delete f.city
         delete f.state
@@ -80,9 +85,10 @@ export async function GET(request: NextRequest) {
       tag_scope === 'city' || tag_scope === 'state' || tag_scope === 'brasil' ? tag_scope : null
 
     if (validScope) {
-      const profiles = await fetchScoped(validScope)
+      const effectiveScope = isOnlineCategory ? 'brasil' : validScope
+      const profiles = await fetchScoped(effectiveScope)
       return Response.json(
-        { profiles, tag_match_scope: validScope },
+        { profiles, tag_match_scope: effectiveScope },
         { headers: { 'Cache-Control': 'public, s-maxage=20, stale-while-revalidate=60' } }
       )
     }
@@ -94,7 +100,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    if (city && state) {
+    if (!isOnlineCategory && city && state) {
       const cityList = await fetchScoped('city')
       if (cityList.length > 0) {
         return Response.json(
@@ -103,7 +109,7 @@ export async function GET(request: NextRequest) {
         )
       }
     }
-    if (state) {
+    if (!isOnlineCategory && state) {
       const stateList = await fetchScoped('state')
       if (stateList.length > 0) {
         return Response.json(
@@ -212,3 +218,4 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: 'Erro ao criar perfil' }, { status: 500 })
   }
 }
+
