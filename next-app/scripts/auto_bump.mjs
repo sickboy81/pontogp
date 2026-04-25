@@ -45,7 +45,14 @@ if (!PB_URL || !EMAIL || !PASSWORD) {
 const pb = new PocketBase(PB_URL)
 
 function todayBR() {
-  return new Date().toLocaleDateString('fr-ca', { timeZone: 'America/Sao_Paulo' })
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date())
+  const byType = Object.fromEntries(parts.map((part) => [part.type, part.value]))
+  return `${byType.year}-${byType.month}-${byType.day}`
 }
 
 async function main() {

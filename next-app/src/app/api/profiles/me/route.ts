@@ -9,6 +9,17 @@ export const dynamic = 'force-dynamic'
 
 const NO_STORE = { 'Cache-Control': 'private, no-store' } as const
 
+function todayBR(): string {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date())
+  const byType = Object.fromEntries(parts.map((part) => [part.type, part.value]))
+  return `${byType.year}-${byType.month}-${byType.day}`
+}
+
 /** GET: perfil do usuário logado. Inclui clicks (contagem em profile_clicks) para o dashboard. Sem sessão: 200 + null (evita 401 no browser em páginas públicas). */
 export async function GET(request: NextRequest) {
   const cookieHeader = request.headers.get('cookie')
@@ -21,7 +32,7 @@ export async function GET(request: NextRequest) {
   const profile = await getProfileByUserId(userId, token)
   if (!profile) return Response.json(null)
 
-  const todayBR = new Date().toLocaleDateString('fr-ca', { timeZone: 'America/Sao_Paulo' })
+  const today = todayBR()
 
   const adminToken = await getAdminToken()
   if (adminToken) {
@@ -50,19 +61,19 @@ export async function GET(request: NextRequest) {
         for (const record of items) {
           const d = record.date
           const dateStr = typeof d === 'string' ? d.slice(0, 10) : ''
-          if (dateStr === todayBR) {
+          if (dateStr === today) {
             used = Number(record.bumps_used) || 0
             break
           }
         }
       }
-      ;(profile as { bumps_used_date?: string; bumps_used_today?: number }).bumps_used_date = todayBR
+      ;(profile as { bumps_used_date?: string; bumps_used_today?: number }).bumps_used_date = today
       ;(profile as { bumps_used_today?: number }).bumps_used_today = used
     } catch {
       // mantém bumps_used_today/date do perfil se existirem
     }
   } else {
-    ;(profile as { bumps_used_date?: string; bumps_used_today?: number }).bumps_used_date = todayBR
+    ;(profile as { bumps_used_date?: string; bumps_used_today?: number }).bumps_used_date = today
     ;(profile as { bumps_used_today?: number }).bumps_used_today = 0
   }
 

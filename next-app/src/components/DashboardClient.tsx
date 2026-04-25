@@ -35,6 +35,17 @@ function formatExpiresAt(iso: string | undefined): string | null {
   return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
+function todaySaoPauloDateKey(): string {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date())
+  const byType = Object.fromEntries(parts.map((part) => [part.type, part.value]))
+  return `${byType.year}-${byType.month}-${byType.day}`
+}
+
 function formatExpiresAtDateTime(iso: string | undefined): string | null {
   if (!iso) return null
   const d = parsePocketBaseDateInput(iso) ?? new Date(iso)
@@ -319,7 +330,7 @@ export default function DashboardClient() {
     }
   }
 
-  const todayStr = new Date().toLocaleDateString('fr-ca', { timeZone: 'America/Sao_Paulo' })
+  const todayStr = todaySaoPauloDateKey()
   const bumpsUsedToday =
     (profile as { bumps_used_date?: string; bumps_used_today?: number })?.bumps_used_date === todayStr
       ? ((profile as { bumps_used_today?: number })?.bumps_used_today ?? 0)
