@@ -55,6 +55,7 @@ export default function DashboardLocationMapPicker({
   } | null>(null)
   const [isSearching, setIsSearching] = useState(false)
   const [dragging, setDragging] = useState(false)
+  const [tileFailCountByKey, setTileFailCountByKey] = useState<Record<string, number>>({})
   const zoom = approximate ? 13 : 15
   const hasCoords = lat != null && lng != null
 
@@ -74,7 +75,7 @@ export default function DashboardLocationMapPicker({
     const centerY = latToWorldY(center.lat, zoom)
     const centerTileX = Math.floor(centerX / TILE_SIZE)
     const centerTileY = Math.floor(centerY / TILE_SIZE)
-    const list: Array<{ key: string; url: string; x: number; y: number }> = []
+    const list: Array<{ key: string; urls: string[]; x: number; y: number }> = []
 
     for (let dx = -1; dx <= 1; dx++) {
       for (let dy = -1; dy <= 1; dy++) {
@@ -82,7 +83,11 @@ export default function DashboardLocationMapPicker({
         const tileY = centerTileY + dy
         list.push({
           key: `${zoom}-${tileX}-${tileY}`,
-          url: `/api/map-tiles/${zoom}/${tileX}/${tileY}.png`,
+          urls: [
+            `/api/map-tiles/${zoom}/${tileX}/${tileY}.png`,
+            `https://tile.openstreetmap.org/${zoom}/${tileX}/${tileY}.png`,
+            `https://a.tile.openstreetmap.org/${zoom}/${tileX}/${tileY}.png`,
+          ],
           x: tileX * TILE_SIZE - centerX,
           y: tileY * TILE_SIZE - centerY,
         })
@@ -90,6 +95,10 @@ export default function DashboardLocationMapPicker({
     }
     return list
   }, [center, zoom])
+
+  useEffect(() => {
+    setTileFailCountByKey({})
+  }, [center?.lat, center?.lng, zoom])
 
   useEffect(() => {
     if (hasCoords || !city || !state) return
@@ -200,11 +209,17 @@ export default function DashboardLocationMapPicker({
             {tiles.map((tile) => (
               <img
                 key={tile.key}
-                src={tile.url}
+                src={tile.urls[Math.min(tileFailCountByKey[tile.key] ?? 0, tile.urls.length - 1)]}
                 alt=""
                 draggable={false}
                 className="absolute h-64 w-64 select-none"
                 style={{ left: tile.x, top: tile.y }}
+                onError={() =>
+                  setTileFailCountByKey((prev) => ({
+                    ...prev,
+                    [tile.key]: (prev[tile.key] ?? 0) + 1,
+                  }))
+                }
               />
             ))}
           </div>
