@@ -89,6 +89,10 @@ export interface Profile {
   visual_highlight?: boolean
   contact_expires_at?: string
   search_expires_at?: string
+  /** Dias corridos desde o vencimento da busca (0 quando ainda não venceu). */
+  search_expired_days?: number
+  /** true quando já passou do prazo configurado para indisponível. */
+  is_unavailable?: boolean
   last_bump_at?: string
   auto_bump?: boolean
   bumps_used_today?: number

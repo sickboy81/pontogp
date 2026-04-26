@@ -141,7 +141,9 @@ export default function ProfileView({
   }
 
   const contactExpired =
-    !!profile.contact_expires_at && new Date(profile.contact_expires_at) <= new Date()
+    profile.is_unavailable === true ||
+    (!!profile.contact_expires_at && new Date(profile.contact_expires_at) <= new Date())
+  const isUnavailable = profile.is_unavailable === true
   const visibleWhatsapp = profile.show_whatsapp !== false ? profile.whatsapp : ''
   const visibleTelegram = profile.show_telegram !== false ? profile.telegram : ''
   const visiblePhone = profile.show_phone !== false ? profile.phone : ''
@@ -155,7 +157,7 @@ export default function ProfileView({
     profile.prices.forEach((p) => priceItems.push({ label: p.description, value: p.price }))
   }
 
-  const hasMobileContactBar = !contactExpired && !!(visibleWhatsapp || visibleTelegram || visiblePhone)
+  const hasMobileContactBar = !contactExpired && !isUnavailable && !!(visibleWhatsapp || visibleTelegram || visiblePhone)
 
   return (
     <div className={`mx-auto max-w-4xl px-4 py-8 ${hasMobileContactBar ? 'pb-28 md:pb-8' : ''}`}>
@@ -183,7 +185,7 @@ export default function ProfileView({
                     src={profile.thumbnail}
                     alt={profile.name}
                     className="h-full w-full rounded-[7px]"
-                    imgClassName="h-full w-full"
+                    imgClassName={`h-full w-full ${isUnavailable ? 'blur-md grayscale' : ''}`}
                   />
                 ) : (
                   <div className="flex h-full items-center justify-center text-slate-500">Sem foto</div>
@@ -202,14 +204,17 @@ export default function ProfileView({
                   <button
                     key={i}
                     type="button"
-                    onClick={() => { setLightboxIndex(i); setLightboxOpen(true) }}
+                    onClick={() => {
+                      if (isUnavailable) return
+                      setLightboxIndex(i); setLightboxOpen(true)
+                    }}
                     className="h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-slate-600"
                   >
                     <ProfileImageWithWatermark
                       src={src}
                       alt=""
                       className="h-full w-full rounded-lg"
-                      imgClassName="h-full w-full"
+                      imgClassName={`h-full w-full ${isUnavailable ? 'blur-md grayscale' : ''}`}
                       showWatermark={false}
                     />
                   </button>
@@ -270,6 +275,11 @@ export default function ProfileView({
             )}
             {profile.bio && (
               <p className="mt-2 whitespace-pre-wrap text-slate-300">{profile.bio}</p>
+            )}
+            {isUnavailable && (
+              <p className="mt-3 rounded-lg border border-amber-500/50 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
+                Perfil indisponível no momento. As fotos ficam desfocadas até a renovação do anúncio.
+              </p>
             )}
 
             {((profile.services?.length ?? 0) > 0 || (profile.massage_types?.length ?? 0) > 0 || (profile.online_services?.length ?? 0) > 0) && (
@@ -468,7 +478,9 @@ export default function ProfileView({
             <div className="mt-6 flex flex-wrap gap-2">
               {contactExpired ? (
                 <p className="rounded-lg border border-amber-500/50 bg-amber-500/10 px-4 py-2 text-sm text-amber-200">
-                  Contato indisponível. O anúncio expirou.
+                  {isUnavailable
+                    ? 'Contato indisponível. O perfil está temporariamente indisponível.'
+                    : 'Contato indisponível. O anúncio expirou.'}
                 </p>
               ) : (
                 <>
@@ -519,6 +531,7 @@ export default function ProfileView({
               )}
             </div>
             {!contactExpired &&
+              !isUnavailable &&
               (socialProfileHref(profile.instagram, 'instagram') ||
                 socialProfileHref(profile.twitter, 'twitter') ||
                 socialProfileHref(profile.privacy, 'privacy') ||
@@ -584,7 +597,10 @@ export default function ProfileView({
                 <button
                   key={i}
                   type="button"
-                  onClick={() => { setLightboxIndex(i); setLightboxOpen(true) }}
+                  onClick={() => {
+                    if (isUnavailable) return
+                    setLightboxIndex(i); setLightboxOpen(true)
+                  }}
                   className="relative aspect-[3/4] overflow-hidden rounded-lg border border-slate-600 bg-slate-700 transition hover:border-primary-500"
                 >
                   <Image
@@ -592,7 +608,7 @@ export default function ProfileView({
                     alt=""
                     fill
                     sizes="(max-width: 640px) 33vw, (max-width: 768px) 25vw, 20vw"
-                    className="object-cover"
+                    className={`object-cover ${isUnavailable ? 'blur-md grayscale' : ''}`}
                   />
                 </button>
               ))}

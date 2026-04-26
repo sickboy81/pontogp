@@ -22,6 +22,10 @@ export default function AdminConfiguracaoPage() {
     { id: string; slug: string; name: string; subscription_days?: number }[]
   >([])
   const [savingExpiration, setSavingExpiration] = useState(false)
+  const [visibilityPolicy, setVisibilityPolicy] = useState<{
+    unavailable_after_days: number
+    archive_after_days: number
+  }>({ unavailable_after_days: 30, archive_after_days: 90 })
 
   useEffect(() => {
     Promise.all([
@@ -42,6 +46,22 @@ export default function AdminConfiguracaoPage() {
         }
         if (exp?.durations && typeof exp.durations === 'object') {
           setExpirationDurations(exp.durations as Record<string, { contact_days?: number; search_days?: number }>)
+        }
+        if (exp?.visibility_policy && typeof exp.visibility_policy === 'object') {
+          const p = exp.visibility_policy as Partial<{
+            unavailable_after_days: number
+            archive_after_days: number
+          }>
+          setVisibilityPolicy({
+            unavailable_after_days:
+              typeof p.unavailable_after_days === 'number' && p.unavailable_after_days >= 1
+                ? Math.floor(p.unavailable_after_days)
+                : 30,
+            archive_after_days:
+              typeof p.archive_after_days === 'number' && p.archive_after_days >= 2
+                ? Math.floor(p.archive_after_days)
+                : 90,
+          })
         }
         if (Array.isArray(plansList)) {
           setPlansForExp(
@@ -111,7 +131,10 @@ export default function AdminConfiguracaoPage() {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ durations: expirationDurations }),
+        body: JSON.stringify({
+          durations: expirationDurations,
+          visibility_policy: visibilityPolicy,
+        }),
       })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
@@ -123,6 +146,21 @@ export default function AdminConfiguracaoPage() {
     } finally {
       setSavingExpiration(false)
     }
+  }
+
+  const setVisibilityField = (
+    key: 'unavailable_after_days' | 'archive_after_days',
+    raw: string
+  ) => {
+    const n = parseInt(raw, 10)
+    if (Number.isNaN(n)) return
+    setVisibilityPolicy((prev) => {
+      const next = { ...prev, [key]: Math.max(1, Math.min(365, n)) }
+      if (next.archive_after_days <= next.unavailable_after_days) {
+        next.archive_after_days = next.unavailable_after_days + 1
+      }
+      return next
+    })
   }
 
   const handleSaveAnnouncement = async (e: React.FormEvent) => {
@@ -264,6 +302,38 @@ export default function AdminConfiguracaoPage() {
             vazio para não sobrescrever: o PIX usa o campo <code className="text-slate-300">subscription_days</code> de
             cada registo de plano; se estiver vazio, o código do webhook usa 30 dias.
           </p>
+          <div className="mt-3 rounded-lg border border-slate-700 bg-slate-900/40 p-3">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
+              Visibilidade pós-vencimento
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="text-sm text-slate-300">
+                <span className="mb-1 block text-xs text-slate-500">Indisponível após (dias)</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={365}
+                  value={visibilityPolicy.unavailable_after_days}
+                  onChange={(e) => setVisibilityField('unavailable_after_days', e.target.value)}
+                  className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1.5 text-white"
+                />
+              </label>
+              <label className="text-sm text-slate-300">
+                <span className="mb-1 block text-xs text-slate-500">Excluir após (dias)</span>
+                <input
+                  type="number"
+                  min={2}
+                  max={365}
+                  value={visibilityPolicy.archive_after_days}
+                  onChange={(e) => setVisibilityField('archive_after_days', e.target.value)}
+                  className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1.5 text-white"
+                />
+              </label>
+            </div>
+            <p className="mt-2 text-xs text-slate-500">
+              Entre esses prazos, o anúncio fica visível no site com fotos desfocadas e etiqueta de indisponível.
+            </p>
+          </div>
           <p className="mb-2 text-xs text-amber-400/90">
             Se antes vias sempre o número 30, era o <em>placeholder</em> (cinzento), não o valor no BD. Agora a coluna
             &quot;Padrão (plano)&quot; mostra o que vem do cadastro de planos.

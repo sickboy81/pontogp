@@ -4,6 +4,11 @@ export type ExpirationDurationsMap = Record<
   { contact_days?: number; search_days?: number }
 >
 
+export type ProfileVisibilityPolicy = {
+  unavailable_after_days: number
+  archive_after_days: number
+}
+
 export function parseExpirationDurationsValue(raw: unknown): ExpirationDurationsMap {
   if (raw == null) return {}
   if (typeof raw === 'string') {
@@ -16,4 +21,23 @@ export function parseExpirationDurationsValue(raw: unknown): ExpirationDurations
   }
   if (typeof raw === 'object' && !Array.isArray(raw)) return raw as ExpirationDurationsMap
   return {}
+}
+
+export function parseProfileVisibilityPolicy(raw: unknown): ProfileVisibilityPolicy {
+  const defaults: ProfileVisibilityPolicy = {
+    unavailable_after_days: 30,
+    archive_after_days: 90,
+  }
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return defaults
+  const candidate = raw as Partial<ProfileVisibilityPolicy>
+  const unavailable =
+    typeof candidate.unavailable_after_days === 'number' && candidate.unavailable_after_days >= 1
+      ? Math.floor(candidate.unavailable_after_days)
+      : defaults.unavailable_after_days
+  let archive =
+    typeof candidate.archive_after_days === 'number' && candidate.archive_after_days >= 1
+      ? Math.floor(candidate.archive_after_days)
+      : defaults.archive_after_days
+  if (archive <= unavailable) archive = unavailable + 1
+  return { unavailable_after_days: unavailable, archive_after_days: archive }
 }

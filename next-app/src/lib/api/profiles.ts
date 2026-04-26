@@ -1,4 +1,5 @@
 import type { Profile, Schedule } from '@/lib/types'
+import { parseProfileVisibilityPolicy, type ProfileVisibilityPolicy } from '@/lib/parse-expiration-settings'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
@@ -116,7 +117,56 @@ export function mapProfile(record: Record<string, unknown> & { expand?: Record<s
   } as Profile
 }
 
-const LIFECYCLE = `status != "archived" && (search_expires_at = "" || search_expires_at > "${toPBDate()}")`
+const VISIBILITY_SETTINGS_KEY = 'profile_visibility_policy'
+let visibilityPolicyCache:
+  | { value: ProfileVisibilityPolicy; fetchedAt: number }
+  | null = null
+
+async function getProfileVisibilityPolicy(): Promise<ProfileVisibilityPolicy> {
+  const now = Date.now()
+  if (visibilityPolicyCache && now - visibilityPolicyCache.fetchedAt < 60_000) {
+    return visibilityPolicyCache.value
+  }
+  const fallback = parseProfileVisibilityPolicy(null)
+  try {
+    const res = await fetch(
+      `${PB_URL}/api/collections/settings/records?filter=${encodeURIComponent(`key = "${VISIBILITY_SETTINGS_KEY}"`)}&perPage=1&fields=value`,
+      { cache: 'no-store' }
+    )
+    if (!res.ok) return fallback
+    const data = (await res.json()) as { items?: Array<{ value?: unknown }> }
+    const parsed = parseProfileVisibilityPolicy(data.items?.[0]?.value ?? null)
+    visibilityPolicyCache = { value: parsed, fetchedAt: now }
+    return parsed
+  } catch {
+    return fallback
+  }
+}
+
+function getSearchExpiredDays(searchExpiresAt: string | undefined, now = new Date()): number {
+  if (!searchExpiresAt) return 0
+  const expires = new Date(searchExpiresAt)
+  if (Number.isNaN(expires.getTime())) return 0
+  const deltaMs = now.getTime() - expires.getTime()
+  if (deltaMs <= 0) return 0
+  return Math.floor(deltaMs / (24 * 60 * 60 * 1000))
+}
+
+function isProfileBeyondArchiveWindow(
+  profile: { status?: string; search_expires_at?: string },
+  policy: ProfileVisibilityPolicy,
+  now = new Date()
+): boolean {
+  if (profile.status === 'archived') return true
+  const days = getSearchExpiredDays(profile.search_expires_at, now)
+  return days >= policy.archive_after_days
+}
+
+function buildLifecycleFilter(policy: ProfileVisibilityPolicy): string {
+  const cutoff = new Date()
+  cutoff.setDate(cutoff.getDate() - policy.archive_after_days)
+  return `status != "archived" && (search_expires_at = "" || search_expires_at > "${toPBDate(cutoff)}")`
+}
 
 const SORT_MAP: Record<string, string> = {
   default: '-last_bump_at,-created',
@@ -174,6 +224,8 @@ export async function getProfiles(options: {
     jsonTag,
     excludeProfileId,
   } = options
+  const policy = await getProfileVisibilityPolicy()
+  const lifecycleFilter = buildLifecycleFilter(policy)
   const parts: string[] = []
   Object.entries(filters).forEach(([key, val]) => {
     if (key === 'min_age' || key === 'max_age' || key === 'search' || key === 'min_price' || key === 'max_price') return
@@ -197,7 +249,7 @@ export async function getProfiles(options: {
   if (excludeProfileId) {
     parts.push(`id != "${escapeDoubleQuotes(excludeProfileId)}"`)
   }
-  let filterStr = parts.length ? `(${parts.join(' && ')}) && (${LIFECYCLE})` : LIFECYCLE
+  let filterStr = parts.length ? `(${parts.join(' && ')}) && (${lifecycleFilter})` : lifecycleFilter
   const sort = SORT_MAP[sortKey] || SORT_MAP.default
   const page = Math.floor(offset / limit) + 1
   const res = await fetch(
@@ -206,7 +258,19 @@ export async function getProfiles(options: {
   )
   if (!res.ok) return []
   const data = await res.json()
-  return (data.items || []).map(mapProfile).filter((p: Profile | null): p is Profile => p !== null)
+  const now = new Date()
+  return (data.items || [])
+    .map(mapProfile)
+    .filter((p: Profile | null): p is Profile => p !== null)
+    .map((p: Profile) => {
+      const searchExpiredDays = getSearchExpiredDays(p.search_expires_at, now)
+      return {
+        ...p,
+        search_expired_days: searchExpiredDays,
+        is_unavailable: searchExpiredDays >= policy.unavailable_after_days,
+      } as Profile
+    })
+    .filter((p: Profile) => !isProfileBeyondArchiveWindow(p, policy, now))
 }
 
 /** Busca perfil do usuário por user id (servidor). Não aplica LIFECYCLE para permitir edição mesmo expirado. */
@@ -232,13 +296,23 @@ export async function getProfileByUserId(
 /** Busca perfil por ID (servidor). */
 export async function getProfile(id: string): Promise<Profile | null> {
   try {
+    const policy = await getProfileVisibilityPolicy()
+    const now = new Date()
     const res = await fetch(
       `${PB_URL}/api/collections/profiles/records/${id}?expand=photos,videos,audio,plan`,
       { next: { revalidate: 60 } }
     )
     if (!res.ok) return null
     const record = await res.json()
-    return mapProfile(record)
+    const mapped = mapProfile(record)
+    if (!mapped) return null
+    if (isProfileBeyondArchiveWindow(mapped, policy, now)) return null
+    const searchExpiredDays = getSearchExpiredDays(mapped.search_expires_at, now)
+    return {
+      ...mapped,
+      search_expired_days: searchExpiredDays,
+      is_unavailable: searchExpiredDays >= policy.unavailable_after_days,
+    }
   } catch {
     return null
   }
@@ -247,6 +321,8 @@ export async function getProfile(id: string): Promise<Profile | null> {
 /** Busca perfil por slug (servidor). Slug sem @. */
 export async function getProfileBySlug(slug: string): Promise<Profile | null> {
   try {
+    const policy = await getProfileVisibilityPolicy()
+    const now = new Date()
     const filter = `slug = "${slug}"`
     const res = await fetch(
       `${PB_URL}/api/collections/profiles/records?filter=${encodeURIComponent(filter)}&perPage=1&expand=photos,videos,audio,plan`,
@@ -255,7 +331,15 @@ export async function getProfileBySlug(slug: string): Promise<Profile | null> {
     if (!res.ok) return null
     const data = await res.json()
     const item = data.items?.[0]
-    return item ? mapProfile(item) : null
+    const mapped = item ? mapProfile(item) : null
+    if (!mapped) return null
+    if (isProfileBeyondArchiveWindow(mapped, policy, now)) return null
+    const searchExpiredDays = getSearchExpiredDays(mapped.search_expires_at, now)
+    return {
+      ...mapped,
+      search_expired_days: searchExpiredDays,
+      is_unavailable: searchExpiredDays >= policy.unavailable_after_days,
+    }
   } catch {
     return null
   }
@@ -264,8 +348,10 @@ export async function getProfileBySlug(slug: string): Promise<Profile | null> {
 /** Lista slugs de perfis (para sitemap). */
 export async function getProfileSlugs(): Promise<string[]> {
   try {
+    const policy = await getProfileVisibilityPolicy()
+    const lifecycleFilter = buildLifecycleFilter(policy)
     const res = await fetch(
-      `${PB_URL}/api/collections/profiles/records?perPage=500&fields=slug&filter=${encodeURIComponent(LIFECYCLE)}`,
+      `${PB_URL}/api/collections/profiles/records?perPage=500&fields=slug&filter=${encodeURIComponent(lifecycleFilter)}`,
       { next: { revalidate: 300 } }
     )
     if (!res.ok) return []
