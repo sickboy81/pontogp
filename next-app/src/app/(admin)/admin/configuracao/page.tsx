@@ -52,15 +52,19 @@ export default function AdminConfiguracaoPage() {
             unavailable_after_days: number
             archive_after_days: number
           }>
+          const unavailable =
+            typeof p.unavailable_after_days === 'number' && p.unavailable_after_days >= 1
+              ? Math.floor(p.unavailable_after_days)
+              : 30
+          let archive =
+            // Compat com políticas antigas que possam ter salvo valor 1.
+            typeof p.archive_after_days === 'number' && p.archive_after_days >= 1
+              ? Math.floor(p.archive_after_days)
+              : 90
+          if (archive <= unavailable) archive = unavailable + 1
           setVisibilityPolicy({
-            unavailable_after_days:
-              typeof p.unavailable_after_days === 'number' && p.unavailable_after_days >= 1
-                ? Math.floor(p.unavailable_after_days)
-                : 30,
-            archive_after_days:
-              typeof p.archive_after_days === 'number' && p.archive_after_days >= 2
-                ? Math.floor(p.archive_after_days)
-                : 90,
+            unavailable_after_days: unavailable,
+            archive_after_days: archive,
           })
         }
         if (Array.isArray(plansList)) {
@@ -155,7 +159,8 @@ export default function AdminConfiguracaoPage() {
     const n = parseInt(raw, 10)
     if (Number.isNaN(n)) return
     setVisibilityPolicy((prev) => {
-      const next = { ...prev, [key]: Math.max(1, Math.min(365, n)) }
+      const min = key === 'archive_after_days' ? 2 : 1
+      const next = { ...prev, [key]: Math.max(min, Math.min(365, n)) }
       if (next.archive_after_days <= next.unavailable_after_days) {
         next.archive_after_days = next.unavailable_after_days + 1
       }

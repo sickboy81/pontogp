@@ -28,13 +28,22 @@ export function parseProfileVisibilityPolicy(raw: unknown): ProfileVisibilityPol
     unavailable_after_days: 30,
     archive_after_days: 90,
   }
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return defaults
-  const candidate = raw as Partial<ProfileVisibilityPolicy>
+  let source: unknown = raw
+  if (typeof source === 'string') {
+    try {
+      source = JSON.parse(source) as unknown
+    } catch {
+      return defaults
+    }
+  }
+  if (!source || typeof source !== 'object' || Array.isArray(source)) return defaults
+  const candidate = source as Partial<ProfileVisibilityPolicy>
   const unavailable =
     typeof candidate.unavailable_after_days === 'number' && candidate.unavailable_after_days >= 1
       ? Math.floor(candidate.unavailable_after_days)
       : defaults.unavailable_after_days
   let archive =
+    // Compat: versões antigas podiam gravar 1. Aceitamos e normalizamos abaixo.
     typeof candidate.archive_after_days === 'number' && candidate.archive_after_days >= 1
       ? Math.floor(candidate.archive_after_days)
       : defaults.archive_after_days

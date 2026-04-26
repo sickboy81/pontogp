@@ -76,38 +76,22 @@ export async function PATCH(request: NextRequest) {
   try {
     const [listRes, visListRes] = await Promise.all([
       fetch(
-      `${PB_URL}/api/collections/settings/records?filter=${encodeURIComponent('key = "expiration_durations"')}&perPage=1&fields=id`,
+      `${PB_URL}/api/collections/settings/records?filter=${encodeURIComponent('key = "expiration_durations"')}&perPage=1&fields=id,value`,
       { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' }
       ),
       fetch(
-        `${PB_URL}/api/collections/settings/records?filter=${encodeURIComponent(`key = "${VISIBILITY_POLICY_KEY}"`)}&perPage=1&fields=id`,
+        `${PB_URL}/api/collections/settings/records?filter=${encodeURIComponent(`key = "${VISIBILITY_POLICY_KEY}"`)}&perPage=1&fields=id,value`,
         { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' }
       ),
     ])
     if (!listRes.ok) throw new Error('Erro ao buscar')
     const listData = await listRes.json()
-    const existing = listData.items?.[0] as { id?: string } | undefined
+    const existing = listData.items?.[0] as { id?: string; value?: unknown } | undefined
     const visListData = visListRes.ok ? await visListRes.json() : { items: [] }
-    const visExisting = visListData.items?.[0] as { id?: string } | undefined
+    const visExisting = visListData.items?.[0] as { id?: string; value?: unknown } | undefined
 
-    if (existing?.id) {
-      const res = await fetch(
-        `${PB_URL}/api/collections/settings/records/${existing.id}`,
-        {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ value: durations }),
-        }
-      )
-      if (!res.ok) throw new Error('Erro ao atualizar')
-    } else {
-      const res = await fetch(`${PB_URL}/api/collections/settings/records`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ key: 'expiration_durations', value: durations }),
-      })
-      if (!res.ok) throw new Error('Erro ao criar')
-    }
+    // Atualiza política primeiro e só confirma durações depois; se a 2ª parte falhar, tentamos rollback.
+    let createdVisId: string | null = null
     if (visExisting?.id) {
       const res = await fetch(
         `${PB_URL}/api/collections/settings/records/${visExisting.id}`,
@@ -125,6 +109,76 @@ export async function PATCH(request: NextRequest) {
         body: JSON.stringify({ key: VISIBILITY_POLICY_KEY, value: visibility_policy }),
       })
       if (!res.ok) throw new Error('Erro ao criar política de visibilidade')
+      const created = (await res.json().catch(() => ({}))) as { id?: string }
+      createdVisId = created.id ?? null
+    }
+
+    try {
+      if (existing?.id) {
+        const res = await fetch(
+          `${PB_URL}/api/collections/settings/records/${existing.id}`,
+          {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ value: durations }),
+          }
+        )
+        if (!res.ok) throw new Error('Erro ao atualizar')
+      } else {
+        const res = await fetch(`${PB_URL}/api/collections/settings/records`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ key: 'expiration_durations', value: durations }),
+        })
+        if (!res.ok) throw new Error('Erro ao criar')
+      }
+    } catch (err) {
+      const baseMessage = err instanceof Error ? err.message : 'Erro ao salvar'
+      let rollbackFailure: string | null = null
+      // Rollback com proteção contra corrida: só reverte se o valor atual ainda for o que este request tentou gravar.
+      try {
+        if (visExisting?.id) {
+          const currentRes = await fetch(
+            `${PB_URL}/api/collections/settings/records/${visExisting.id}?fields=value`,
+            { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' }
+          )
+          if (!currentRes.ok) {
+            rollbackFailure = 'falha ao ler política atual para rollback'
+          } else {
+            const current = (await currentRes.json().catch(() => ({}))) as { value?: unknown }
+            const currentPolicy = parseProfileVisibilityPolicy(current.value ?? null)
+            const attemptedPolicy = parseProfileVisibilityPolicy(visibility_policy)
+            const stillOwnedByThisRequest =
+              currentPolicy.unavailable_after_days === attemptedPolicy.unavailable_after_days &&
+              currentPolicy.archive_after_days === attemptedPolicy.archive_after_days
+            if (stillOwnedByThisRequest) {
+              const restoreRes = await fetch(`${PB_URL}/api/collections/settings/records/${visExisting.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ value: visExisting.value ?? parseProfileVisibilityPolicy(null) }),
+              })
+              if (!restoreRes.ok) {
+                rollbackFailure = 'falha ao restaurar política anterior'
+              }
+            }
+          }
+        } else if (createdVisId) {
+          const deleteRes = await fetch(`${PB_URL}/api/collections/settings/records/${createdVisId}`, {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${token}` },
+          })
+          if (!deleteRes.ok) {
+            rollbackFailure = 'falha ao remover política criada durante rollback'
+          }
+        }
+      } catch (rollbackErr) {
+        rollbackFailure =
+          rollbackErr instanceof Error ? rollbackErr.message : 'falha inesperada no rollback'
+      }
+      if (rollbackFailure) {
+        throw new Error(`${baseMessage}. Rollback: ${rollbackFailure}`)
+      }
+      throw err
     }
     return Response.json({ ok: true, durations, visibility_policy })
   } catch (e) {
