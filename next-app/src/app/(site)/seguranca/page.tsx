@@ -1,6 +1,6 @@
 export const metadata = {
-  title: 'Dicas de Segurança',
-  description: 'Dicas de segurança para usuários do CerejaVIP.',
+  title: 'Segurança - Dicas para Acompanhantes e Clientes',
+  description: 'Dicas de segurança para acompanhantes e clientes na CerejaVIP. Saiba como se proteger, verificar perfis e manter sua privacidade em encontros.',
 }
 
 export default function SegurancaPage() {

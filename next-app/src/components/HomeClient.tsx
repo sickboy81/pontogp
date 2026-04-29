@@ -13,10 +13,6 @@ import { useFavoritesStore } from '@/store/favorites'
 
 const LIMIT = 21
 
-const HomeSeoSection = dynamic(() => import('@/components/HomeSeoSection'), {
-  ssr: false,
-  loading: () => <div className="mt-16 h-24 rounded-2xl border border-slate-800 bg-slate-900/30" />,
-})
 const StoriesSection = dynamic(() => import('@/components/StoriesSection'), {
   ssr: false,
   loading: () => null,
@@ -111,7 +107,6 @@ export default function HomeClient() {
   const planColorMap: Record<string, string> = { gratis: '#64748b', bronze: '#b45309', prata: '#737373', ouro: '#ca8a04' }
 
   const [debouncedSearch, setDebouncedSearch] = useState(searchQuery)
-  const [showSeoSection, setShowSeoSection] = useState(false)
   const [tagMatchScope, setTagMatchScope] = useState<TagMatchScope | null>(() =>
     parseTagScope(searchParams.get('tag_scope'))
   )
@@ -153,26 +148,6 @@ export default function HomeClient() {
     const t = setTimeout(() => setDebouncedSearch(searchQuery), 500)
     return () => clearTimeout(t)
   }, [searchQuery])
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    let cancelled = false
-    const run = () => {
-      if (!cancelled) setShowSeoSection(true)
-    }
-    if ('requestIdleCallback' in window) {
-      const id = window.requestIdleCallback(run, { timeout: 2000 })
-      return () => {
-        cancelled = true
-        window.cancelIdleCallback(id)
-      }
-    }
-    const t = globalThis.setTimeout(run, 900)
-    return () => {
-      cancelled = true
-      globalThis.clearTimeout(t)
-    }
-  }, [])
 
   useEffect(() => {
     if (isAuthenticated) fetchFavorites()
@@ -438,7 +413,6 @@ export default function HomeClient() {
         </>
       )}
 
-      {showSeoSection ? <HomeSeoSection /> : null}
     </div>
   )
 }

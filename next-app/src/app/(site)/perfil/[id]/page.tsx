@@ -17,13 +17,15 @@ export async function generateMetadata({ params }: Props) {
       ? `${profile.bio_title || ''} ${profile.bio}`.trim().slice(0, 160) + '...'
       : `Perfil de ${profile.name} no CerejaVIP.`
   const ogImageUrl = getProfileOgImageUrl(profile)
+  const canonical = `${SITE_URL}/perfil/${id}`
   return {
     title,
     description,
+    alternates: { canonical },
     openGraph: {
       title,
       description,
-      url: `${SITE_URL}/perfil/${id}`,
+      url: canonical,
       type: 'profile',
       images: [
         {
@@ -55,12 +57,55 @@ export default async function PerfilByIdPage({ params, searchParams }: Props) {
   const profile = await getProfile(id)
   if (!profile) notFound()
   const profileUrl = `${SITE_URL}/perfil/${id}`
+
+  const profilePageJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'ProfilePage',
+    url: profileUrl,
+    inLanguage: 'pt-BR',
+    mainEntity: {
+      '@type': 'Person',
+      name: profile.name,
+      description: profile.bio_title || profile.bio || `Perfil de ${profile.name} no CerejaVIP`,
+      address: {
+        '@type': 'PostalAddress',
+        addressLocality: profile.city,
+        addressRegion: profile.state,
+        addressCountry: 'BR',
+      },
+    },
+  }
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Início', item: `${SITE_URL}/` },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: `Acompanhantes em ${profile.city}`,
+        item: `${SITE_URL}/?state=${profile.state}&city=${encodeURIComponent(profile.city)}`,
+      },
+      { '@type': 'ListItem', position: 3, name: profile.name, item: profileUrl },
+    ],
+  }
+
   return (
-    <ProfileView
-      profile={profile}
-      profileUrl={profileUrl}
-      openStories={openStories}
-      initialStoryId={initialStoryId}
-    />
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(profilePageJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
+      <ProfileView
+        profile={profile}
+        profileUrl={profileUrl}
+        openStories={openStories}
+        initialStoryId={initialStoryId}
+      />
+    </>
   )
 }

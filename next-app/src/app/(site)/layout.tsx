@@ -1,11 +1,14 @@
 import SiteFrame from '@/components/SiteFrame'
-
-export const dynamic = 'force-dynamic'
+import { Suspense } from 'react'
 
 export default function SiteLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  return <SiteFrame>{children}</SiteFrame>
+  return (
+    <Suspense fallback={<main className="min-h-screen">{children}</main>}>
+      <SiteFrame>{children}</SiteFrame>
+    </Suspense>
+  )
 }

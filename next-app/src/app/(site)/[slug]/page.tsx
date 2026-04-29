@@ -26,13 +26,15 @@ export async function generateMetadata({ params }: Props) {
       : `Perfil de ${profile.name} no CerejaVIP.`
   const ogImageUrl = getProfileOgImageUrl(profile)
   const canonicalSlug = profile.display_mode === 'link_bio' ? `@${slug}` : rawSlug
+  const canonical = `${SITE_URL}/${canonicalSlug}`
   return {
     title,
     description,
+    alternates: { canonical },
     openGraph: {
       title,
       description,
-      url: `${SITE_URL}/${canonicalSlug}`,
+      url: canonical,
       type: 'profile',
       images: [
         {
@@ -69,11 +71,56 @@ export default async function ProfileBySlugPage({ params, searchParams }: Props)
 
   const publicSlug = fromAtRewrite ? `@${slug}` : rawSlug
   const profileUrl = `${SITE_URL}/${publicSlug}`
+
+  const profilePageJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'ProfilePage',
+    url: profileUrl,
+    inLanguage: 'pt-BR',
+    mainEntity: {
+      '@type': 'Person',
+      name: profile.name,
+      description: profile.bio_title || profile.bio || `Perfil de ${profile.name} no CerejaVIP`,
+      address: {
+        '@type': 'PostalAddress',
+        addressLocality: profile.city,
+        addressRegion: profile.state,
+        addressCountry: 'BR',
+      },
+    },
+  }
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Início', item: `${SITE_URL}/` },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: `Acompanhantes em ${profile.city}`,
+        item: `${SITE_URL}/?state=${profile.state}&city=${encodeURIComponent(profile.city)}`,
+      },
+      { '@type': 'ListItem', position: 3, name: profile.name, item: profileUrl },
+    ],
+  }
+
   const content =
     profile.display_mode === 'link_bio' && !viewFull ? (
       <LinkBioView profile={profile} profileUrl={profileUrl} />
     ) : (
       <ProfileView profile={profile} profileUrl={profileUrl} />
     )
-  return <AgeVerificationGate>{content}</AgeVerificationGate>
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(profilePageJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
+      <AgeVerificationGate>{content}</AgeVerificationGate>
+    </>
+  )
 }

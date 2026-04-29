@@ -4,10 +4,14 @@ import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import SiteHeader from '@/components/SiteHeader'
 import AnnouncementBar from '@/components/AnnouncementBar'
+import { SEO_CITIES, getPrioritySeoCities } from '@/lib/seo-cities'
+import { SEO_STATES } from '@/lib/seo-states'
 
 export default function SiteFrame({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const isAtProfileRoute = !!pathname && pathname.startsWith('/@')
+  const priorityCities = getPrioritySeoCities()
+  const prioritySlugSet = new Set(priorityCities.map((item) => item.slug))
 
   if (isAtProfileRoute) {
     // Perfil em formato "link na bio": tela limpa, sem chrome do site.
@@ -54,7 +58,45 @@ export default function SiteFrame({ children }: { children: React.ReactNode }) {
               </ul>
             </div>
           </div>
-          <div className="mt-10 border-t border-slate-700/50 pt-6 text-center text-sm text-slate-500">
+          <div className="mt-8 border-t border-slate-700/50 pt-6">
+            <p className="text-sm font-semibold uppercase tracking-wider text-slate-500 mb-3">Cidades prioritárias</p>
+            <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs">
+              {priorityCities.map((item) => (
+                <Link
+                  key={item.slug}
+                  href={`/cidade/${item.slug}`}
+                  className="text-slate-500 hover:text-slate-300"
+                >
+                  {item.city}
+                </Link>
+              ))}
+            </div>
+            <p className="text-sm font-semibold uppercase tracking-wider text-slate-500 mt-4 mb-3">Outras cidades</p>
+            <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs">
+              {SEO_CITIES.filter((item) => !prioritySlugSet.has(item.slug)).map((item) => (
+                <Link
+                  key={item.slug}
+                  href={`/cidade/${item.slug}`}
+                  className="text-slate-500 hover:text-slate-300"
+                >
+                  {item.city}
+                </Link>
+              ))}
+            </div>
+            <p className="text-sm font-semibold uppercase tracking-wider text-slate-500 mt-4 mb-3">Acompanhantes por estado</p>
+            <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs">
+              {SEO_STATES.map((item) => (
+                <Link
+                  key={item.slug}
+                  href={`/estado/${item.slug}`}
+                  className="text-slate-500 hover:text-slate-300"
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </div>
+          </div>
+          <div className="mt-6 border-t border-slate-700/50 pt-6 text-center text-sm text-slate-500">
             <p>© {new Date().getFullYear()} CerejaVIP. Todos os direitos reservados.</p>
           </div>
         </div>

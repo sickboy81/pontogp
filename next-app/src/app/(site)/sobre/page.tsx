@@ -1,6 +1,6 @@
 export const metadata = {
-  title: 'Sobre Nós',
-  description: 'Conheça o CerejaVIP. Plataforma de classificados premium com foco em segurança e privacidade.',
+  title: 'Sobre o CerejaVIP - Plataforma de Acompanhantes Brasil',
+  description: 'Conheça o CerejaVIP: plataforma de classificados para acompanhantes com perfis verificados, chat seguro, galeria HD e privacidade total. Presente em todas as capitais do Brasil.',
 }
 
 export default function SobrePage() {

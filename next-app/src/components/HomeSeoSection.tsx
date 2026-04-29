@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { SEO_CITIES } from '@/lib/seo-cities'
+import { getPrioritySeoCities } from '@/lib/seo-cities'
 import { SEO_STATES } from '@/lib/seo-states'
 
 const SEO_QUICK_LINKS = [
@@ -14,6 +14,8 @@ const SEO_QUICK_LINKS = [
 ]
 
 export default function HomeSeoSection() {
+  const priorityCities = getPrioritySeoCities()
+
   return (
     <section className="mt-16 border-t border-slate-800 pt-10 md:pt-14">
       <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-6 md:p-10">
@@ -79,9 +81,9 @@ export default function HomeSeoSection() {
         </div>
 
         <div className="mt-6">
-          <p className="mb-3 text-sm font-semibold text-white">Cidades em destaque</p>
+          <p className="mb-3 text-sm font-semibold text-white">Cidades prioritárias</p>
           <div className="flex flex-wrap gap-2">
-            {SEO_CITIES.map((item) => (
+            {priorityCities.map((item) => (
               <Link
                 key={`${item.state}-${item.city}`}
                 href={`/cidade/${item.slug}`}
@@ -92,6 +94,9 @@ export default function HomeSeoSection() {
               </Link>
             ))}
           </div>
+          <p className="mt-3 text-xs text-slate-500">
+            Também cobrimos mais cidades em todo o Brasil. Veja todas no rodapé ou pela busca.
+          </p>
         </div>
 
         <div className="mt-8 space-y-3 text-sm leading-relaxed text-slate-400 md:text-base">

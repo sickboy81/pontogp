@@ -1,9 +1,9 @@
 import { ImageResponse } from 'next/og'
 
-export const runtime = 'edge'
 export const alt = 'CerejaVIP - Acompanhantes Brasil'
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
+export const revalidate = false
 
 export default function Image() {
   return new ImageResponse(
@@ -24,7 +24,7 @@ export default function Image() {
       >
         <div
           style={{
-            display: 'inline-flex',
+            display: 'flex',
             alignItems: 'center',
             gap: 14,
             borderRadius: 9999,

@@ -52,7 +52,7 @@ export default function ProfileCard({ profile, index = 0, planColor, priority = 
           {mainPhoto ? (
             <Image
               src={mainPhoto}
-              alt={profile.name}
+              alt={`${profile.name}, ${profile.category} em ${profile.city}/${profile.state}${profile.verified ? ' - perfil verificado' : ''}`}
               fill
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
               className={`object-cover transition duration-300 group-hover:scale-105 ${isUnavailable ? 'scale-105 blur-sm grayscale' : ''}`}

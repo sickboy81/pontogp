@@ -1,12 +1,13 @@
-'use client'
-
-import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import {
-  Shield, Star, Zap, Check, Quote, Camera, MessageCircle,
-  Heart, BarChart3, Link2, Clock, Video, Lock, ChevronDown, Sparkles,
+  Shield, Star, Zap, Quote, Camera, MessageCircle,
+  Heart, BarChart3, Link2, Clock, Video, Lock, Sparkles,
   Eye, Phone, ArrowRight, Users, TrendingUp, BadgeCheck,
 } from 'lucide-react'
+import AnunciantesFaq from '@/components/AnunciantesFaq'
+import AnunciantesPlans from '@/components/AnunciantesPlans'
+
+const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://cerejavip.com'
 
 const testimonials = [
   { name: 'Juliana M.', location: 'São Paulo, SP', text: 'Meus contatos aumentaram mais de 200% no primeiro mês! O dashboard mostra tudo em tempo real — sei exatamente de onde vêm meus clientes.', rating: 5, plan: 'Ouro' },
@@ -48,64 +49,40 @@ const steps = [
   { number: 4, title: 'Receba contatos', description: 'Clientes encontram você e entram em contato direto via WhatsApp ou chat.', icon: Phone },
 ]
 
-const planStyles: Record<string, { color: string; textColor: string }> = {
-  gratis: { color: 'border-slate-600', textColor: 'text-slate-400' },
-  bronze: { color: 'border-amber-700', textColor: 'text-amber-600' },
-  prata: { color: 'border-slate-400', textColor: 'text-slate-300' },
-  ouro: { color: 'border-amber-400', textColor: 'text-amber-400' },
+const faqJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: faqData.map((item) => ({
+    '@type': 'Question',
+    name: item.question,
+    acceptedAnswer: {
+      '@type': 'Answer',
+      text: item.answer,
+    },
+  })),
 }
 
-function formatPrice(price: number) {
-  if (price <= 0) return 'Grátis'
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(price)
-}
-
-type Plan = {
-  slug: string
-  name: string
-  price_weekly?: number
-  features?: string[]
-  daily_bumps?: number
-}
-
-function FAQItem({ question, answer, open, onToggle }: { question: string; answer: string; open: boolean; onToggle: () => void }) {
-  return (
-    <div className="border border-slate-700 overflow-hidden hover:border-slate-600 transition-colors">
-      <button type="button" onClick={onToggle} className="w-full flex items-center justify-between p-6 text-left hover:bg-slate-800/50 transition-colors">
-        <span className="text-lg font-medium text-white pr-4">{question}</span>
-        <ChevronDown className={`w-5 h-5 text-slate-400 flex-shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
-      </button>
-      {open && <div className="px-6 pb-6"><p className="text-slate-400 leading-relaxed">{answer}</p></div>}
-    </div>
-  )
+const breadcrumbJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Início', item: `${SITE_URL}/` },
+    { '@type': 'ListItem', position: 2, name: 'Anunciantes', item: `${SITE_URL}/anunciantes` },
+  ],
 }
 
 export default function AnunciantesPage() {
-  const [plans, setPlans] = useState<Plan[]>([])
-  const [faqOpen, setFaqOpen] = useState<number | null>(null)
-
-  useEffect(() => {
-    fetch('/api/plans?enabledOnly=true')
-      .then((r) => r.json())
-      .then((data: Plan[]) => {
-        const order = ['gratis', 'bronze', 'prata', 'ouro']
-        const sorted = data
-          .filter((p) => (p.slug === 'gratis' || p.slug === 'bronze' || p.slug === 'prata' || p.slug === 'ouro' || order.includes(p.slug)))
-          .sort((a, b) => {
-            const ai = order.indexOf(a.slug)
-            const bi = order.indexOf(b.slug)
-            if (ai === -1 && bi === -1) return (a.price_weekly || 0) - (b.price_weekly || 0)
-            if (ai === -1) return 1
-            if (bi === -1) return -1
-            return ai - bi
-          })
-        setPlans(sorted)
-      })
-      .catch(() => {})
-  }, [])
-
   return (
     <div className="min-h-screen bg-slate-900 text-white overflow-x-hidden">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
+
       {/* Hero */}
       <section className="relative px-4 pt-8 pb-16 md:px-8 md:pt-12 md:pb-24">
         <div className="absolute inset-0 bg-gradient-to-b from-primary-600/10 via-transparent to-transparent pointer-events-none" />
@@ -235,62 +212,7 @@ export default function AnunciantesPage() {
           <p className="text-slate-400 text-lg max-w-2xl mb-16">
             Comece grátis e faça upgrade quando quiser. Sem fidelidade, sem burocracia.
           </p>
-          <div className={`grid grid-cols-1 sm:grid-cols-2 ${plans.length >= 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-4`}>
-            {plans.map((plan) => {
-              const style = planStyles[plan.slug] || { color: 'border-slate-600', textColor: 'text-slate-400' }
-              const isPopular = plan.slug === 'prata'
-              const isFree = (plan.price_weekly || 0) <= 0
-              const isTop = plan.slug === 'ouro'
-              return (
-                <div
-                  key={plan.slug}
-                  className={`relative border ${style.color} bg-slate-800/50 p-6 flex flex-col ${isPopular ? 'ring-1 ring-slate-400/50' : ''}`}
-                >
-                  {isPopular && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-white text-black text-xs font-bold px-3 py-1 tracking-wider uppercase">
-                      Mais Popular
-                    </div>
-                  )}
-                  <div className="mb-6">
-                    <h3 className={`text-xl font-bold ${style.textColor} mb-1`}>{plan.name}</h3>
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-3xl font-black text-white">
-                        {isFree ? 'Grátis' : formatPrice(plan.price_weekly || 0)}
-                      </span>
-                      {!isFree && <span className="text-slate-500 text-sm">/semana</span>}
-                      {isFree && <span className="text-slate-500 text-sm">para sempre</span>}
-                    </div>
-                  </div>
-                  <ul className="space-y-3 mb-6 flex-grow">
-                    {Array.isArray(plan.features) && plan.features.slice(0, 5).map((f, i) => (
-                      <li key={i} className="flex items-start gap-2 text-sm">
-                        <Check className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />
-                        <span className="text-slate-300">{f}</span>
-                      </li>
-                    ))}
-                    {plan.daily_bumps != null && plan.daily_bumps > 0 && (
-                      <li className="flex items-start gap-2 text-sm">
-                        <Check className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />
-                        <span className="text-slate-300">{plan.daily_bumps} bump{plan.daily_bumps > 1 ? 's' : ''}/dia</span>
-                      </li>
-                    )}
-                  </ul>
-                  <Link
-                    href={isFree ? '/register' : '/planos'}
-                    className={`block text-center py-3 text-sm font-bold uppercase tracking-wider transition-all ${
-                      isTop
-                        ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-black hover:from-amber-400 hover:to-amber-500'
-                        : isPopular
-                          ? 'bg-white text-black hover:bg-slate-200'
-                          : 'border border-slate-600 text-white hover:bg-slate-700'
-                    }`}
-                  >
-                    {isFree ? 'Criar Perfil' : 'Escolher Plano'}
-                  </Link>
-                </div>
-              )
-            })}
-          </div>
+          <AnunciantesPlans />
           <div className="text-center mt-8">
             <Link href="/planos" className="inline-flex items-center gap-2 text-primary-400 hover:text-primary-300 font-medium transition-colors">
               Ver comparação completa dos planos
@@ -381,17 +303,7 @@ export default function AnunciantesPage() {
           <h2 className="text-3xl md:text-5xl font-bold mb-16">
             Perguntas <span className="text-primary-500">frequentes</span>
           </h2>
-          <div className="space-y-3">
-            {faqData.map((faq, index) => (
-              <FAQItem
-                key={index}
-                question={faq.question}
-                answer={faq.answer}
-                open={faqOpen === index}
-                onToggle={() => setFaqOpen(faqOpen === index ? null : index)}
-              />
-            ))}
-          </div>
+          <AnunciantesFaq items={faqData} />
         </div>
       </section>
 
