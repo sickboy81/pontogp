@@ -75,6 +75,30 @@ export function resolveHomeCanonical(
   return { canonical: `${SITE_URL}/`, noindex: false }
 }
 
+/** Redireciona apenas queries equivalentes a landings oficiais, preservando filtros livres na home. */
+export function resolveHomeRedirectPath(sp: URLSearchParams): string | null {
+  if (hasDisallowedQueryKeys(sp)) return null
+
+  const stateUf = (sp.get('state') || '').trim().toUpperCase()
+  const city = sp.get('city') || ''
+  const category = (sp.get('category') || '').trim()
+  const gender = (sp.get('gender') || '').trim()
+
+  if (!isDefaultCategoryGender(category, gender)) return null
+
+  if (stateUf && city) {
+    const hit = findSeoCityByParams(stateUf, city)
+    return hit ? `/cidade/${hit.slug}` : null
+  }
+
+  if (stateUf && !city) {
+    const st = findSeoStateByUf(stateUf)
+    return st ? `/estado/${st.slug}` : null
+  }
+
+  return null
+}
+
 export function getHomeSearchParamsURL(sp: { [key: string]: string | string[] | undefined } | URLSearchParams) {
   if (sp instanceof URLSearchParams) return sp
   const u = new URLSearchParams()

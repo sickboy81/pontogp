@@ -21,10 +21,6 @@ const nextConfig = {
     ],
   },
   serverExternalPackages: ['sharp', 'ffmpeg-static'],
-  typescript: {
-    // Mantém deploy estável no VPS enquanto saneamos tipagem gradualmente.
-    ignoreBuildErrors: true,
-  },
   async headers() {
     return [
       {

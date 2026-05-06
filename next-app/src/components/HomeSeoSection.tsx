@@ -71,12 +71,32 @@ export default function HomeSeoSection() {
                 <Link
                   key={item.href}
                   href={item.href}
+                  rel="nofollow"
                   className="inline-flex rounded-lg border border-slate-700 px-3 py-2 text-xs text-slate-300 transition hover:border-primary-500 hover:text-white md:text-sm"
                 >
                   {item.label}
                 </Link>
               ))}
             </div>
+          </div>
+        </div>
+
+        <div className="mt-6">
+          <p className="mb-3 text-sm font-semibold text-white">Buscas por proximidade</p>
+          <div className="flex flex-wrap gap-2">
+            {[
+              { href: '/acompanhantes-perto-de-mim', label: 'Acompanhantes perto de mim' },
+              { href: '/massagistas-perto-de-mim', label: 'Massagistas perto de mim' },
+              { href: '/acompanhantes-trans-perto-de-mim', label: 'Acompanhantes trans perto de mim' },
+            ].map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="inline-flex rounded-lg border border-slate-700 px-3 py-2 text-xs text-slate-300 transition hover:border-primary-500 hover:text-white md:text-sm"
+              >
+                {item.label}
+              </Link>
+            ))}
           </div>
         </div>
 
@@ -107,6 +127,13 @@ export default function HomeSeoSection() {
           <p>
             Para quem busca, recomendamos combinar filtros de localização e categoria para encontrar resultados mais relevantes.
             Se preferir, você pode começar pela listagem completa de <Link href="/anunciantes" className="text-primary-400 hover:text-primary-300">anunciantes</Link> e depois refinar.
+          </p>
+          <p>
+            Para aprender boas práticas de segurança, privacidade e divulgação local, consulte os{' '}
+            <Link href="/guia" className="text-primary-400 hover:text-primary-300">
+              guias da CerejaVIP
+            </Link>
+            .
           </p>
         </div>
       </div>

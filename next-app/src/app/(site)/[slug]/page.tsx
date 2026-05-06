@@ -2,6 +2,8 @@ import { notFound, redirect } from 'next/navigation'
 import { getProfileBySlug } from '@/lib/api/profiles'
 import { getProfileOgImageUrl } from '@/lib/og'
 import { STATIC_SLUGS } from '@/lib/constants'
+import { SEO_CITIES } from '@/lib/seo-cities'
+import { findSeoStateByUf } from '@/lib/seo-states'
 import ProfileView from '@/components/ProfileView'
 import LinkBioView from '@/components/LinkBioView'
 import AgeVerificationGate from '@/components/AgeVerificationGate'
@@ -71,6 +73,15 @@ export default async function ProfileBySlugPage({ params, searchParams }: Props)
 
   const publicSlug = fromAtRewrite ? `@${slug}` : rawSlug
   const profileUrl = `${SITE_URL}/${publicSlug}`
+  const cityLanding = SEO_CITIES.find(
+    (item) => item.state === profile.state && item.city.trim().toLowerCase() === profile.city.trim().toLowerCase()
+  )
+  const stateLanding = findSeoStateByUf(profile.state)
+  const locationUrl = cityLanding
+    ? `${SITE_URL}/cidade/${cityLanding.slug}`
+    : stateLanding
+      ? `${SITE_URL}/estado/${stateLanding.slug}`
+      : `${SITE_URL}/`
 
   const profilePageJsonLd = {
     '@context': 'https://schema.org',
@@ -98,7 +109,7 @@ export default async function ProfileBySlugPage({ params, searchParams }: Props)
         '@type': 'ListItem',
         position: 2,
         name: `Acompanhantes em ${profile.city}`,
-        item: `${SITE_URL}/?state=${profile.state}&city=${encodeURIComponent(profile.city)}`,
+        item: locationUrl,
       },
       { '@type': 'ListItem', position: 3, name: profile.name, item: profileUrl },
     ],

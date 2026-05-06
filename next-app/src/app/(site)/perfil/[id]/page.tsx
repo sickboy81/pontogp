@@ -1,6 +1,8 @@
 import { notFound } from 'next/navigation'
 import { getProfile } from '@/lib/api/profiles'
 import { getProfileOgImageUrl } from '@/lib/og'
+import { SEO_CITIES } from '@/lib/seo-cities'
+import { findSeoStateByUf } from '@/lib/seo-states'
 import ProfileView from '@/components/ProfileView'
 
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://cerejavip.com'
@@ -57,6 +59,15 @@ export default async function PerfilByIdPage({ params, searchParams }: Props) {
   const profile = await getProfile(id)
   if (!profile) notFound()
   const profileUrl = `${SITE_URL}/perfil/${id}`
+  const cityLanding = SEO_CITIES.find(
+    (item) => item.state === profile.state && item.city.trim().toLowerCase() === profile.city.trim().toLowerCase()
+  )
+  const stateLanding = findSeoStateByUf(profile.state)
+  const locationUrl = cityLanding
+    ? `${SITE_URL}/cidade/${cityLanding.slug}`
+    : stateLanding
+      ? `${SITE_URL}/estado/${stateLanding.slug}`
+      : `${SITE_URL}/`
 
   const profilePageJsonLd = {
     '@context': 'https://schema.org',
@@ -84,7 +95,7 @@ export default async function PerfilByIdPage({ params, searchParams }: Props) {
         '@type': 'ListItem',
         position: 2,
         name: `Acompanhantes em ${profile.city}`,
-        item: `${SITE_URL}/?state=${profile.state}&city=${encodeURIComponent(profile.city)}`,
+        item: locationUrl,
       },
       { '@type': 'ListItem', position: 3, name: profile.name, item: profileUrl },
     ],

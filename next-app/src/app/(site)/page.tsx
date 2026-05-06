@@ -74,11 +74,11 @@ export default function HomePage() {
       '@type': 'ItemList',
       name: 'Categorias principais',
       itemListElement: [
-        { '@type': 'ListItem', position: 1, name: 'Acompanhantes femininas', url: `${SITE_URL}/?category=acompanhante&gender=mulher` },
-        { '@type': 'ListItem', position: 2, name: 'Acompanhantes masculinos', url: `${SITE_URL}/?category=acompanhante&gender=homem` },
-        { '@type': 'ListItem', position: 3, name: 'Acompanhantes trans', url: `${SITE_URL}/?category=acompanhante&gender=trans` },
-        { '@type': 'ListItem', position: 4, name: 'Massagistas', url: `${SITE_URL}/?category=massagista` },
-        { '@type': 'ListItem', position: 5, name: 'Atendimento online', url: `${SITE_URL}/?category=online` },
+        { '@type': 'ListItem', position: 1, name: 'Acompanhantes femininas', url: `${SITE_URL}/anunciantes` },
+        { '@type': 'ListItem', position: 2, name: 'Acompanhantes masculinos', url: `${SITE_URL}/anunciantes` },
+        { '@type': 'ListItem', position: 3, name: 'Acompanhantes trans', url: `${SITE_URL}/anunciantes` },
+        { '@type': 'ListItem', position: 4, name: 'Massagistas', url: `${SITE_URL}/anunciantes` },
+        { '@type': 'ListItem', position: 5, name: 'Atendimento online', url: `${SITE_URL}/anunciantes` },
       ],
     },
   }

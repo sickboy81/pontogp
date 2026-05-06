@@ -5,6 +5,7 @@ import Link from 'next/link'
 import SiteHeader from '@/components/SiteHeader'
 import AnnouncementBar from '@/components/AnnouncementBar'
 import { SEO_CITIES, getPrioritySeoCities } from '@/lib/seo-cities'
+import { SEO_NEAR_ME_PAGES } from '@/lib/seo-near-me'
 import { SEO_STATES } from '@/lib/seo-states'
 
 export default function SiteFrame({ children }: { children: React.ReactNode }) {
@@ -38,6 +39,8 @@ export default function SiteFrame({ children }: { children: React.ReactNode }) {
                 <li><Link href="/" className="text-slate-400 hover:text-white">Início</Link></li>
                 <li><Link href="/anunciantes" className="text-slate-400 hover:text-white">Anunciantes</Link></li>
                 <li><Link href="/planos" className="text-slate-400 hover:text-white">Planos</Link></li>
+                <li><Link href="/guia" className="text-slate-400 hover:text-white">Guias</Link></li>
+                <li><Link href="/acompanhantes-perto-de-mim" className="text-slate-400 hover:text-white">Perto de mim</Link></li>
                 <li><Link href="/contato" className="text-slate-400 hover:text-white">Contato</Link></li>
               </ul>
             </div>
@@ -89,6 +92,18 @@ export default function SiteFrame({ children }: { children: React.ReactNode }) {
                 <Link
                   key={item.slug}
                   href={`/estado/${item.slug}`}
+                  className="text-slate-500 hover:text-slate-300"
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </div>
+            <p className="text-sm font-semibold uppercase tracking-wider text-slate-500 mt-4 mb-3">Buscas por proximidade</p>
+            <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs">
+              {SEO_NEAR_ME_PAGES.map((item) => (
+                <Link
+                  key={item.slug}
+                  href={`/${item.slug}`}
                   className="text-slate-500 hover:text-slate-300"
                 >
                   {item.label}

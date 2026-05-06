@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { getAuthCookieFromHeader } from '@/lib/auth-cookie'
+import { resolveHomeRedirectPath } from '@/lib/seo-home'
 
 const PROTECTED_PREFIXES = ['/dashboard', '/mensagens', '/diretrizes-fotos-videos', '/admin', '/favoritos']
 
@@ -24,6 +25,26 @@ function withNoCache(res: NextResponse, pathname: string): NextResponse {
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
+  const host = request.headers.get('host') || ''
+  const forwardedProto = request.headers.get('x-forwarded-proto') || ''
+
+  if (host === 'www.cerejavip.com' || (host === 'cerejavip.com' && forwardedProto === 'http')) {
+    const canonicalUrl = request.nextUrl.clone()
+    canonicalUrl.protocol = 'https:'
+    canonicalUrl.host = 'cerejavip.com'
+    canonicalUrl.port = ''
+    return NextResponse.redirect(canonicalUrl, 308)
+  }
+
+  if (pathname === '/' && request.nextUrl.search) {
+    const redirectPath = resolveHomeRedirectPath(request.nextUrl.searchParams)
+    if (redirectPath) {
+      const cleanUrl = request.nextUrl.clone()
+      cleanUrl.pathname = redirectPath
+      cleanUrl.search = ''
+      return NextResponse.redirect(cleanUrl, 308)
+    }
+  }
 
   // Reescreve /@username -> /username mantendo URL pública com @.
   if (pathname.startsWith('/@') && pathname.length > 2) {

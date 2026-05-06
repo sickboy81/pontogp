@@ -12,7 +12,6 @@ const execFileAsync = promisify(execFile)
 function getFfmpegPath(): string | null {
   if (process.env.FFMPEG_PATH) return process.env.FFMPEG_PATH
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const p = require('ffmpeg-static') as string | false | null
     return typeof p === 'string' && p.length > 0 ? p : null
   } catch {

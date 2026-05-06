@@ -31,7 +31,6 @@ async function runCheck(check) {
 const results = []
 for (const check of checks) {
   // Sequencial para facilitar leitura de log.
-  // eslint-disable-next-line no-await-in-loop
   const result = await runCheck(check)
   results.push(result)
 }
