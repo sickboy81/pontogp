@@ -81,8 +81,15 @@ async function resetDailyBumps() {
     await pb.admins.authWithPassword(ADMIN_EMAIL, ADMIN_PASSWORD)
     console.log('✅ Autenticado com sucesso')
     
-    // Obter data de hoje
-    const today = new Date().toISOString().split('T')[0] // YYYY-MM-DD
+    // Obter data de hoje no mesmo fuso usado pelo bump/manual dashboard.
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Sao_Paulo',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(new Date())
+    const byType = Object.fromEntries(parts.map((part) => [part.type, part.value]))
+    const today = `${byType.year}-${byType.month}-${byType.day}`
     console.log(`📅 Data de hoje: ${today}`)
     
     // Buscar todos os registros com data diferente de hoje

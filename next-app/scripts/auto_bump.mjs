@@ -1,14 +1,13 @@
 #!/usr/bin/env node
 /**
- * Aplica bump automático em perfis com auto_bump = true que ainda têm cota.
- * Uso: node scripts/auto_bump.mjs
- * Agende com cron (ex.: a cada 15 min).
+ * Aplica bump automático usando a mesma fonte oficial da produção:
+ * profile_daily_bumps + profiles.last_bump_at.
  *
- * Variáveis: NEXT_PUBLIC_POCKETBASE_URL (ou VITE_POCKETBASE_URL),
- * POCKETBASE_ADMIN_EMAIL, POCKETBASE_ADMIN_PASSWORD.
+ * Este script existe para `npm run auto-bump` dentro do next-app. O Docker de
+ * produção continua copiando e executando `/app/auto_bump.cjs` na raiz.
  */
 
-import { readFileSync, existsSync } from 'fs'
+import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'fs'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
 import PocketBase from 'pocketbase'
@@ -16,6 +15,8 @@ import PocketBase from 'pocketbase'
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const nextAppRoot = join(__dirname, '..')
 const repoRoot = join(nextAppRoot, '..')
+const LOCK_FILE = '/tmp/cerejavip-auto-bump.lock'
+const LOCK_STALE_MS = 15 * 60 * 1000
 
 function loadEnv(dir) {
   const path = join(dir, '.env')
@@ -24,8 +25,7 @@ function loadEnv(dir) {
   for (const line of content.split('\n')) {
     const m = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/)
     if (m && !process.env[m[1]]) {
-      const val = m[2].replace(/^["']|["']$/g, '').trim()
-      process.env[m[1]] = val
+      process.env[m[1]] = m[2].replace(/^["']|["']$/g, '').trim()
     }
   }
 }
@@ -33,14 +33,13 @@ function loadEnv(dir) {
 loadEnv(nextAppRoot)
 loadEnv(repoRoot)
 
-const PB_URL = (process.env.NEXT_PUBLIC_POCKETBASE_URL || process.env.VITE_POCKETBASE_URL || '').replace(/\/$/, '')
-const EMAIL = process.env.POCKETBASE_ADMIN_EMAIL || ''
-const PASSWORD = process.env.POCKETBASE_ADMIN_PASSWORD || ''
-
-if (!PB_URL || !EMAIL || !PASSWORD) {
-  console.error('Defina URL e credenciais admin do PocketBase (ou .env)')
-  process.exit(1)
-}
+const PB_URL = (
+  process.env.NEXT_PUBLIC_POCKETBASE_URL ||
+  process.env.VITE_POCKETBASE_URL ||
+  'https://pocketbase.cerejavip.com'
+).replace(/\/$/, '')
+const EMAIL = process.env.POCKETBASE_ADMIN_EMAIL || process.env.PB_ADMIN_EMAIL || ''
+const PASSWORD = process.env.POCKETBASE_ADMIN_PASSWORD || process.env.PB_ADMIN_PASSWORD || ''
 
 const pb = new PocketBase(PB_URL)
 
@@ -55,71 +54,132 @@ function todayBR() {
   return `${byType.year}-${byType.month}-${byType.day}`
 }
 
-async function main() {
+function acquireLock() {
+  const now = Date.now()
   try {
-    await pb.admins.authWithPassword(EMAIL, PASSWORD)
-  } catch (err) {
-    console.error('Erro ao autenticar:', err.message)
-    process.exit(1)
-  }
-
-  const now = new Date().toISOString().replace('T', ' ').slice(0, 19)
-  const today = todayBR()
-
-  let list
-  try {
-    list = await pb.collection('profiles').getList(1, 200, {
-      filter: 'auto_bump = true && status = "active"',
-      fields: 'id,plan,last_bump_at,bumps_used_date,bumps_used_today',
-    })
-  } catch (err) {
-    console.error('Erro ao listar perfis:', err.message)
-    process.exit(1)
-  }
-
-  const plansCache = {}
-  async function getDailyBumps(planRef) {
-    if (!planRef) return 0
-    if (plansCache[planRef] !== undefined) return plansCache[planRef]
-    try {
-      const isId = String(planRef).length >= 15 && !['gratis', 'bronze', 'prata', 'ouro', 'vip', 'premium'].includes(planRef)
-      const plan = isId
-        ? await pb.collection('plans').getOne(planRef, { fields: 'daily_bumps' })
-        : (await pb.collection('plans').getList(1, 1, { filter: `slug="${planRef}"`, fields: 'daily_bumps' })).items[0]
-      const n = plan ? (Number(plan.daily_bumps) || 0) : 0
-      plansCache[planRef] = n
-      return n
-    } catch {
-      plansCache[planRef] = 0
-      return 0
+    if (existsSync(LOCK_FILE)) {
+      const lockTs = Number(readFileSync(LOCK_FILE, 'utf8'))
+      const lockAge = Number.isFinite(lockTs) ? now - lockTs : Number.POSITIVE_INFINITY
+      if (lockAge < LOCK_STALE_MS) {
+        console.log(`[AutoBump] Skip: another execution is running (lock age ${Math.round(lockAge / 1000)}s).`)
+        return false
+      }
+      console.log('[AutoBump] Stale lock detected, replacing old lock.')
+      unlinkSync(LOCK_FILE)
     }
+
+    writeFileSync(LOCK_FILE, String(now), { flag: 'wx' })
+    return true
+  } catch (error) {
+    console.error('[AutoBump] Failed to acquire lock:', error.message)
+    return false
   }
-
-  let applied = 0
-  for (const profile of list.items || []) {
-    const dailyBumps = await getDailyBumps(profile.plan)
-    if (dailyBumps <= 0) continue
-
-    const usedToday = profile.bumps_used_date === today ? (Number(profile.bumps_used_today) || 0) : 0
-    if (usedToday >= dailyBumps) continue
-
-    try {
-      await pb.collection('profiles').update(profile.id, {
-        last_bump_at: now,
-        bumps_used_date: today,
-        bumps_used_today: usedToday + 1,
-      })
-      applied++
-      console.log('Bump aplicado:', profile.id)
-    } catch (err) {
-      console.warn('Erro ao dar bump em', profile.id, err.message)
-    }
-  }
-
-  console.log('Total de bumps aplicados:', applied)
 }
 
-main().catch((err) => {
-  console.error(err)
-  process.exit(1)
-})
+function releaseLock() {
+  try {
+    if (existsSync(LOCK_FILE)) unlinkSync(LOCK_FILE)
+  } catch (error) {
+    console.error('[AutoBump] Failed to release lock:', error.message)
+  }
+}
+
+async function runAutoBump() {
+  if (!acquireLock()) return
+
+  try {
+    if (!PB_URL || !EMAIL || !PASSWORD) {
+      console.error('Defina URL e credenciais admin do PocketBase')
+      process.exitCode = 1
+      return
+    }
+
+    console.log(`[${new Date().toISOString()}] Starting Auto-Bump process...`)
+    await pb.admins.authWithPassword(EMAIL, PASSWORD)
+
+    const plans = await pb.collection('plans').getFullList({
+      fields: 'id,slug,daily_bumps',
+    })
+    const plansMap = new Map()
+    for (const plan of plans) {
+      if (plan.id) plansMap.set(plan.id, plan)
+      if (plan.slug) plansMap.set(plan.slug, plan)
+    }
+
+    const profiles = await pb.collection('profiles').getFullList({
+      filter: 'status = "active" && auto_bump = true',
+      sort: '-last_bump_at',
+      fields: 'id,name,plan,last_bump_at,auto_bump',
+    })
+    console.log(`Found ${profiles.length} active profiles with auto-bump enabled.`)
+
+    const today = todayBR()
+    const dailyMap = new Map()
+    const dailyRecords = await pb.collection('profile_daily_bumps').getFullList({
+      filter: `date = "${today}"`,
+      fields: 'id,profile,bumps_used',
+    })
+    for (const record of dailyRecords) {
+      if (record.profile) dailyMap.set(record.profile, record)
+    }
+
+    const forceMode = process.argv.includes('--force')
+    for (const profile of profiles) {
+      const plan = plansMap.get(profile.plan)
+      const dailyBumps = Number(plan?.daily_bumps) || 0
+      if (dailyBumps <= 0) {
+        console.log(`Profile ${profile.id} has no valid plan for bumps (plan ref: ${profile.plan || 'empty'}).`)
+        continue
+      }
+
+      const dailyBumpRecord = dailyMap.get(profile.id)
+      const bumpsUsed = Number(dailyBumpRecord?.bumps_used) || 0
+      if (bumpsUsed >= dailyBumps) {
+        console.log(`Profile ${profile.id} already used all ${dailyBumps} bumps for today.`)
+        continue
+      }
+
+      const intervalMs = (24 * 60 * 60 * 1000) / dailyBumps
+      const lastBump = profile.last_bump_at ? new Date(profile.last_bump_at).getTime() : 0
+      const now = Date.now()
+      if (!forceMode && now - lastBump < intervalMs) {
+        const nextBumpIn = Math.round((intervalMs - (now - lastBump)) / 1000 / 60)
+        console.log(`Profile ${profile.id} needs to wait ${nextBumpIn} more minutes for next auto-bump.`)
+        continue
+      }
+
+      console.log(`Bumping profile ${profile.id} (${profile.name})... ${forceMode ? '[FORCE MODE]' : ''}`)
+      if (dailyBumpRecord) {
+        await pb.collection('profile_daily_bumps').update(dailyBumpRecord.id, {
+          bumps_used: bumpsUsed + 1,
+        })
+        dailyMap.set(profile.id, { ...dailyBumpRecord, bumps_used: bumpsUsed + 1 })
+      } else {
+        const created = await pb.collection('profile_daily_bumps').create({
+          profile: profile.id,
+          date: today,
+          bumps_used: 1,
+        })
+        dailyMap.set(profile.id, created)
+      }
+
+      await pb.collection('profiles').update(profile.id, {
+        last_bump_at: new Date().toISOString(),
+      })
+      console.log(`Successfully bumped ${profile.id}.`)
+    }
+  } catch (error) {
+    console.error('Auto-Bump Error:', error)
+    process.exitCode = 1
+  } finally {
+    releaseLock()
+  }
+}
+
+if (process.argv.includes('--loop')) {
+  console.log('Running in loop mode (every 5 minutes)...')
+  runAutoBump()
+  setInterval(runAutoBump, 5 * 60 * 1000)
+} else {
+  runAutoBump()
+}
