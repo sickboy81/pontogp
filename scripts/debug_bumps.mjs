@@ -22,7 +22,14 @@ async function debugBumps() {
         await pb.admins.authWithPassword(env.DIRECTUS_ADMIN_EMAIL, env.DIRECTUS_ADMIN_PASSWORD);
 
         console.log('Fetching all bumps for today...');
-        const today = new Date().toISOString().split('T')[0];
+        const parts = new Intl.DateTimeFormat('en-US', {
+            timeZone: 'America/Sao_Paulo',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+        }).formatToParts(new Date());
+        const byType = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+        const today = `${byType.year}-${byType.month}-${byType.day}`;
 
         const records = await pb.collection('profile_daily_bumps').getFullList({
             filter: `date = "${today}"`

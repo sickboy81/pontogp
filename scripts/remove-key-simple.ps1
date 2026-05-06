@@ -1,7 +1,7 @@
 # Script simples para remover API key do historico
 # Usa git filter-branch
 
-$API_KEY = "re_D9C6LBbj_6WVs5MrWMcuG6dr5j4iYcwW2"
+$API_KEY = "COLE_A_API_KEY_EXPOSTA_AQUI"
 
 Write-Host "Removendo API key do historico do Git..." -ForegroundColor Yellow
 Write-Host "API Key: $API_KEY" -ForegroundColor Cyan

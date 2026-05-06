@@ -1,7 +1,7 @@
 # Script para remover API key do historico do Git
 # ATENCAO: Isso vai reescrever o historico do Git!
 
-$API_KEY = "re_D9C6LBbj_6WVs5MrWMcuG6dr5j4iYcwW2"
+$API_KEY = "COLE_A_API_KEY_EXPOSTA_AQUI"
 $REPO_DIR = Get-Location
 
 Write-Host "========================================" -ForegroundColor Cyan

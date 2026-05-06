@@ -3,7 +3,14 @@
 
 import { Resend } from 'resend';
 
-const resend = new Resend('re_cF8e4Axa_3bd5KB9D5Pf8rCi4MJ7tL7BX');
+const apiKey = process.env.RESEND_API_KEY || process.env.EMAIL_SMTP_PASSWORD;
+
+if (!apiKey) {
+    console.error('Defina RESEND_API_KEY ou EMAIL_SMTP_PASSWORD para testar o envio.');
+    process.exit(1);
+}
+
+const resend = new Resend(apiKey);
 
 async function testEmail() {
     console.log('Testing Resend email...');

@@ -5,7 +5,7 @@
 echo "⚠️  ATENÇÃO: Este script vai reescrever o histórico do Git!"
 echo "⚠️  Isso requer force push após a execução!"
 echo ""
-echo "A API key que será removida: re_D9C6LBbj_6WVs5MrWMcuG6dr5j4iYcwW2"
+echo "A API key que será removida deve ser informada em um arquivo local não versionado."
 echo ""
 read -p "Deseja continuar? (sim/não): " confirm
 

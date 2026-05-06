@@ -68,6 +68,9 @@ export async function POST(request: NextRequest) {
       if (!provided || !safeEqualHex(provided, expected)) {
         return Response.json({ error: 'Assinatura inválida' }, { status: 401 })
       }
+    } else if (process.env.NODE_ENV === 'production') {
+      console.error('[pix-webhook] PIXGO_WEBHOOK_SECRET ausente em produção.')
+      return Response.json({ error: 'Webhook não configurado' }, { status: 503 })
     } else {
       console.warn('[pix-webhook] PIXGO_WEBHOOK_SECRET ausente; validação de assinatura desativada.')
     }

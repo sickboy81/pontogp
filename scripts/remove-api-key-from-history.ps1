@@ -4,7 +4,7 @@
 Write-Host "⚠️  ATENÇÃO: Este script vai reescrever o histórico do Git!" -ForegroundColor Yellow
 Write-Host "⚠️  Isso requer force push após a execução!" -ForegroundColor Yellow
 Write-Host ""
-Write-Host "A API key que será removida: re_D9C6LBbj_6WVs5MrWMcuG6dr5j4iYcwW2" -ForegroundColor Cyan
+Write-Host "A API key que será removida deve ser informada em um arquivo local não versionado." -ForegroundColor Cyan
 Write-Host ""
 $confirm = Read-Host "Deseja continuar? (sim/não)"
 
@@ -21,7 +21,7 @@ Write-Host "    Download: https://rtyley.github.io/bfg-repo-cleaner/" -Foregroun
 Write-Host ""
 Write-Host "Alternativa manual:" -ForegroundColor Yellow
 Write-Host "1. Instale BFG Repo-Cleaner" -ForegroundColor Gray
-Write-Host "2. Execute: java -jar bfg.jar --replace-text passwords.txt" -ForegroundColor Gray
-Write-Host "3. Onde passwords.txt contém: re_D9C6LBbj_6WVs5MrWMcuG6dr5j4iYcwW2==>" -ForegroundColor Gray
+Write-Host "2. Crie um arquivo local passwords.txt com: SUA_CHAVE_EXPOSTA==>REMOVIDO" -ForegroundColor Gray
+Write-Host "3. Execute: java -jar bfg.jar --replace-text passwords.txt" -ForegroundColor Gray
 Write-Host "4. Depois: git reflog expire --expire=now --all && git gc --prune=now --aggressive" -ForegroundColor Gray
 Write-Host "5. Force push: git push --force --all" -ForegroundColor Gray

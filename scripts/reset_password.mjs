@@ -22,9 +22,14 @@ const DIRECTUS_URL = env.VITE_DIRECTUS_URL || 'https://base.pontogp.com';
 const ADMIN_EMAIL = env.DIRECTUS_ADMIN_EMAIL;
 const ADMIN_PASSWORD = env.DIRECTUS_ADMIN_PASSWORD;
 
-// The user email you want to reset
-const TARGET_EMAIL = 'mariana@mariana.com';
-const NEW_PASSWORD = '12345678';
+// Informe apenas por variáveis locais, nunca versionadas.
+const TARGET_EMAIL = process.env.TARGET_EMAIL || env.TARGET_EMAIL;
+const NEW_PASSWORD = process.env.NEW_PASSWORD || env.NEW_PASSWORD;
+
+if (!TARGET_EMAIL || !NEW_PASSWORD) {
+    console.error('Defina TARGET_EMAIL e NEW_PASSWORD em variável de ambiente local para executar este script.');
+    process.exit(1);
+}
 
 const directus = createDirectus(DIRECTUS_URL)
     .with(rest())
