@@ -387,7 +387,7 @@ export default function SiteHeader() {
         </div>
 
         {/* Linha 2: dropdowns Categoria e Gênero abaixo do logo */}
-        <div className="mt-2 pb-1 md:mt-1 md:pb-0">
+        <div className="mt-4 pb-2 md:mt-2 md:pb-0">
           {categoryGenderNav}
         </div>
       </div>
