@@ -35,7 +35,10 @@ ENV HOSTNAME=0.0.0.0
 ENV PORT=3000
 
 # Runtime app
-COPY --from=builder /app ./
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/node_modules/pocketbase ./node_modules/pocketbase
 
 # Legacy operational scripts kept for cron compatibility
 COPY auto_bump.cjs ./auto_bump.cjs
@@ -55,4 +58,4 @@ RUN /usr/local/bin/export-cron-env.sh && \
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "/usr/local/bin/export-cron-env.sh && crond && npm run start"]
+CMD ["sh", "-c", "/usr/local/bin/export-cron-env.sh && crond && node server.js"]

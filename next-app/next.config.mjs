@@ -7,6 +7,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const nextConfig = {
   // Evita aviso e raiz errada quando existe outro package-lock fora de next-app/
   turbopack: { root: __dirname },
+  output: 'standalone',
   poweredByHeader: false,
   reactStrictMode: true,
   images: {
