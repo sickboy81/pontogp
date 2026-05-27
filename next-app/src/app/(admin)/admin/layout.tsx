@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Menu, X, LayoutDashboard, Globe, LogOut } from 'lucide-react'
 import { useAuthStore, isAdminRole } from '@/store/auth'
+import { isAuthTokenExpired, setAuthCookie } from '@/lib/auth-cookie'
 
 const ADMIN_LINKS = [
   { href: '/admin', label: 'Painel' },
@@ -33,19 +34,43 @@ export default function AdminLayout({
 }) {
   const router = useRouter()
   const user = useAuthStore((s) => s.user)
+  const token = useAuthStore((s) => s.token)
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const logout = useAuthStore((s) => s.logout)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [authHydrated, setAuthHydrated] = useState(false)
+  const [accessReady, setAccessReady] = useState(false)
 
   useEffect(() => {
-    if (!isAuthenticated || !user) {
+    const p = useAuthStore.persist
+    if (p.hasHydrated()) setAuthHydrated(true)
+    return p.onFinishHydration(() => setAuthHydrated(true))
+  }, [])
+
+  useEffect(() => {
+    if (!authHydrated) return
+
+    if (!isAuthenticated || !user || !token) {
       router.replace('/login?callbackUrl=/admin')
+      setAccessReady(false)
       return
     }
+
+    if (isAuthTokenExpired(token)) {
+      void logout().finally(() => router.replace('/login?callbackUrl=/admin'))
+      setAccessReady(false)
+      return
+    }
+
     if (!isAdminRole(user.role)) {
       router.replace('/dashboard')
+      setAccessReady(false)
+      return
     }
-  }, [isAuthenticated, user, router])
+
+    setAuthCookie(token)
+    setAccessReady(true)
+  }, [authHydrated, isAuthenticated, user, token, logout, router])
 
   const handleLogout = async () => {
     setMenuOpen(false)
@@ -55,7 +80,7 @@ export default function AdminLayout({
 
   const closeMenu = () => setMenuOpen(false)
 
-  if (!isAuthenticated || !user) return null
+  if (!authHydrated || !accessReady || !isAuthenticated || !user) return null
   if (!isAdminRole(user.role)) return null
 
   return (
