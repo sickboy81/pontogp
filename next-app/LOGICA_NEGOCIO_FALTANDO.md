@@ -1,5 +1,10 @@
 # Lógica de negócio que não foi migrada
 
+> **DOCUMENTO HISTÓRICO:** este arquivo descreve lacunas observadas durante
+> uma etapa anterior da migração. Parte delas já foi resolvida. Não altere
+> regras de negócio com base apenas neste texto; confirme em `../AGENTS.md`,
+> no schema e no código atual.
+
 Este doc lista **regras e fluxos** que existiam no site antigo e **não foram recriados** no next-app. O PocketBase e a UI já têm campos para isso; falta a **lógica** (quem atualiza, quando, como).
 
 ---

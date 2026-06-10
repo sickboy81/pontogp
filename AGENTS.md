@@ -16,6 +16,10 @@ os fluxos críticos e as verificações obrigatórias.
 Não existe aplicação Vite ativa. Não recrie configurações, rotas ou service
 workers de versões antigas.
 
+Scripts antigos na raiz que citam Directus, `VITE_DIRECTUS_URL` ou migrações
+da aplicação anterior são históricos. Não os execute em produção sem auditar
+o arquivo e confirmar explicitamente que ele ainda se aplica ao PocketBase.
+
 ## Como executar
 
 ```bash
@@ -80,6 +84,19 @@ rode `npm run schema` e versione o JSON atualizado.
 Credenciais administrativas são segredos de runtime. Não as grave em código,
 Dockerfile, commits ou logs. Se um segredo aparecer em log, rotacione-o.
 
+Variáveis usadas pela aplicação:
+
+- obrigatórias: `NEXT_PUBLIC_POCKETBASE_URL`;
+- necessárias para APIs administrativas e scripts: `POCKETBASE_ADMIN_EMAIL`
+  e `POCKETBASE_ADMIN_PASSWORD`;
+- produção/SEO: `NEXT_PUBLIC_APP_URL`;
+- pagamentos: `PIXGO_API_KEY`, `PIXGO_WEBHOOK_SECRET` e
+  `PIXGO_WEBHOOK_SIGNATURE_HEADER`;
+- Turnstile: `NEXT_PUBLIC_TURNSTILE_SITE_KEY` e `TURNSTILE_SECRET_KEY`;
+- opcionais: `POCKETBASE_COUPONS_COLLECTION` e `FFMPEG_PATH`.
+
+Consulte `next-app/.env.example` antes de configurar outro ambiente.
+
 ## Subidas automáticas de perfis
 
 Este fluxo é crítico. Leia `next-app/docs/BUMPS_E_AUTO_BUMP.md` antes de
@@ -119,6 +136,9 @@ atualizar o Dockerfile e testar dentro do container.
   já causou `no space left on device`.
 - Não remova `auto_bump.cjs`, `scripts/reset-daily-bumps.mjs` ou `dcron`.
 - O servidor precisa manter o DNS `pocketbase.cerejavip.com`.
+- `next-app/scripts/cleanup_profiles.mjs` não está agendado no Dockerfile
+  atual. Se a expiração automática for necessária, configure um job separado
+  e monitore seus logs.
 
 Após deploy, valide:
 
@@ -142,6 +162,22 @@ limpar caches da versão Vite.
 
 Não remova esses arquivos enquanto houver usuários antigos. Eles devem ser
 servidos com `Cache-Control: no-store`.
+
+## Dados, mídia e backup
+
+O Git não contém os dados de produção nem os uploads. Eles vivem no serviço e
+volume do PocketBase. Um clone do repositório sozinho não restaura o site.
+
+Antes de manutenção no servidor:
+
+- identifique o volume usado pelo PocketBase;
+- faça backup do banco e da pasta de uploads;
+- teste restauração em ambiente separado;
+- nunca execute `docker volume prune` sem mapear todos os volumes;
+- mantenha cópia externa ao mesmo servidor.
+
+Também preserve fora do Git as variáveis do Coolify, configuração DNS,
+credenciais PixGo/Turnstile e regras configuradas no painel do PocketBase.
 
 ## Regras para mudanças
 

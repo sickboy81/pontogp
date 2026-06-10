@@ -1,5 +1,10 @@
 # TUDO o que falta – CerejaVIP (versão Next vs original)
 
+> **DOCUMENTO HISTÓRICO:** este levantamento registra o estado de uma fase
+> anterior da migração e contém itens que já foram implementados. Não o use
+> como backlog ou fonte de verdade atual. Consulte `../AGENTS.md`, o código e
+> os documentos em `docs/`.
+
 Comparação com o projeto **original** em `E:\Vibecode apps\CerejaVIP`. Nada foi alterado no original; este doc lista **tudo** que existe lá e não foi migrado para o next-app (`CerejaVIP - Versão 3`).
 
 ---

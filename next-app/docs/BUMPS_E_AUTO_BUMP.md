@@ -54,12 +54,17 @@ Isso evita corrida entre execuções sobrepostas.
   - `DIRECTUS_ADMIN_EMAIL` + `DIRECTUS_ADMIN_PASSWORD`
   - `ADMIN_EMAIL` + `ADMIN_PASSWORD`
 
-## Cron recomendado
+## Cron usado no Docker
 
 ```cron
 0 0 * * * . /etc/environment.sh && cd /app && node /app/scripts/reset-daily-bumps.mjs >> /var/log/cron.log 2>&1
 */5 * * * * . /etc/environment.sh && cd /app && node /app/auto_bump.cjs >> /var/log/auto_bump.log 2>&1
 ```
+
+O `0 0` segue o fuso horário do container. O script calcula a data de negócio
+em `America/Sao_Paulo`, portanto não substitua essa lógica por data local
+implícita. O cleanup de expiração de perfis é outro processo e não está
+incluído neste cron.
 
 ## Checklist de saúde (produção)
 

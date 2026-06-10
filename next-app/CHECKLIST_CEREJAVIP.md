@@ -1,5 +1,9 @@
 # Checklist CerejaVIP – o que existe e o que falta
 
+> **CHECKLIST HISTÓRICO:** este arquivo não representa sozinho o estado atual
+> do produto. Use `../AGENTS.md` como ponto de entrada e valide cada item no
+> código antes de tratá-lo como pendência.
+
 Lista baseada no escopo do README raiz (produto original) e no estado atual do **next-app** (Next.js 16 + PocketBase).
 
 - **Lista completa do que falta** (comparação com o projeto original em `E:\Vibecode apps\CerejaVIP`): ver **`TUDO_O_QUE_FALTA.md`**.
