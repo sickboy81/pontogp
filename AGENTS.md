@@ -16,8 +16,8 @@ os fluxos críticos e as verificações obrigatórias.
 Não existe aplicação Vite ativa. Não recrie configurações, rotas ou service
 workers de versões antigas.
 
-Scripts antigos na raiz que citam Directus, `VITE_DIRECTUS_URL` ou migrações
-da aplicação anterior são históricos. Não os execute em produção sem auditar
+Scripts antigos que citam Directus, `VITE_DIRECTUS_URL` ou migrações da
+aplicação anterior ficam em `legacy/`. Não os execute em produção sem auditar
 o arquivo e confirmar explicitamente que ele ainda se aplica ao PocketBase.
 
 Configurações antigas de Vercel/Vite, Nixpacks e Nginx SPA foram removidas.
@@ -83,7 +83,7 @@ webhook PIX ou de uma operação administrativa.
 - Schema exportado: `next-app/pocketbase-schema.json`
 - Guia do schema: `next-app/docs/pocketbase-schema.md`
 - Regras: `next-app/docs/REGRAS_POCKETBASE.md`
-- Hooks versionados: `pb_hooks/README.md` (não são instalados pelo app)
+- Hooks históricos: `legacy/pb-hooks/README.md` (não são instalados pelo app)
 
 Antes de alterar campos ou filtros, consulte o schema. Após mudar o banco,
 rode `npm run schema` e versione o JSON atualizado.
@@ -209,3 +209,4 @@ credenciais PixGo/Turnstile e regras configuradas no painel do PocketBase.
 - `next-app/docs/pocketbase-schema.md`: atualização do schema
 - `next-app/docs/SMOKE_ROLLBACK_MONITORAMENTO.md`: deploy e rollback
 - `next-app/docs/PENDENCIAS_PRODUCAO.md`: verificações externas ainda abertas
+- `legacy/README.md`: inventário e regras para material histórico

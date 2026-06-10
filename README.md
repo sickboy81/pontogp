@@ -104,10 +104,13 @@ CerejaVIP - Versão 3/
 
 ## ⏱ Scripts de cron (Coolify / VPS)
 
-- **Bump automático:** scripts na raiz (`auto_bump.cjs`, `scripts/auto-bump.js`) aplicam subidas e usam `profile_daily_bumps`. Use **apenas um** em produção. Variáveis: `POCKETBASE_ADMIN_EMAIL`, `POCKETBASE_ADMIN_PASSWORD`. Ver `next-app/docs/BUMPS_E_AUTO_BUMP.md`.
+- **Bump automático:** `auto_bump.cjs` aplica subidas e usa `profile_daily_bumps`. Variáveis: `POCKETBASE_ADMIN_EMAIL`, `POCKETBASE_ADMIN_PASSWORD`. Ver `next-app/docs/BUMPS_E_AUTO_BUMP.md`.
 - **Cleanup de expiração:** `next-app/scripts/cleanup_profiles.mjs` (contact_expires_at vencido → status muted; search_expires_at vencido → archived). Ele não está no cron do Docker atual; se usado, deve ser agendado e monitorado separadamente. Mesmas variáveis de ambiente (URL + admin).
 - **Smoke/rollback/monitoramento:** ver `next-app/docs/SMOKE_ROLLBACK_MONITORAMENTO.md`.
 - **Operação 100% Next:** ver `next-app/docs/OPERACAO_NEXT_APP.md` (o `legacy-vite/` é somente referência histórica).
+
+Arquivos históricos e migrações antigas ficam isolados em `legacy/` e não
+participam do build ou deploy.
 
 ## 🌐 Deploy
 

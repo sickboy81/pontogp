@@ -11,7 +11,7 @@ O schema exportado em 10/06/2026 permite que o usuário atualize o próprio
 registro. Confirme no PocketBase que usuários comuns não conseguem enviar
 `role`, `status`, `verified`, `document_verified`, `plan` ou `chat_blocked`.
 
-O arquivo `pb_hooks/secure_users.pb.js` tenta bloquear alteração de `role`,
+O arquivo `legacy/pb-hooks/secure_users.pb.js` tenta bloquear alteração de `role`,
 mas o Git não confirma se ele está instalado nem se é compatível com a versão
 atual do PocketBase.
 

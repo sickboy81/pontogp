@@ -12,3 +12,8 @@ dist
 .DS_Store
 .vscode
 .idea
+.agent
+legacy
+legacy-vite
+docs-legacy
+tools-legacy
