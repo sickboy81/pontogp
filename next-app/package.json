@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint .",
     "schema": "node scripts/export-pocketbase-schema.mjs",
+    "schema:check": "node scripts/check-schema-contracts.mjs",
     "auto-bump": "node scripts/auto_bump.mjs",
     "cleanup-profiles": "node scripts/cleanup_profiles.mjs",
     "smoke:critical": "node scripts/smoke-critical.mjs"

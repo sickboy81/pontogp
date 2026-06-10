@@ -11,6 +11,10 @@ const checks = [
   { name: 'anunciantes', path: '/anunciantes', expected: [200] },
   { name: 'planos', path: '/planos', expected: [200] },
   { name: 'contato', path: '/contato', expected: [200] },
+  { name: 'robots', path: '/robots.txt', expected: [200] },
+  { name: 'sitemap principal', path: '/sitemap.xml', expected: [200] },
+  { name: 'limpeza sw legado', path: '/sw.js', expected: [200] },
+  { name: 'limpeza service worker', path: '/service-worker.js', expected: [200] },
   { name: 'admin stats sem auth', path: '/api/admin/stats', expected: [401] },
   // 404 cobre ambiente ainda sem rota publicada; 401 cobre rota protegida já ativa.
   { name: 'admin plans sem auth', path: '/api/admin/plans', expected: [401, 404] },

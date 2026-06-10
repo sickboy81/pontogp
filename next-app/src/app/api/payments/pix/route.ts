@@ -40,6 +40,9 @@ export async function POST(request: NextRequest) {
     let description =
       (body.description || '').trim() ||
       `Plano CerejaVIP${body.planSlug ? ` - ${body.planSlug}` : ''}`
+    if (body.profileId && /^[a-z0-9]{15}$/i.test(body.profileId)) {
+      description += ` | PROFILE:${body.profileId}`
+    }
     if (body.couponId && typeof body.couponId === 'string' && body.couponId.length <= 20) {
       description += ` | COUPON:${body.couponId}`
     }
@@ -91,26 +94,29 @@ export async function POST(request: NextRequest) {
 
     const paymentRecord = {
       user: userId,
-      profile: body.profileId || null,
       plan: body.planId || null,
       amount,
       status: 'pending',
-      payment_method: 'pix',
+      method: 'pix',
       external_id: d.payment_id,
       description,
     }
 
-    try {
-      await fetch(`${PB_URL}/api/collections/payments/records`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(paymentRecord),
-      })
-    } catch {
-      // Continua mesmo se falhar ao salvar no PB
+    const paymentSaveRes = await fetch(`${PB_URL}/api/collections/payments/records`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(paymentRecord),
+    })
+    if (!paymentSaveRes.ok) {
+      const detail = await paymentSaveRes.text().catch(() => '')
+      console.error('[pix-create] Falha ao registrar pagamento no PocketBase:', paymentSaveRes.status, detail)
+      return Response.json(
+        { error: 'Cobrança gerada, mas não foi possível registrar o pagamento. Tente novamente.' },
+        { status: 502 }
+      )
     }
 
     return Response.json({

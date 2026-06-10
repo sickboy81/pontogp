@@ -20,6 +20,8 @@ Guia curto para publicação segura sem quebrar fluxos críticos.
 
 1. Rodar smoke em produção:
    - `SMOKE_BASE_URL=https://cerejavip.com npm run smoke:critical`
+   - o smoke também valida robots, sitemap e os dois neutralizadores de
+     service worker legado
 2. Validar manualmente no painel:
    - `/admin/planos`
    - `/admin/assinaturas`

@@ -59,6 +59,11 @@ async function main() {
         id: c.id,
         name: c.name,
         type: c.type,
+        listRule: c.listRule ?? null,
+        viewRule: c.viewRule ?? null,
+        createRule: c.createRule ?? null,
+        updateRule: c.updateRule ?? null,
+        deleteRule: c.deleteRule ?? null,
         schema: c.schema || c.fields || [],
       })),
     }

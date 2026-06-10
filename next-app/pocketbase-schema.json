@@ -1,11 +1,16 @@
 {
-  "exportedAt": "2026-02-19T06:24:30.545Z",
+  "exportedAt": "2026-06-10T13:15:31.513Z",
   "baseUrl": "https://pocketbase.cerejavip.com",
   "collections": [
     {
       "id": "pbc_2279338944",
       "name": "_mfas",
       "type": "base",
+      "listRule": "@request.auth.id != '' && recordRef = @request.auth.id && collectionRef = @request.auth.collectionId",
+      "viewRule": "@request.auth.id != '' && recordRef = @request.auth.id && collectionRef = @request.auth.collectionId",
+      "createRule": null,
+      "updateRule": null,
+      "deleteRule": null,
       "schema": [
         {
           "autogeneratePattern": "[a-z0-9]{15}",
@@ -89,6 +94,11 @@
       "id": "pbc_1638494021",
       "name": "_otps",
       "type": "base",
+      "listRule": "@request.auth.id != '' && recordRef = @request.auth.id && collectionRef = @request.auth.collectionId",
+      "viewRule": "@request.auth.id != '' && recordRef = @request.auth.id && collectionRef = @request.auth.collectionId",
+      "createRule": null,
+      "updateRule": null,
+      "deleteRule": null,
       "schema": [
         {
           "autogeneratePattern": "[a-z0-9]{15}",
@@ -185,6 +195,11 @@
       "id": "pbc_2281828961",
       "name": "_externalAuths",
       "type": "base",
+      "listRule": "@request.auth.id != '' && recordRef = @request.auth.id && collectionRef = @request.auth.collectionId",
+      "viewRule": "@request.auth.id != '' && recordRef = @request.auth.id && collectionRef = @request.auth.collectionId",
+      "createRule": null,
+      "updateRule": null,
+      "deleteRule": "@request.auth.id != '' && recordRef = @request.auth.id && collectionRef = @request.auth.collectionId",
       "schema": [
         {
           "autogeneratePattern": "[a-z0-9]{15}",
@@ -282,6 +297,11 @@
       "id": "pbc_4275539003",
       "name": "_authOrigins",
       "type": "base",
+      "listRule": "@request.auth.id != '' && recordRef = @request.auth.id && collectionRef = @request.auth.collectionId",
+      "viewRule": "@request.auth.id != '' && recordRef = @request.auth.id && collectionRef = @request.auth.collectionId",
+      "createRule": null,
+      "updateRule": null,
+      "deleteRule": "@request.auth.id != '' && recordRef = @request.auth.id && collectionRef = @request.auth.collectionId",
       "schema": [
         {
           "autogeneratePattern": "[a-z0-9]{15}",
@@ -365,6 +385,11 @@
       "id": "pbc_3142635823",
       "name": "_superusers",
       "type": "auth",
+      "listRule": null,
+      "viewRule": null,
+      "createRule": null,
+      "updateRule": null,
+      "deleteRule": null,
       "schema": [
         {
           "autogeneratePattern": "[a-z0-9]{15}",
@@ -462,6 +487,11 @@
       "id": "_pb_users_auth_",
       "name": "users",
       "type": "auth",
+      "listRule": "id = @request.auth.id || @request.auth.role = 'admin'",
+      "viewRule": "id = @request.auth.id || @request.auth.role = 'admin'",
+      "createRule": "",
+      "updateRule": "id = @request.auth.id || @request.auth.role = 'admin'",
+      "deleteRule": "id = @request.auth.id || @request.auth.role = 'admin'",
       "schema": [
         {
           "autogeneratePattern": "[a-z0-9]{15}",
@@ -655,33 +685,6 @@
           "type": "text"
         },
         {
-          "hidden": false,
-          "id": "bool2825865321",
-          "name": "show_whatsapp",
-          "presentable": false,
-          "required": false,
-          "system": false,
-          "type": "bool"
-        },
-        {
-          "hidden": false,
-          "id": "bool1896256824",
-          "name": "show_telegram",
-          "presentable": false,
-          "required": false,
-          "system": false,
-          "type": "bool"
-        },
-        {
-          "hidden": false,
-          "id": "bool3849446927",
-          "name": "show_phone",
-          "presentable": false,
-          "required": false,
-          "system": false,
-          "type": "bool"
-        },
-        {
           "autogeneratePattern": "",
           "hidden": false,
           "id": "text2849095986",
@@ -722,6 +725,15 @@
           "required": false,
           "system": false,
           "type": "text"
+        },
+        {
+          "hidden": false,
+          "id": "bool2522556393",
+          "name": "chat_blocked",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "bool"
         }
       ]
     },
@@ -729,6 +741,11 @@
       "id": "pbc_3446931122",
       "name": "files",
       "type": "base",
+      "listRule": "",
+      "viewRule": "",
+      "createRule": "@request.auth.id != \"\"",
+      "updateRule": "@request.auth.id != \"\"",
+      "deleteRule": "@request.auth.id != \"\"",
       "schema": [
         {
           "autogeneratePattern": "[a-z0-9]{15}",
@@ -778,6 +795,11 @@
       "id": "pbc_252722724",
       "name": "profile_views",
       "type": "base",
+      "listRule": "profile.user = @request.auth.id || @request.auth.role = 'admin'",
+      "viewRule": "profile.user = @request.auth.id || @request.auth.role = 'admin'",
+      "createRule": "",
+      "updateRule": "@request.auth.id != \"\"",
+      "deleteRule": "@request.auth.id != \"\"",
       "schema": [
         {
           "autogeneratePattern": "[a-z0-9]{15}",
@@ -840,6 +862,11 @@
       "id": "pbc_1864043505",
       "name": "profile_clicks",
       "type": "base",
+      "listRule": "profile.user = @request.auth.id || @request.auth.role = 'admin'",
+      "viewRule": "profile.user = @request.auth.id || @request.auth.role = 'admin'",
+      "createRule": "",
+      "updateRule": "@request.auth.id != \"\"",
+      "deleteRule": "@request.auth.id != \"\"",
       "schema": [
         {
           "autogeneratePattern": "[a-z0-9]{15}",
@@ -916,6 +943,11 @@
       "id": "pbc_3132050077",
       "name": "test_fields_creation",
       "type": "base",
+      "listRule": null,
+      "viewRule": null,
+      "createRule": null,
+      "updateRule": null,
+      "deleteRule": null,
       "schema": [
         {
           "autogeneratePattern": "[a-z0-9]{15}",
@@ -951,6 +983,11 @@
       "id": "pbc_3414089001",
       "name": "profiles",
       "type": "base",
+      "listRule": "status = \"active\"",
+      "viewRule": "",
+      "createRule": "user = @request.auth.id",
+      "updateRule": "user = @request.auth.id || @request.auth.role = \"admin\"",
+      "deleteRule": "user = @request.auth.id || @request.auth.role = \"admin\"",
       "schema": [
         {
           "autogeneratePattern": "[a-z0-9]{15}",
@@ -1365,15 +1402,6 @@
         },
         {
           "hidden": false,
-          "id": "bool8823450192",
-          "name": "offers_happy_ending",
-          "presentable": false,
-          "required": false,
-          "system": false,
-          "type": "bool"
-        },
-        {
-          "hidden": false,
           "id": "bool256245529",
           "name": "verified",
           "presentable": false,
@@ -1660,15 +1688,6 @@
           "type": "number"
         },
         {
-          "hidden": false,
-          "id": "bool1745585480",
-          "name": "bio_show_full_profile",
-          "presentable": false,
-          "required": false,
-          "system": false,
-          "type": "bool"
-        },
-        {
           "autogeneratePattern": "",
           "hidden": false,
           "id": "text1093766688",
@@ -1851,6 +1870,15 @@
           "presentable": false,
           "system": false,
           "type": "autodate"
+        },
+        {
+          "hidden": false,
+          "id": "bool3774246258",
+          "name": "offers_happy_ending",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "bool"
         }
       ]
     },
@@ -1858,6 +1886,11 @@
       "id": "pbc_2301922722",
       "name": "notifications",
       "type": "base",
+      "listRule": "@request.auth.id = recipient",
+      "viewRule": "@request.auth.id = recipient",
+      "createRule": "@request.auth.id != \"\"",
+      "updateRule": "@request.auth.id = recipient",
+      "deleteRule": "@request.auth.id = recipient",
       "schema": [
         {
           "autogeneratePattern": "[a-z0-9]{15}",
@@ -1968,6 +2001,11 @@
       "id": "pbc_2605467279",
       "name": "messages",
       "type": "base",
+      "listRule": "sender = @request.auth.id || recipient = @request.auth.id || @request.auth.role = \"admin\"",
+      "viewRule": "sender = @request.auth.id || recipient = @request.auth.id || @request.auth.role = \"admin\"",
+      "createRule": "sender = @request.auth.id",
+      "updateRule": "@request.auth.id = sender || @request.auth.id = recipient",
+      "deleteRule": "@request.auth.id = sender",
       "schema": [
         {
           "autogeneratePattern": "[a-z0-9]{15}",
@@ -2053,6 +2091,31 @@
           "required": false,
           "system": false,
           "type": "date"
+        },
+        {
+          "hidden": false,
+          "id": "file1204091606",
+          "maxSelect": 10,
+          "maxSize": 104857600,
+          "mimeTypes": [
+            "image/jpeg",
+            "image/png",
+            "image/gif",
+            "image/webp",
+            "image/svg+xml",
+            "video/mp4",
+            "video/webm",
+            "application/pdf",
+            "application/msword",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+          ],
+          "name": "attachments",
+          "presentable": false,
+          "protected": false,
+          "required": false,
+          "system": false,
+          "thumbs": null,
+          "type": "file"
         }
       ]
     },
@@ -2060,6 +2123,11 @@
       "id": "pbc_2151843437",
       "name": "favorites",
       "type": "base",
+      "listRule": "@request.auth.id = user || profile.user = @request.auth.id",
+      "viewRule": "@request.auth.id = user",
+      "createRule": "@request.auth.id = user",
+      "updateRule": "@request.auth.id = user",
+      "deleteRule": "@request.auth.id = user",
       "schema": [
         {
           "autogeneratePattern": "[a-z0-9]{15}",
@@ -2107,6 +2175,11 @@
       "id": "pbc_2769025244",
       "name": "settings",
       "type": "base",
+      "listRule": "",
+      "viewRule": "",
+      "createRule": "@request.auth.id != \"\"",
+      "updateRule": "@request.auth.id != \"\"",
+      "deleteRule": null,
       "schema": [
         {
           "autogeneratePattern": "[a-z0-9]{15}",
@@ -2175,6 +2248,11 @@
       "id": "pbc_2574762186",
       "name": "test_sort_check",
       "type": "base",
+      "listRule": "",
+      "viewRule": null,
+      "createRule": null,
+      "updateRule": null,
+      "deleteRule": null,
       "schema": [
         {
           "autogeneratePattern": "[a-z0-9]{15}",
@@ -2210,6 +2288,11 @@
       "id": "pbc_4263585338",
       "name": "plans",
       "type": "base",
+      "listRule": "",
+      "viewRule": "",
+      "createRule": "@request.auth.role = 'admin'",
+      "updateRule": "@request.auth.role = 'admin'",
+      "deleteRule": "@request.auth.role = 'admin'",
       "schema": [
         {
           "autogeneratePattern": "[a-z0-9]{15}",
@@ -2449,6 +2532,11 @@
       "id": "pbc_3980638064",
       "name": "subscriptions",
       "type": "base",
+      "listRule": "user = @request.auth.id || @request.auth.role = 'admin'",
+      "viewRule": "user = @request.auth.id || @request.auth.role = 'admin'",
+      "createRule": "@request.auth.role = 'admin'",
+      "updateRule": "@request.auth.role = 'admin'",
+      "deleteRule": "@request.auth.role = 'admin'",
       "schema": [
         {
           "autogeneratePattern": "[a-z0-9]{15}",
@@ -2533,6 +2621,11 @@
       "id": "pbc_2569792458",
       "name": "verification_requests",
       "type": "base",
+      "listRule": "@request.auth.id != \"\"",
+      "viewRule": "@request.auth.id != \"\"",
+      "createRule": "@request.auth.id != \"\"",
+      "updateRule": "",
+      "deleteRule": "",
       "schema": [
         {
           "autogeneratePattern": "[a-z0-9]{15}",
@@ -2758,6 +2851,11 @@
       "id": "pbc_1930317162",
       "name": "contacts",
       "type": "base",
+      "listRule": "@request.auth.role = 'admin'",
+      "viewRule": "@request.auth.role = 'admin'",
+      "createRule": "",
+      "updateRule": "@request.auth.role = 'admin'",
+      "deleteRule": "@request.auth.role = 'admin'",
       "schema": [
         {
           "autogeneratePattern": "[a-z0-9]{15}",
@@ -2866,6 +2964,11 @@
       "id": "pbc_1615648943",
       "name": "reports",
       "type": "base",
+      "listRule": "@request.auth.role = 'admin'",
+      "viewRule": "@request.auth.role = 'admin'",
+      "createRule": "@request.auth.id != \"\"",
+      "updateRule": "@request.auth.role = 'admin'",
+      "deleteRule": "@request.auth.role = 'admin'",
       "schema": [
         {
           "autogeneratePattern": "[a-z0-9]{15}",
@@ -2956,6 +3059,11 @@
       "id": "pbc_2651661972",
       "name": "site_visitors",
       "type": "base",
+      "listRule": "@request.auth.role = 'admin'",
+      "viewRule": "@request.auth.role = 'admin'",
+      "createRule": "",
+      "updateRule": "@request.auth.role = 'admin'",
+      "deleteRule": null,
       "schema": [
         {
           "autogeneratePattern": "[a-z0-9]{15}",
@@ -2977,6 +3085,11 @@
       "id": "pbc_2166005073",
       "name": "verification_tokens",
       "type": "base",
+      "listRule": null,
+      "viewRule": null,
+      "createRule": null,
+      "updateRule": null,
+      "deleteRule": null,
       "schema": [
         {
           "autogeneratePattern": "[a-z0-9]{15}",
@@ -3070,6 +3183,11 @@
       "id": "pbc_3738851971",
       "name": "admin_config",
       "type": "base",
+      "listRule": "@request.auth.role = 'admin'",
+      "viewRule": "@request.auth.role = 'admin'",
+      "createRule": null,
+      "updateRule": null,
+      "deleteRule": null,
       "schema": [
         {
           "autogeneratePattern": "[a-z0-9]{15}",
@@ -3119,6 +3237,11 @@
       "id": "pbc_176456637",
       "name": "profile_daily_bumps",
       "type": "base",
+      "listRule": "@request.auth.id != \"\" && profile.user = @request.auth.id",
+      "viewRule": "@request.auth.id != \"\" && profile.user = @request.auth.id",
+      "createRule": "@request.auth.id != ''",
+      "updateRule": "@request.auth.id != ''",
+      "deleteRule": null,
       "schema": [
         {
           "autogeneratePattern": "[a-z0-9]{15}",
@@ -3176,6 +3299,11 @@
       "id": "pbc_3726736864",
       "name": "message_blocks",
       "type": "base",
+      "listRule": "@request.auth.id != \"\"",
+      "viewRule": "@request.auth.id != \"\"",
+      "createRule": "@request.auth.role = \"admin\"",
+      "updateRule": "@request.auth.role = \"admin\"",
+      "deleteRule": "@request.auth.role = \"admin\"",
       "schema": [
         {
           "autogeneratePattern": "[a-z0-9]{15}",
@@ -3232,6 +3360,11 @@
       "id": "pbc_232317621",
       "name": "stories",
       "type": "base",
+      "listRule": "id != \"\"",
+      "viewRule": "id != \"\"",
+      "createRule": "@request.auth.id != \"\"",
+      "updateRule": "profile.user = @request.auth.id",
+      "deleteRule": "profile.user = @request.auth.id",
       "schema": [
         {
           "autogeneratePattern": "[a-z0-9]{15}",
@@ -3353,6 +3486,11 @@
       "id": "pbc_1681354482",
       "name": "coupons",
       "type": "base",
+      "listRule": "@request.auth.role = 'admin' || active = true",
+      "viewRule": "@request.auth.role = 'admin' || active = true",
+      "createRule": "@request.auth.role = 'admin'",
+      "updateRule": "@request.auth.role = 'admin'",
+      "deleteRule": "@request.auth.role = 'admin'",
       "schema": [
         {
           "autogeneratePattern": "[a-z0-9]{15}",
@@ -3457,6 +3595,11 @@
       "id": "pbc_2073099553",
       "name": "story_comments",
       "type": "base",
+      "listRule": "",
+      "viewRule": "",
+      "createRule": "@request.auth.id != \"\"",
+      "updateRule": "user = @request.auth.id",
+      "deleteRule": "user = @request.auth.id",
       "schema": [
         {
           "autogeneratePattern": "[a-z0-9]{15}",
@@ -3540,6 +3683,11 @@
       "id": "pbc_1702612394",
       "name": "story_likes",
       "type": "base",
+      "listRule": "",
+      "viewRule": "",
+      "createRule": "@request.auth.id != \"\"",
+      "updateRule": "user = @request.auth.id",
+      "deleteRule": "user = @request.auth.id",
       "schema": [
         {
           "autogeneratePattern": "[a-z0-9]{15}",
@@ -3609,6 +3757,11 @@
       "id": "pbc_157608957",
       "name": "comment_likes",
       "type": "base",
+      "listRule": "",
+      "viewRule": "",
+      "createRule": "@request.auth.id != \"\"",
+      "updateRule": "user = @request.auth.id",
+      "deleteRule": "user = @request.auth.id",
       "schema": [
         {
           "autogeneratePattern": "[a-z0-9]{15}",
@@ -3656,6 +3809,11 @@
       "id": "pbc_3044461804",
       "name": "neighborhoods",
       "type": "base",
+      "listRule": "",
+      "viewRule": "",
+      "createRule": null,
+      "updateRule": null,
+      "deleteRule": null,
       "schema": [
         {
           "autogeneratePattern": "[a-z0-9]{15}",
@@ -3677,6 +3835,11 @@
       "id": "pbc_3225185746",
       "name": "expiration_settings",
       "type": "base",
+      "listRule": "",
+      "viewRule": "",
+      "createRule": null,
+      "updateRule": null,
+      "deleteRule": null,
       "schema": [
         {
           "autogeneratePattern": "[a-z0-9]{15}",
@@ -3740,6 +3903,11 @@
       "id": "pbc_631030571",
       "name": "payments",
       "type": "base",
+      "listRule": "@request.auth.role = \"admin\" || @request.auth.id = user.id",
+      "viewRule": "@request.auth.role = \"admin\" || @request.auth.id = user.id",
+      "createRule": "@request.auth.id != \"\"",
+      "updateRule": "@request.auth.role = \"admin\"",
+      "deleteRule": "@request.auth.role = \"admin\"",
       "schema": [
         {
           "autogeneratePattern": "[a-z0-9]{15}",

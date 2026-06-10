@@ -21,8 +21,8 @@ const ALLOWED_KEYS = new Set([
   'weight', 'height_exact', 'breast_type', 'pubis_type', 'piercings', 'tattoos', 'smoker',
   'whatsapp', 'telegram', 'phone', 'show_whatsapp', 'show_telegram', 'show_phone', 'instagram', 'twitter',
   'price_30min', 'price_1h', 'price_2h', 'price_overnight', 'prices',
-  'short_description', 'slug', 'is_online', 'online_until', 'status',
-  'plan', 'visual_highlight', 'auto_bump',
+  'short_description', 'slug', 'is_online', 'online_until',
+  'plan', 'auto_bump',
   'hair_color', 'body_type', 'height', 'display_mode', 'bio_theme', 'bio_button_color', 'bio_links', 'bio_avatar_index', 'bio_show_full_profile',
 ])
 
@@ -83,9 +83,12 @@ export async function PATCH(
           { status: 503 }
         )
       }
-      const renewal = await buildProfilePlanRenewalFromPlanRef(planRef, adminToken)
+      const renewal = await buildProfilePlanRenewalFromPlanRef(planRef, adminToken, ['gratis'])
       if (!renewal) {
-        return Response.json({ error: 'Plano inválido ou inexistente' }, { status: 400 })
+        return Response.json(
+          { error: 'Planos pagos só podem ser aplicados após confirmação do pagamento.' },
+          { status: 403 }
+        )
       }
       update.plan = renewal.plan
       update.search_expires_at = renewal.search_expires_at

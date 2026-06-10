@@ -155,20 +155,10 @@ export default function PlanosClient() {
 
   const handlePaymentSuccess = async () => {
     if (!paymentModal) return
-    try {
-      const ok = await applyPlanToProfile(paymentModal.profile.id, paymentModal.plan)
-      if (!ok) {
-        toast.error('Pagamento detectado, mas a renovação não foi aplicada automaticamente.')
-        toast('Atualize a página ou aguarde o webhook concluir.')
-        return
-      }
-      toast.success(`Plano ${paymentModal.plan.name} ativado!`)
-      setPaymentModal(null)
-      router.push('/dashboard')
-      router.refresh()
-    } catch {
-      toast.error('Erro ao confirmar plano')
-    }
+    toast.success('Pagamento confirmado. O plano será ativado automaticamente.')
+    setPaymentModal(null)
+    router.push('/dashboard')
+    router.refresh()
   }
 
   const formatLimit = (v: number | 'unlimited' | undefined) =>

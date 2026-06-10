@@ -14,7 +14,15 @@ Este documento descreve as coleções usadas pelo next-app e as regras recomenda
 ### `payments`
 
 - **Uso:** criação de registro ao gerar PIX (token do usuário); leitura/atualização no webhook (token admin).
-- **Campos necessários:** além do schema exportado, é **obrigatório** existir o campo **`profile`** (relação com `profiles`). O webhook usa `record.profile` para atualizar o perfil ao confirmar o pagamento. Se o schema exportado não tiver `profile`, crie a relação no painel do PB.
+- **Campos necessários:** `user`, `plan`, `amount`, `status`, `method`,
+  `external_id` e `description`. O fluxo atual grava o perfil como metadado
+  `PROFILE:<id>` na descrição para permanecer compatível com bancos sem a
+  relação `payments.profile`.
+- **Campo recomendado:** `profile` como relação com `profiles`. Se ele for
+  adicionado no futuro, mantenha a compatibilidade com registros antigos que
+  possuem somente o metadado na descrição.
+- **Status aceitos pelo contrato atual:** `pending`, `paid`, `failed` e
+  `refunded`.
 - **Regras sugeridas:** Create com auth (usuário logado); List/View/Update/Delete podem ser apenas admin, pois o webhook usa admin token.
 
 ### `coupons`
@@ -52,3 +60,5 @@ Este documento descreve as coleções usadas pelo next-app e as regras recomenda
 
 1. Teste as rotas afetadas (ex.: gerar PIX, webhook, cupom, comentários/curtidas em stories).
 2. Reexporte o schema se alterar campos: `npm run schema` em `next-app`.
+3. Rode `npm run schema:check` para validar os contratos mínimos usados pelo
+   código.

@@ -45,10 +45,12 @@ async function resolvePlanRecord(planRef: string, adminToken: string): Promise<P
  */
 export async function buildProfilePlanRenewalFromPlanRef(
   planRef: string,
-  adminToken: string
+  adminToken: string,
+  allowedSlugs?: string[]
 ): Promise<{ plan: string; search_expires_at: string; contact_expires_at: string } | null> {
   const planJson = await resolvePlanRecord(planRef, adminToken)
   if (!planJson?.id) return null
+  if (allowedSlugs && (!planJson.slug || !allowedSlugs.includes(planJson.slug))) return null
 
   const planSlug = planJson.slug
   let searchDays = 30

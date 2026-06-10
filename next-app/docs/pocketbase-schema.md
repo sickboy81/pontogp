@@ -18,8 +18,13 @@ Isso gera **`pocketbase-schema.json`** na raiz do `next-app`, com todas as cole�
 ## Conteúdo do arquivo
 
 - `exportedAt`: data/hora da exportação
-- `collections`: array de `{ id, name, type, schema }`
+- `collections`: array com identificação, regras de acesso e schema
+- `listRule`, `viewRule`, `createRule`, `updateRule`, `deleteRule`: regras
+  exportadas da coleção
 - `schema`: array de campos, cada um com `name`, `type` e opções
+
+Exports antigos podem não conter as regras de acesso. Rode `npm run schema`
+novamente após atualizar o projeto para registrar essa parte da configuração.
 
 ## Uso no desenvolvimento
 

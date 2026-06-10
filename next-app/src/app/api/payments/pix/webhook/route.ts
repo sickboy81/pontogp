@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
       return Response.json({ received: true }, { status: 200 })
     }
 
-    const newStatus = event === 'payment.completed' ? 'completed' : event === 'payment.expired' ? 'expired' : 'cancelled'
+    const newStatus = event === 'payment.completed' ? 'paid' : 'failed'
 
     const token = await getAdminToken()
     if (!token) {
@@ -113,6 +113,8 @@ export async function POST(request: NextRequest) {
     if (items.length === 0) return Response.json({ received: true }, { status: 200 })
 
     const record = items[0]
+    const profileMatch = record.description?.match(/\|\s*PROFILE:([a-z0-9]{15})(?:\s*\||\s*$)/i)
+    const profileId = record.profile || profileMatch?.[1] || null
     const authHeader = { Authorization: `Bearer ${token}` }
 
     await fetch(`${PB_URL}/api/collections/payments/records/${record.id}`, {
@@ -121,7 +123,7 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({ status: newStatus }),
     })
 
-    if (newStatus === 'completed' && record.profile) {
+    if (newStatus === 'paid' && profileId) {
       let planId = record.plan ?? null
       let searchDays = 30
       let contactDays = 30
@@ -224,7 +226,7 @@ export async function POST(request: NextRequest) {
         const searchExpiresAt = searchExpires.toISOString().replace('T', ' ').slice(0, 19)
         const contactExpiresAt = contactExpires.toISOString().replace('T', ' ').slice(0, 19)
 
-        await fetch(`${PB_URL}/api/collections/profiles/records/${record.profile}`, {
+        await fetch(`${PB_URL}/api/collections/profiles/records/${profileId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json', ...authHeader },
           body: JSON.stringify({

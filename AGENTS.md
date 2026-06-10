@@ -20,6 +20,9 @@ Scripts antigos na raiz que citam Directus, `VITE_DIRECTUS_URL` ou migrações
 da aplicação anterior são históricos. Não os execute em produção sem auditar
 o arquivo e confirmar explicitamente que ele ainda se aplica ao PocketBase.
 
+Configurações antigas de Vercel/Vite, Nixpacks e Nginx SPA foram removidas.
+Não as recrie: o único deploy oficial deste repositório é o `Dockerfile`.
+
 ## Como executar
 
 ```bash
@@ -70,6 +73,9 @@ npm run smoke:critical
   antes de montar componentes que chamam `/api/admin/*`.
 
 Nunca confie apenas no papel salvo no navegador para autorizar uma API.
+Usuários não podem aplicar planos pagos pelo PATCH genérico do perfil; somente
+o plano `gratis` pode ser escolhido diretamente. Planos pagos dependem do
+webhook PIX ou de uma operação administrativa.
 
 ## PocketBase
 
@@ -77,9 +83,13 @@ Nunca confie apenas no papel salvo no navegador para autorizar uma API.
 - Schema exportado: `next-app/pocketbase-schema.json`
 - Guia do schema: `next-app/docs/pocketbase-schema.md`
 - Regras: `next-app/docs/REGRAS_POCKETBASE.md`
+- Hooks versionados: `pb_hooks/README.md` (não são instalados pelo app)
 
 Antes de alterar campos ou filtros, consulte o schema. Após mudar o banco,
 rode `npm run schema` e versione o JSON atualizado.
+
+Depois da exportação, rode `npm run schema:check`. Esse comando valida os
+campos e valores mínimos dos fluxos de autenticação, pagamentos e auto bump.
 
 Credenciais administrativas são segredos de runtime. Não as grave em código,
 Dockerfile, commits ou logs. Se um segredo aparecer em log, rotacione-o.
@@ -198,3 +208,4 @@ credenciais PixGo/Turnstile e regras configuradas no painel do PocketBase.
 - `next-app/docs/REGRAS_POCKETBASE.md`: permissões e coleções
 - `next-app/docs/pocketbase-schema.md`: atualização do schema
 - `next-app/docs/SMOKE_ROLLBACK_MONITORAMENTO.md`: deploy e rollback
+- `next-app/docs/PENDENCIAS_PRODUCAO.md`: verificações externas ainda abertas
