@@ -34,7 +34,7 @@ Frontend em Next.js 16 (App Router) com SEO por rota, PocketBase como backend e 
 - **`app/(admin)/`** – painel admin (requer role admin)
 - **`src/lib/api/`** – chamadas ao PocketBase (servidor)
 - **`src/lib/pb.ts`** – cliente PocketBase no browser
-- **`src/middleware.ts`** – protege rotas (dashboard, mensagens, favoritos, admin)
+- **`src/proxy.ts`** – redirects, proteção inicial de rotas e no-cache do HTML
 
 ## Funcionalidades
 
@@ -79,3 +79,9 @@ Frontend em Next.js 16 (App Router) com SEO por rota, PocketBase como backend e 
 - `npm run build` – build de produção
 - `npm run start` – servidor de produção
 - `npm run lint` – ESLint
+
+## Antes de alterar
+
+Leia o guia operacional da raiz: `../AGENTS.md`. Ele documenta autenticação,
+PocketBase, SEO, Docker/Coolify, service worker legado e o sistema crítico de
+subidas automáticas.

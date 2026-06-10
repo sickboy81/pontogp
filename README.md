@@ -2,6 +2,10 @@
 
 Plataforma de classificados para profissionais de entretenimento, construída com **Next.js**, **TypeScript** e **PocketBase**.
 
+> Para trabalhar neste repositório por outra IDE ou agente, comece por
+> [`AGENTS.md`](AGENTS.md). Esse arquivo é o mapa operacional e registra os
+> fluxos que não podem ser alterados acidentalmente.
+
 ## 🚀 Tecnologias
 
 - **Frontend**: Next.js (App Router) + TypeScript
@@ -10,7 +14,7 @@ Plataforma de classificados para profissionais de entretenimento, construída co
 - **Autenticação**: PocketBase Auth (JWT / cookie)
 - **Pagamentos**: PIX (integração PixGo)
 - **Mapas**: OpenStreetMap (iframe)
-- **Deploy**: Docker / Coolify ou Vercel (frontend) + servidor PocketBase
+- **Deploy oficial**: Docker standalone / Coolify + servidor PocketBase
 
 ## 📦 Instalação
 
@@ -107,7 +111,7 @@ CerejaVIP - Versão 3/
 
 ## 🌐 Deploy
 
-- **Next.js**: Vercel, Coolify/Nixpacks ou Docker. Configure as variáveis de ambiente de produção.
+- **Next.js**: Docker standalone no Coolify. Configure as variáveis de ambiente de produção.
 - **PocketBase**: VPS/Docker; use HTTPS e configure CORS e domínio.
 - **PIX**: Webhook de confirmação em `/api/payments/pix/webhook`. O usuário pode informar um cupom no modal de pagamento; ao confirmar o PIX, o webhook aplica plano e duração do cupom ao perfil e incrementa `used_count`.
 

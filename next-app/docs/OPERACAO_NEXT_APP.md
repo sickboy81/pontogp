@@ -18,9 +18,14 @@ Documento para evitar regressões por uso do legado Vite.
 
 1. Build sempre dentro de `next-app`:
    - `npm run build`
-2. Start sempre via Next:
+2. Desenvolvimento/start manual dentro de `next-app`:
+   - `npm run dev`
    - `npm run start`
-3. Cron scripts oficiais:
+3. Produção Docker/Coolify:
+   - build com `output: 'standalone'`;
+   - start com `node server.js`;
+   - não copiar `/app` inteiro do builder para o runtime.
+4. Cron scripts oficiais:
    - bump/cleanup conforme `next-app/docs/BUMPS_E_AUTO_BUMP.md`
 
 ## Regras de mudança
@@ -29,4 +34,13 @@ Documento para evitar regressões por uso do legado Vite.
 - Qualquer ajuste de segurança deve priorizar APIs em `next-app/src/app/api`.
 - Antes de merge/deploy, executar:
   - `npm run build`
+  - iniciar o servidor;
   - `npm run smoke:critical`
+
+## Dependências externas críticas
+
+- Site: `https://cerejavip.com`
+- PocketBase: `https://pocketbase.cerejavip.com`
+- O DNS do subdomínio `pocketbase` precisa apontar para o serviço PocketBase.
+- `public/sw.js` e `public/service-worker.js` neutralizam caches/PWAs antigos e
+  não devem ser removidos sem planejamento.
