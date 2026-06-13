@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { Menu, X, LayoutDashboard, Globe, LogOut } from 'lucide-react'
 import { useAuthStore, isAdminRole } from '@/store/auth'
 import { isAuthTokenExpired, setAuthCookie } from '@/lib/auth-cookie'
+import { resolveAdminAccess } from '@/lib/admin-access.mjs'
 
 const ADMIN_LINKS = [
   { href: '/admin', label: 'Painel' },
@@ -39,7 +40,10 @@ export default function AdminLayout({
   const logout = useAuthStore((s) => s.logout)
   const [menuOpen, setMenuOpen] = useState(false)
   const [authHydrated, setAuthHydrated] = useState(false)
-  const [accessReady, setAccessReady] = useState(false)
+  const [serverValidation, setServerValidation] = useState<{
+    token: string
+    authenticated: boolean
+  } | null>(null)
 
   useEffect(() => {
     const p = useAuthStore.persist
@@ -52,24 +56,47 @@ export default function AdminLayout({
 
     if (!isAuthenticated || !user || !token) {
       router.replace('/login?callbackUrl=/admin')
-      setAccessReady(false)
       return
     }
 
     if (isAuthTokenExpired(token)) {
       void logout().finally(() => router.replace('/login?callbackUrl=/admin'))
-      setAccessReady(false)
       return
     }
 
     if (!isAdminRole(user.role)) {
       router.replace('/dashboard')
-      setAccessReady(false)
       return
     }
 
+    let cancelled = false
+    const controller = new AbortController()
     setAuthCookie(token)
-    setAccessReady(true)
+    fetch('/api/admin/session', {
+      credentials: 'include',
+      cache: 'no-store',
+      signal: controller.signal,
+    })
+      .then((response) => response.json())
+      .then((data: { authenticated?: boolean }) => {
+        if (cancelled) return
+        if (data.authenticated === true) {
+          setServerValidation({ token, authenticated: true })
+          return
+        }
+        setServerValidation({ token, authenticated: false })
+        void logout().finally(() => router.replace('/login?callbackUrl=/admin'))
+      })
+      .catch((error: unknown) => {
+        if (cancelled || (error instanceof DOMException && error.name === 'AbortError')) return
+        setServerValidation({ token, authenticated: false })
+        void logout().finally(() => router.replace('/login?callbackUrl=/admin'))
+      })
+
+    return () => {
+      cancelled = true
+      controller.abort()
+    }
   }, [authHydrated, isAuthenticated, user, token, logout, router])
 
   const handleLogout = async () => {
@@ -80,8 +107,18 @@ export default function AdminLayout({
 
   const closeMenu = () => setMenuOpen(false)
 
-  if (!authHydrated || !accessReady || !isAuthenticated || !user) return null
-  if (!isAdminRole(user.role)) return null
+  const access = resolveAdminAccess({
+    hydrated: authHydrated,
+    authenticated: isAuthenticated,
+    hasUser: Boolean(user),
+    hasToken: Boolean(token),
+    tokenExpired: Boolean(token && isAuthTokenExpired(token)),
+    adminRole: isAdminRole(user?.role),
+    serverAuthenticated:
+      token && serverValidation?.token === token ? serverValidation.authenticated : null,
+  })
+
+  if (access !== 'ready' || !user) return null
 
   return (
     <div className="min-h-screen bg-slate-900">
