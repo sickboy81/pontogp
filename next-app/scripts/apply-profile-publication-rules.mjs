@@ -16,10 +16,15 @@ const PROFILE_UPDATE_RULE =
 function loadEnv(dir) {
   const path = join(dir, '.env')
   if (!existsSync(path)) return
-  for (const line of readFileSync(path, 'utf8').split('\n')) {
-    const match = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/)
-    if (!match || process.env[match[1]]) continue
-    process.env[match[1]] = match[2].replace(/^["']|["']$/g, '').trim()
+  for (const rawLine of readFileSync(path, 'utf8').split('\n')) {
+    const line = rawLine.replace(/^\uFEFF/, '').trim()
+    if (!line || line.startsWith('#')) continue
+    const separator = line.indexOf('=')
+    if (separator <= 0) continue
+    const key = line.slice(0, separator).trim()
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key) || process.env[key]) continue
+    const value = line.slice(separator + 1).trim().replace(/^(['"])(.*)\1$/, '$2')
+    process.env[key] = value
   }
 }
 

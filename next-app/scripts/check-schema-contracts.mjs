@@ -43,6 +43,18 @@ for (const status of ['pending', 'paid', 'failed', 'refunded']) {
   if (!paymentStatuses.has(status)) failures.push(`status de pagamento ausente: ${status}`)
 }
 
+const profiles = collections.get('profiles')
+const expectedProfileCreateRule =
+  'user = @request.auth.id && @request.body.status = "inactive"'
+const expectedProfileUpdateRule =
+  '(user = @request.auth.id && @request.body.status:changed = false) || @request.auth.role = "admin"'
+if (profiles?.createRule !== expectedProfileCreateRule) {
+  failures.push('regra de criação de profiles não obriga status inactive')
+}
+if (profiles?.updateRule !== expectedProfileUpdateRule) {
+  failures.push('regra de atualização de profiles permite alteração direta de status')
+}
+
 if (failures.length) {
   console.error('[schema-contracts] falhou:')
   for (const failure of failures) console.error(`- ${failure}`)
