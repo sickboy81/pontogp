@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Copy, Loader2, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAuthStore, isAdminRole } from '@/store/auth'
+import { formatCpfOrCnpj, isValidCpfOrCnpj } from '@/lib/brazil-document'
 
 interface PlanPaymentModalProps {
   isOpen: boolean
@@ -47,6 +48,8 @@ export default function PlanPaymentModal({
   const [polling, setPolling] = useState(false)
   const [couponCode, setCouponCode] = useState('')
   const [couponError, setCouponError] = useState<string | null>(null)
+  const [receiverCpf, setReceiverCpf] = useState('')
+  const [receiverCpfError, setReceiverCpfError] = useState<string | null>(null)
   const userRole = useAuthStore((s) => s.user?.role)
   const showSimulate = isAdminRole(userRole)
 
@@ -54,6 +57,12 @@ export default function PlanPaymentModal({
     setLoading(true)
     setPixError(null)
     setCouponError(null)
+    setReceiverCpfError(null)
+    if (!isValidCpfOrCnpj(receiverCpf)) {
+      setReceiverCpfError('Informe um CPF ou CNPJ válido.')
+      setLoading(false)
+      return
+    }
     let couponId: string | undefined
     const code = couponCode.trim().toUpperCase()
     if (code) {
@@ -85,6 +94,7 @@ export default function PlanPaymentModal({
           description: `CerejaVIP - ${planName}`,
           customerName,
           customerEmail,
+          receiverCpf,
           ...(couponId && { couponId }),
         }),
       })
@@ -104,7 +114,17 @@ export default function PlanPaymentModal({
     } finally {
       setLoading(false)
     }
-  }, [planId, planSlug, amount, profileId, planName, couponCode])
+  }, [
+    planId,
+    planSlug,
+    amount,
+    profileId,
+    planName,
+    couponCode,
+    customerName,
+    customerEmail,
+    receiverCpf,
+  ])
 
   useEffect(() => {
     if (isOpen) {
@@ -118,6 +138,8 @@ export default function PlanPaymentModal({
       setPolling(false)
       setCouponCode('')
       setCouponError(null)
+      setReceiverCpf('')
+      setReceiverCpfError(null)
     }
   }, [isOpen])
 
@@ -135,13 +157,18 @@ export default function PlanPaymentModal({
           setPolling(false)
           onSuccess(externalRef)
           onClose()
-        } else if (status === 'cancelled' || status === 'expired' || status === 'erro') {
+        } else if (
+          status === 'cancelled' ||
+          status === 'expired' ||
+          status === 'refunded' ||
+          status === 'erro'
+        ) {
           setPolling(false)
         }
       } catch {
         // Ignora erro de polling
       }
-    }, 4000)
+    }, 30000)
     return () => clearInterval(interval)
   }, [isOpen, externalRef, polling, onSuccess, onClose])
 
@@ -188,6 +215,27 @@ export default function PlanPaymentModal({
 
           {step === 'init' && !loading && (
             <div className="mt-4 space-y-2">
+              <label className="block text-xs text-slate-400">
+                CPF ou CNPJ de quem fará o pagamento
+              </label>
+              <input
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                value={receiverCpf}
+                onChange={(e) => {
+                  setReceiverCpf(formatCpfOrCnpj(e.target.value))
+                  setReceiverCpfError(null)
+                }}
+                placeholder="000.000.000-00"
+                maxLength={18}
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-primary-500 focus:outline-none"
+              />
+              {receiverCpfError && <p className="text-xs text-red-400">{receiverCpfError}</p>}
+              <p className="text-xs leading-relaxed text-amber-300">
+                O QR Code só poderá ser pago pelo titular deste CPF/CNPJ. Pagamentos feitos por
+                outra pessoa serão rejeitados pela PixGo.
+              </p>
               <label className="block text-xs text-slate-500">Cupom (opcional)</label>
               <input
                 type="text"

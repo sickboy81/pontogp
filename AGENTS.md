@@ -100,8 +100,7 @@ Variáveis usadas pela aplicação:
 - necessárias para APIs administrativas e scripts: `POCKETBASE_ADMIN_EMAIL`
   e `POCKETBASE_ADMIN_PASSWORD`;
 - produção/SEO: `NEXT_PUBLIC_APP_URL`;
-- pagamentos: `PIXGO_API_KEY`, `PIXGO_WEBHOOK_SECRET` e
-  `PIXGO_WEBHOOK_SIGNATURE_HEADER`;
+- pagamentos: `PIXGO_API_KEY` e `PIXGO_WEBHOOK_SECRET`;
 - Turnstile: `NEXT_PUBLIC_TURNSTILE_SITE_KEY` e `TURNSTILE_SECRET_KEY`;
 - opcionais: `POCKETBASE_COUPONS_COLLECTION` e `FFMPEG_PATH`.
 
@@ -209,4 +208,5 @@ credenciais PixGo/Turnstile e regras configuradas no painel do PocketBase.
 - `next-app/docs/pocketbase-schema.md`: atualização do schema
 - `next-app/docs/SMOKE_ROLLBACK_MONITORAMENTO.md`: deploy e rollback
 - `next-app/docs/PENDENCIAS_PRODUCAO.md`: verificações externas ainda abertas
+- `next-app/docs/PIXGO_API.md`: contrato atual da criação, status e webhook PIX
 - `legacy/README.md`: inventário e regras para material histórico

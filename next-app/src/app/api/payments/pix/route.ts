@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server'
 import { getAuthCookieFromHeader, getUserIdFromToken } from '@/lib/auth-cookie'
+import { isValidCpfOrCnpj, onlyDigits } from '@/lib/brazil-document'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 const PIXGO_URL = 'https://pixgo.org/api/v1'
@@ -11,7 +12,7 @@ function getToken(request: NextRequest): string | null {
   return getAuthCookieFromHeader(request.headers.get('cookie'))
 }
 
-/** POST: gera cobrança PIX via PixGo. Body: { planId, planSlug, amount, profileId, description } */
+/** POST: gera cobrança PIX via PixGo. */
 export async function POST(request: NextRequest) {
   const token = getToken(request)
   if (!token) return Response.json({ error: 'Não autorizado' }, { status: 401 })
@@ -34,26 +35,38 @@ export async function POST(request: NextRequest) {
       description?: string
       customerName?: string
       customerEmail?: string
+      receiverCpf?: string
       couponId?: string
     }
     const amount = Number(body.amount)
-    let description =
+    const receiverCpf = onlyDigits(body.receiverCpf || '')
+    const baseDescription =
       (body.description || '').trim() ||
       `Plano CerejaVIP${body.planSlug ? ` - ${body.planSlug}` : ''}`
+    let metadata = ''
     if (body.profileId && /^[a-z0-9]{15}$/i.test(body.profileId)) {
-      description += ` | PROFILE:${body.profileId}`
+      metadata += ` | PROFILE:${body.profileId}`
     }
     if (body.couponId && typeof body.couponId === 'string' && body.couponId.length <= 20) {
-      description += ` | COUPON:${body.couponId}`
+      metadata += ` | COUPON:${body.couponId}`
     }
+    const description = `${baseDescription.slice(0, Math.max(0, 200 - metadata.length))}${metadata}`
 
     if (!amount || amount < 10) {
       return Response.json({ error: 'Valor mínimo R$ 10,00' }, { status: 400 })
+    }
+    if (!isValidCpfOrCnpj(receiverCpf)) {
+      return Response.json(
+        { error: 'Informe um CPF ou CNPJ válido de quem fará o pagamento.' },
+        { status: 400 }
+      )
     }
 
     const externalId = `CV_${Date.now()}_${userId.slice(0, 8)}`
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || ''
     const webhookUrl = baseUrl ? `${baseUrl.replace(/\/$/, '')}/api/payments/pix/webhook` : undefined
+    const receiverName = body.customerName?.trim()
+    const receiverEmail = body.customerEmail?.trim()
 
     const res = await fetch(`${PIXGO_URL}/payment/create`, {
       method: 'POST',
@@ -65,8 +78,13 @@ export async function POST(request: NextRequest) {
         amount,
         description,
         external_id: externalId,
-        customer_name: body.customerName || undefined,
-        customer_email: body.customerEmail || undefined,
+        receiver_cpf: receiverCpf,
+        receiver_name:
+          receiverName && receiverName.length >= 2 && receiverName.length <= 100
+            ? receiverName
+            : undefined,
+        receiver_email:
+          receiverEmail && receiverEmail.length <= 255 ? receiverEmail : undefined,
         ...(webhookUrl && { webhook_url: webhookUrl }),
       }),
     })

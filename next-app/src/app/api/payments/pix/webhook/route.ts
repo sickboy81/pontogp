@@ -6,8 +6,10 @@ import { parseExpirationDurationsValue } from '@/lib/parse-expiration-settings'
 import { checkRateLimit } from '@/lib/rate-limit'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
+const PIXGO_URL = 'https://pixgo.org/api/v1'
+const PIXGO_API_KEY = process.env.PIXGO_API_KEY || ''
 const PIXGO_WEBHOOK_SECRET = process.env.PIXGO_WEBHOOK_SECRET || ''
-const PIXGO_WEBHOOK_SIGNATURE_HEADER = process.env.PIXGO_WEBHOOK_SIGNATURE_HEADER || 'x-signature'
+const MAX_WEBHOOK_AGE_SECONDS = 5 * 60
 
 export const dynamic = 'force-dynamic'
 
@@ -28,18 +30,7 @@ function safeEqualHex(a: string, b: string): boolean {
   }
 }
 
-function readSignatureHeader(request: NextRequest): string {
-  const configured = request.headers.get(PIXGO_WEBHOOK_SIGNATURE_HEADER)
-  if (configured) return configured
-  return (
-    request.headers.get('x-signature') ||
-    request.headers.get('x-webhook-signature') ||
-    request.headers.get('x-pixgo-signature') ||
-    ''
-  )
-}
-
-/** POST: webhook PixGo.org - notifica pagamento completed/expired/cancelled */
+/** POST: webhook PixGo.org - notifica pagamento completed/expired/refunded */
 export async function POST(request: NextRequest) {
   try {
     const contentType = request.headers.get('content-type') || ''
@@ -59,10 +50,21 @@ export async function POST(request: NextRequest) {
     }
 
     if (PIXGO_WEBHOOK_SECRET) {
-      const provided = normalizeHexSignature(readSignatureHeader(request))
+      const timestamp = request.headers.get('x-webhook-timestamp') || ''
+      const provided = normalizeHexSignature(request.headers.get('x-webhook-signature') || '')
+      const timestampSeconds = Number.parseInt(timestamp, 10)
+      const ageSeconds = Math.abs(Date.now() / 1000 - timestampSeconds)
+      if (
+        !/^\d+$/.test(timestamp) ||
+        !Number.isFinite(timestampSeconds) ||
+        ageSeconds > MAX_WEBHOOK_AGE_SECONDS
+      ) {
+        return Response.json({ error: 'Timestamp inválido ou expirado' }, { status: 401 })
+      }
+
       const expected = crypto
         .createHmac('sha256', PIXGO_WEBHOOK_SECRET)
-        .update(rawBody)
+        .update(`${timestamp}.${rawBody}`)
         .digest('hex')
 
       if (!provided || !safeEqualHex(provided, expected)) {
@@ -87,11 +89,48 @@ export async function POST(request: NextRequest) {
       return Response.json({ received: true }, { status: 200 })
     }
 
-    if (event !== 'payment.completed' && event !== 'payment.expired' && event !== 'payment.cancelled') {
+    if (
+      event !== 'payment.completed' &&
+      event !== 'payment.expired' &&
+      event !== 'payment.refunded'
+    ) {
       return Response.json({ received: true }, { status: 200 })
     }
 
-    const newStatus = event === 'payment.completed' ? 'paid' : 'failed'
+    if (event === 'payment.completed') {
+      if (!PIXGO_API_KEY) {
+        console.error('[pix-webhook] PIXGO_API_KEY ausente; confirmação do pagamento indisponível.')
+        return Response.json({ error: 'Confirmação indisponível' }, { status: 503 })
+      }
+
+      const statusRes = await fetch(`${PIXGO_URL}/payment/${encodeURIComponent(paymentId)}/status`, {
+        headers: { 'X-API-Key': PIXGO_API_KEY },
+        cache: 'no-store',
+      })
+      const statusJson = (await statusRes.json().catch(() => null)) as {
+        success?: boolean
+        data?: { status?: string }
+      } | null
+      if (
+        !statusRes.ok ||
+        !statusJson?.success ||
+        statusJson.data?.status?.toLowerCase() !== 'completed'
+      ) {
+        console.error('[pix-webhook] Evento completed não confirmado pela API PixGo.', {
+          paymentId,
+          httpStatus: statusRes.status,
+          paymentStatus: statusJson?.data?.status,
+        })
+        return Response.json({ error: 'Pagamento ainda não confirmado' }, { status: 503 })
+      }
+    }
+
+    const newStatus =
+      event === 'payment.completed'
+        ? 'paid'
+        : event === 'payment.refunded'
+          ? 'refunded'
+          : 'failed'
 
     const token = await getAdminToken()
     if (!token) {

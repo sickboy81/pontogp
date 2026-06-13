@@ -116,7 +116,7 @@ participam do build ou deploy.
 
 - **Next.js**: Docker standalone no Coolify. Configure as variáveis de ambiente de produção.
 - **PocketBase**: VPS/Docker; use HTTPS e configure CORS e domínio.
-- **PIX**: Webhook de confirmação em `/api/payments/pix/webhook`. O usuário pode informar um cupom no modal de pagamento; ao confirmar o PIX, o webhook aplica plano e duração do cupom ao perfil e incrementa `used_count`.
+- **PIX**: o pagador informa CPF/CNPJ antes de gerar a cobrança, conforme o contrato atual da PixGo. O webhook assinado em `/api/payments/pix/webhook` aplica o plano e a duração do cupom ao perfil e incrementa `used_count`.
 
 ## 📄 Licença
 
