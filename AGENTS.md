@@ -140,6 +140,9 @@ alterá-lo.
 - Fonte da cota: `profile_daily_bumps`
 - Ordenação dos perfis: `profiles.last_bump_at`
 - Apenas perfis `status = "active"` e `auto_bump = true` participam
+- Perfis com `search_expires_at` ou `contact_expires_at` vencido são
+  inelegíveis; o cron desliga `auto_bump`, e as APIs bloqueiam bump manual e
+  reativação até a renovação
 - O lock `/tmp/cerejavip-auto-bump.lock` evita execuções sobrepostas
 
 Não crie um segundo agendador e não troque nomes de arquivos ou caminhos sem

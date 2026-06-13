@@ -28,6 +28,7 @@ import { formatPrice, parsePocketBaseDateInput } from '@/utils/format'
 import toast from 'react-hot-toast'
 import { useAuthStore } from '@/store/auth'
 import { MIN_PROFILE_PHOTOS, getMissingProfilePhotos } from '@/lib/profile-publication.mjs'
+import { isProfileBumpEligible } from '@/lib/profile-bump-eligibility.mjs'
 
 function formatExpiresAt(iso: string | undefined): string | null {
   if (!iso) return null
@@ -339,6 +340,7 @@ export default function DashboardClient() {
   const searchExpired = searchDays !== null && searchDays <= 0
   const contactExpired = contactDays !== null && contactDays <= 0
   const hasAnyExpirationIssue = searchExpired || contactExpired
+  const bumpEligible = isProfileBumpEligible(profile)
   const activeStories = myStories.filter((s) => s.active)
   const inactiveStories = myStories.filter((s) => !s.active)
   const recentStoryCount = 3
@@ -379,7 +381,7 @@ export default function DashboardClient() {
   const bumpsRemaining = Math.max(0, dailyBumps - bumpsUsedToday)
 
   const handleBump = async () => {
-    if (!profile || bumpLoading || bumpsRemaining <= 0) return
+    if (!profile || !bumpEligible || bumpLoading || bumpsRemaining <= 0) return
     setBumpLoading(true)
     try {
       const res = await fetch('/api/profiles/me/bump', {
@@ -400,7 +402,7 @@ export default function DashboardClient() {
   }
 
   const handleToggleAutoBump = async () => {
-    if (!profile) return
+    if (!profile || !bumpEligible) return
     try {
       const res = await fetch(`/api/profiles/${profile.id}`, {
         method: 'PATCH',
@@ -954,11 +956,12 @@ export default function DashboardClient() {
               <span className={`h-2 w-2 rounded-full ${profile.is_online ? 'animate-pulse bg-green-400' : 'bg-slate-500'}`} />
               {profile.is_online ? 'Online' : 'Offline'}
             </button>
-            <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-300">
+            <label className={`flex items-center gap-2 text-sm ${bumpEligible ? 'cursor-pointer text-slate-300' : 'cursor-not-allowed text-slate-500'}`}>
               <input
                 type="checkbox"
-                checked={!!profile.auto_bump}
+                checked={bumpEligible && !!profile.auto_bump}
                 onChange={handleToggleAutoBump}
+                disabled={!bumpEligible}
                 className="rounded border-slate-600 bg-slate-800 text-primary-600 focus:ring-primary-500"
               />
               Subida automática
@@ -975,12 +978,18 @@ export default function DashboardClient() {
             Subir anúncio
           </h3>
           <p className="mb-3 text-sm text-slate-300">
-            Você tem <strong className="text-white">{bumpsRemaining}</strong> subida(s) restante(s) hoje (máx. {dailyBumps}/dia).
+            {bumpEligible ? (
+              <>
+                Você tem <strong className="text-white">{bumpsRemaining}</strong> subida(s) restante(s) hoje (máx. {dailyBumps}/dia).
+              </>
+            ) : (
+              'As subidas estão desativadas porque o plano expirou. Renove o plano para reativá-las.'
+            )}
           </p>
           <button
             type="button"
             onClick={handleBump}
-            disabled={bumpLoading || bumpsRemaining <= 0}
+            disabled={!bumpEligible || bumpLoading || bumpsRemaining <= 0}
             className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {bumpLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}

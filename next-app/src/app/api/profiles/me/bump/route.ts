@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { getAuthCookieFromHeader, getUserIdFromToken } from '@/lib/auth-cookie'
 import { getProfileByUserId } from '@/lib/api/profiles'
 import { getAdminToken } from '@/lib/pocketbase-admin'
+import { isProfileBumpEligible } from '@/lib/profile-bump-eligibility.mjs'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
@@ -31,6 +32,12 @@ export async function POST(request: NextRequest) {
 
   const profile = await getProfileByUserId(userId, token)
   if (!profile) return Response.json({ error: 'Perfil não encontrado' }, { status: 404 })
+  if (!isProfileBumpEligible(profile)) {
+    return Response.json(
+      { error: 'Seu plano expirou. Renove para usar as subidas do anúncio.' },
+      { status: 400 }
+    )
+  }
 
   const planRef = profile.plan || 'gratis'
   let dailyBumps = 0

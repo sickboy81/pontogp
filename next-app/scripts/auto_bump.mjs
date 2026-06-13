@@ -11,6 +11,9 @@ import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'fs'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
 import PocketBase from 'pocketbase'
+import bumpEligibility from '../../auto_bump_eligibility.cjs'
+
+const { isProfileBumpEligible } = bumpEligibility
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const nextAppRoot = join(__dirname, '..')
@@ -109,7 +112,7 @@ async function runAutoBump() {
     const profiles = await pb.collection('profiles').getFullList({
       filter: 'status = "active" && auto_bump = true',
       sort: '-last_bump_at',
-      fields: 'id,name,plan,last_bump_at,auto_bump',
+      fields: 'id,name,plan,last_bump_at,auto_bump,status,search_expires_at,contact_expires_at',
     })
     console.log(`Found ${profiles.length} active profiles with auto-bump enabled.`)
 
@@ -125,6 +128,16 @@ async function runAutoBump() {
 
     const forceMode = process.argv.includes('--force')
     for (const profile of profiles) {
+      if (!isProfileBumpEligible(profile)) {
+        try {
+          await pb.collection('profiles').update(profile.id, { auto_bump: false })
+          console.log(`Auto-bump disabled for expired profile ${profile.id}.`)
+        } catch (error) {
+          console.error(`Failed to disable auto-bump for expired profile ${profile.id}:`, error.message)
+        }
+        continue
+      }
+
       const plan = plansMap.get(profile.plan)
       const dailyBumps = Number(plan?.daily_bumps) || 0
       if (dailyBumps <= 0) {

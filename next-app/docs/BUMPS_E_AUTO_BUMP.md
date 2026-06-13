@@ -16,12 +16,16 @@ Nao use dois mecanismos de bump ao mesmo tempo.
 ## Regras de negócio do bump atual
 
 - O `auto_bump.cjs` percorre perfis `status = "active"` com `auto_bump = true`.
+- Perfis com `search_expires_at` ou `contact_expires_at` vencido não recebem
+  bump. O cron desliga `auto_bump` nesses registros antes de continuar.
 - Para cada perfil:
   - valida plano com `daily_bumps > 0`, aceitando `profiles.plan` como `id` ou `slug`;
   - consulta uso do dia em `profile_daily_bumps`;
   - respeita intervalo `24h / daily_bumps`;
   - incrementa `bumps_used` e atualiza `last_bump_at`.
 - Se faltar plano/cota, nao sobe.
+- O bump manual e a ativação do auto bump pela API aplicam a mesma regra de
+  expiração usada pelo cron.
 
 ## Anti-concorrencia (proteção contra dupla execução)
 
@@ -32,6 +36,9 @@ Nao use dois mecanismos de bump ao mesmo tempo.
 - lock "velho" (stale) é substituido automaticamente.
 
 Isso evita corrida entre execuções sobrepostas.
+
+O helper `auto_bump_eligibility.cjs` acompanha o script no container e deve
+continuar sendo copiado pelo Dockerfile.
 
 ## Variáveis obrigatórias
 
@@ -87,6 +94,7 @@ incluído neste cron.
 - **"credenciais admin ausentes"**: faltam envs admin no serviço.
 - **"POCKETBASE_URL ausente" no reset**: definir `POCKETBASE_URL` ou usar `NEXT_PUBLIC_POCKETBASE_URL`.
 - **Bump nao acontece mas sem erro**:
+  - plano com busca ou contato expirado,
   - perfil sem plano valido,
   - cota diaria esgotada,
   - intervalo entre bumps ainda nao atingido.

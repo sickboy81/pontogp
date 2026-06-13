@@ -3,6 +3,7 @@ import { getAuthCookieFromHeader, getUserIdFromToken } from '@/lib/auth-cookie'
 import { getAdminToken } from '@/lib/pocketbase-admin'
 import { buildProfilePlanRenewalFromPlanRef } from '@/lib/plan-renewal-dates'
 import { canSaveProfileContacts } from '@/lib/profile-publication.mjs'
+import { isProfileBumpEligible } from '@/lib/profile-bump-eligibility.mjs'
 import type { Profile } from '@/lib/types'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
@@ -56,7 +57,7 @@ export async function PATCH(
 
   try {
     const res = await fetch(
-      `${PB_URL}/api/collections/profiles/records/${id}?fields=id,user,status,whatsapp,telegram,phone,show_whatsapp,show_telegram,show_phone`,
+      `${PB_URL}/api/collections/profiles/records/${id}?fields=id,user,status,whatsapp,telegram,phone,show_whatsapp,show_telegram,show_phone,auto_bump,search_expires_at,contact_expires_at`,
       { headers: { Authorization: `Bearer ${token}` } }
     )
     if (!res.ok) {
@@ -72,6 +73,9 @@ export async function PATCH(
       show_whatsapp?: boolean
       show_telegram?: boolean
       show_phone?: boolean
+      auto_bump?: boolean
+      search_expires_at?: string
+      contact_expires_at?: string
     }
     if (record.user !== userId) {
       return Response.json({ error: 'Sem permissão para editar este perfil' }, { status: 403 })
@@ -86,6 +90,13 @@ export async function PATCH(
     if (!canSaveProfileContacts(record.status ?? '', { ...record, ...update })) {
       return Response.json(
         { error: 'Preencha e torne público pelo menos um contato.' },
+        { status: 400 }
+      )
+    }
+
+    if (update.auto_bump === true && !isProfileBumpEligible({ ...record, ...update })) {
+      return Response.json(
+        { error: 'Seu plano expirou. Renove antes de ativar a subida automática.' },
         { status: 400 }
       )
     }

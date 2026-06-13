@@ -1,6 +1,7 @@
 
 const fs = require('fs');
 const PocketBase = require('pocketbase/cjs');
+const { isProfileBumpEligible } = require('./auto_bump_eligibility.cjs');
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || process.env.VITE_POCKETBASE_URL || 'https://pocketbase.cerejavip.com';
 const ADMIN_EMAIL = process.env.POCKETBASE_ADMIN_EMAIL || process.env.PB_ADMIN_EMAIL;
@@ -74,7 +75,7 @@ async function runAutoBump() {
         const profiles = await pb.collection('profiles').getFullList({
             filter: 'status = "active" && auto_bump = true',
             sort: '-last_bump_at',
-            fields: 'id,name,plan,last_bump_at,auto_bump'
+            fields: 'id,name,plan,last_bump_at,auto_bump,status,search_expires_at,contact_expires_at'
         });
 
         console.log(`Found ${profiles.length} active profiles with auto-bump enabled.`);
@@ -97,6 +98,16 @@ async function runAutoBump() {
         }
 
         for (const profile of profiles) {
+            if (!isProfileBumpEligible(profile)) {
+                try {
+                    await pb.collection('profiles').update(profile.id, { auto_bump: false });
+                    console.log(`Auto-bump disabled for expired profile ${profile.id}.`);
+                } catch (error) {
+                    console.error(`Failed to disable auto-bump for expired profile ${profile.id}:`, error.message);
+                }
+                continue;
+            }
+
             const plan = plansMap.get(profile.plan);
             if (!plan || !plan.daily_bumps || plan.daily_bumps <= 0) {
                 console.log(`Profile ${profile.id} has no valid plan for bumps (plan ref: ${profile.plan || 'empty'}).`);

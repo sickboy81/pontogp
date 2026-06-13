@@ -40,6 +40,7 @@ COPY --from=builder /app/node_modules/pocketbase ./node_modules/pocketbase
 
 # Legacy operational scripts kept for cron compatibility
 COPY auto_bump.cjs ./auto_bump.cjs
+COPY auto_bump_eligibility.cjs ./auto_bump_eligibility.cjs
 COPY scripts/reset-daily-bumps.mjs ./scripts/reset-daily-bumps.mjs
 
 # Refresh cron env on each container start
