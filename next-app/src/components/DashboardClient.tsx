@@ -27,6 +27,7 @@ import type { Profile } from '@/lib/types'
 import { formatPrice, parsePocketBaseDateInput } from '@/utils/format'
 import toast from 'react-hot-toast'
 import { useAuthStore } from '@/store/auth'
+import { MIN_PROFILE_PHOTOS, getMissingProfilePhotos } from '@/lib/profile-publication.mjs'
 
 function formatExpiresAt(iso: string | undefined): string | null {
   if (!iso) return null
@@ -287,6 +288,41 @@ export default function DashboardClient() {
             <Plus className="h-5 w-5" />
             Criar perfil
           </Link>
+        </div>
+      </div>
+    )
+  }
+
+  if (profile.status === 'inactive') {
+    const photoCount = profile.photos?.length || 0
+    const missingPhotos = getMissingProfilePhotos(photoCount)
+    return (
+      <div className="mx-auto max-w-2xl">
+        <h1 className="mb-6 text-2xl font-bold text-white">Dashboard</h1>
+        <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-6">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="mt-0.5 h-6 w-6 shrink-0 text-amber-300" />
+            <div className="min-w-0">
+              <h2 className="text-lg font-semibold text-white">Seu perfil está em rascunho</h2>
+              <p className="mt-2 text-sm leading-relaxed text-slate-200">
+                Envie pelo menos {MIN_PROFILE_PHOTOS} fotos e use o botão Publicar perfil para
+                colocar o anúncio nas buscas.
+              </p>
+              <p className="mt-3 text-sm font-medium text-amber-200">
+                {photoCount}/{MIN_PROFILE_PHOTOS} fotos adicionadas
+                {missingPhotos > 0
+                  ? ` · faltam ${missingPhotos} ${missingPhotos === 1 ? 'foto' : 'fotos'}`
+                  : ' · pronto para publicar'}
+              </p>
+              <Link
+                href="/dashboard/perfil?tab=midia"
+                className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-lg bg-primary-600 px-5 py-2.5 font-semibold text-white transition hover:bg-primary-500"
+              >
+                <ImagePlus className="h-5 w-5" />
+                {missingPhotos > 0 ? 'Adicionar fotos' : 'Publicar perfil'}
+              </Link>
+            </div>
+          </div>
         </div>
       </div>
     )

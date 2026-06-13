@@ -33,9 +33,41 @@ Documento para evitar regressões por uso do legado Vite.
 - Novas features devem entrar somente em `next-app`.
 - Qualquer ajuste de segurança deve priorizar APIs em `next-app/src/app/api`.
 - Antes de merge/deploy, executar:
+  - `npm test`
   - `npm run build`
   - iniciar o servidor;
   - `npm run smoke:critical`
+
+## Publicação de perfis
+
+- O POST `/api/profiles` cria novos perfis com `status = "inactive"`.
+- O anunciante adiciona pelo menos 3 fotos na aba `Mídia`.
+- A publicação só ocorre após a ação explícita
+  `POST /api/profiles/[id]/publish`.
+- A rota de publicação confere proprietário e quantidade de fotos no
+  PocketBase antes de usar o token administrativo para alterar o status para
+  `active`.
+- Perfil ativo com exatamente 3 fotos não pode excluir nenhuma delas. Para
+  trocar uma foto, envie a nova antes de remover a antiga.
+- Perfis ativos anteriores à regra não são despublicados automaticamente.
+- `getProfile()` rejeita status diferente de `active` para impedir acesso
+  público direto a rascunhos.
+- `/api/profiles/me` consulta o perfil com credencial administrativa no
+  servidor, sempre filtrando pelo ID do usuário autenticado. Isso permite
+  recuperar rascunhos sem ampliar a regra pública de listagem.
+- A regra compartilhada e seus testes ficam em
+  `next-app/src/lib/profile-publication.mjs` e
+  `next-app/src/lib/profile-publication.test.mjs`.
+- Depois do deploy desta versão, execute uma vez:
+
+```bash
+npm run schema:apply-profile-publication
+npm run schema
+npm run schema:check
+```
+
+O primeiro comando impede criação ativa e alteração direta de `status` pelo
+JWT do usuário. Não o execute antes de o novo código estar publicado.
 
 ## Dependências externas críticas
 

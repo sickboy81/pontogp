@@ -1,5 +1,6 @@
 import type { Profile, Schedule } from '@/lib/types'
 import { parseProfileVisibilityPolicy, type ProfileVisibilityPolicy } from '@/lib/parse-expiration-settings'
+import { isPublicProfileStatus } from '@/lib/profile-publication.mjs'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
@@ -346,6 +347,7 @@ export async function getProfile(id: string): Promise<Profile | null> {
     const record = await res.json()
     const mapped = mapProfile(record)
     if (!mapped) return null
+    if (!isPublicProfileStatus(mapped.status)) return null
     if (isProfileBeyondArchiveWindow(mapped, policy, now)) return null
     const searchExpiredDays = getSearchExpiredDays(mapped.search_expires_at, now)
     return {

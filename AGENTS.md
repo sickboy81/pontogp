@@ -77,6 +77,29 @@ Usuários não podem aplicar planos pagos pelo PATCH genérico do perfil; soment
 o plano `gratis` pode ser escolhido diretamente. Planos pagos dependem do
 webhook PIX ou de uma operação administrativa.
 
+## Publicação de perfis
+
+- Perfis novos são criados com `status = "inactive"` e funcionam como rascunho.
+- A publicação exige ação explícita em `Publicar perfil`.
+- A API só publica quando o perfil possui pelo menos 3 fotos.
+- A validação obrigatória fica em
+  `next-app/src/app/api/profiles/[id]/publish/route.ts`; não confie apenas no
+  botão do navegador.
+- Um perfil ativo deve manter pelo menos 3 fotos. Com exatamente 3, a remoção
+  fica bloqueada até outra foto ser adicionada.
+- Perfis ativos antigos com menos de 3 fotos não são despublicados
+  automaticamente.
+- Rotas públicas só podem servir perfis com `status = "active"`.
+- `/api/profiles/me` usa o token administrativo no servidor para localizar o
+  rascunho do usuário, pois a regra pública de listagem do PocketBase expõe
+  somente perfis ativos.
+- A coleção `profiles` deve impedir alteração direta de `status` pelo
+  proprietário. Após o deploy do código, aplique
+  `npm run schema:apply-profile-publication`, reexporte com `npm run schema` e
+  valide com `npm run schema:check`.
+- Não adicione `status` ao PATCH genérico de perfil. Publicação e moderação
+  devem continuar em operações específicas.
+
 ## PocketBase
 
 - URL padrão: `NEXT_PUBLIC_POCKETBASE_URL=https://pocketbase.cerejavip.com`

@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import {
   getProfiles,
   isProfileJsonTagField,
+  mapProfile,
   sanitizeProfileTagValue,
   type ProfileJsonTagField,
 } from '@/lib/api/profiles'
@@ -158,7 +159,7 @@ export async function POST(request: NextRequest) {
       service_to: Array.isArray(body.service_to) ? body.service_to : [],
       special_services: Array.isArray(body.special_services) ? body.special_services : [],
       location_approximate: body.location_approximate !== false,
-      status: 'active',
+      status: 'inactive',
       plan: body.plan ?? 'gratis',
       verified: false,
     }
@@ -214,7 +215,7 @@ export async function POST(request: NextRequest) {
       )
     }
     const record = (await res.json()) as Record<string, unknown>
-    return Response.json(record)
+    return Response.json(mapProfile(record) || record)
   } catch (e) {
     return Response.json({ error: 'Erro ao criar perfil' }, { status: 500 })
   }

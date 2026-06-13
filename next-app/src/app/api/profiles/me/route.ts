@@ -29,12 +29,12 @@ export async function GET(request: NextRequest) {
   const userId = getUserIdFromToken(token)
   if (!userId) return Response.json(null, { headers: NO_STORE })
 
-  const profile = await getProfileByUserId(userId, token)
+  const adminToken = await getAdminToken()
+  const profile = await getProfileByUserId(userId, adminToken || token)
   if (!profile) return Response.json(null)
 
   const today = todayBR()
 
-  const adminToken = await getAdminToken()
   if (adminToken) {
     try {
       const res = await fetch(

@@ -23,6 +23,12 @@ import {
   parseTwitterUsername,
   socialProfileHref,
 } from '@/lib/social-links'
+import {
+  MIN_PROFILE_PHOTOS,
+  canPublishProfile,
+  canRemoveProfilePhoto,
+  getMissingProfilePhotos,
+} from '@/lib/profile-publication.mjs'
 
 type FormData = {
   name: string
@@ -302,6 +308,7 @@ export default function DashboardPerfilForm() {
   const [error, setError] = useState<string | null>(null)
   const [photoUploading, setPhotoUploading] = useState(false)
   const [photoDeleting, setPhotoDeleting] = useState<string | null>(null)
+  const [publishing, setPublishing] = useState(false)
   const [videoUploading, setVideoUploading] = useState(false)
   const [videoDeleting, setVideoDeleting] = useState<string | null>(null)
   const [audioUploading, setAudioUploading] = useState(false)
@@ -367,6 +374,12 @@ export default function DashboardPerfilForm() {
   const selectedNeighborhoods = new Set(form.neighborhoods)
   const mapLat = parseCoordinate(form.location_lat, -90, 90)
   const mapLng = parseCoordinate(form.location_lng, -180, 180)
+  const photoCount = profile?.photos?.length || 0
+  const missingPhotoCount = getMissingProfilePhotos(photoCount)
+  const canPublish = canPublishProfile(photoCount)
+  const canRemovePhoto = profile
+    ? canRemoveProfilePhoto(profile.status, photoCount)
+    : false
 
   const toggleNeighborhood = (neighborhood: string, checked: boolean) => {
     setForm((f) => ({
@@ -442,6 +455,29 @@ export default function DashboardPerfilForm() {
       setError(err instanceof Error ? err.message : 'Erro ao remover foto')
     } finally {
       setPhotoDeleting(null)
+    }
+  }
+
+  const handlePublish = async () => {
+    if (!profile || profile.status !== 'inactive' || !canPublish) return
+    setPublishing(true)
+    setError(null)
+    try {
+      const res = await fetch(`/api/profiles/${profile.id}/publish`, {
+        method: 'POST',
+        credentials: 'include',
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        throw new Error((data as { error?: string }).error || 'Erro ao publicar perfil')
+      }
+      setProfile((current) => current ? { ...current, status: 'active' } : current)
+      toast.success('Perfil publicado com sucesso.')
+      router.refresh()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao publicar perfil')
+    } finally {
+      setPublishing(false)
     }
   }
 
@@ -677,6 +713,12 @@ export default function DashboardPerfilForm() {
           const data = await res.json().catch(() => ({}))
           throw new Error((data as { error?: string }).error || 'Erro ao criar perfil')
         }
+        const created = (await res.json()) as Profile
+        setProfile(created)
+        setForm(profileToForm(created))
+        setTab('midia')
+        toast.success('Perfil salvo como rascunho. Adicione pelo menos 3 fotos para publicar.')
+        return
       }
       router.push('/dashboard')
       router.refresh()
@@ -1521,6 +1563,31 @@ export default function DashboardPerfilForm() {
           <>
           <div className="border-t border-slate-700 pt-4">
             <h3 className="mb-3 font-medium text-slate-300">Fotos do perfil</h3>
+            <div className="mb-4 flex flex-col gap-3 rounded-lg border border-slate-700 bg-slate-900/50 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-medium text-slate-200">
+                  {photoCount}/{MIN_PROFILE_PHOTOS} fotos obrigatórias
+                </p>
+                <p className="mt-1 text-xs text-slate-400">
+                  {missingPhotoCount > 0
+                    ? `Adicione mais ${missingPhotoCount} ${missingPhotoCount === 1 ? 'foto' : 'fotos'} para liberar a publicação.`
+                    : profile.status === 'active'
+                      ? 'Perfil publicado. Mantenha pelo menos 3 fotos.'
+                      : 'Quantidade mínima atingida. O perfil já pode ser publicado.'}
+                </p>
+              </div>
+              {profile.status === 'inactive' && (
+                <button
+                  type="button"
+                  onClick={handlePublish}
+                  disabled={!canPublish || publishing}
+                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-500 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {publishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
+                  {publishing ? 'Publicando...' : 'Publicar perfil'}
+                </button>
+              )}
+            </div>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
               {(profile.photos || []).map((url) => {
                 const pid = extractMediaId(url)
@@ -1539,9 +1606,10 @@ export default function DashboardPerfilForm() {
                     <button
                       type="button"
                       onClick={() => handlePhotoDelete(url)}
-                      disabled={isDeleting}
+                      disabled={isDeleting || !canRemovePhoto}
                       className="absolute right-2 top-2 rounded-full bg-black/60 p-1.5 text-red-400 transition hover:bg-red-600/80 disabled:opacity-50"
                       aria-label="Remover foto"
+                      title={!canRemovePhoto ? 'Adicione outra foto antes de remover uma das três fotos obrigatórias.' : undefined}
                     >
                       {isDeleting ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -1573,6 +1641,11 @@ export default function DashboardPerfilForm() {
             <p className="mt-2 text-xs text-slate-500">
               JPG, PNG ou WebP. Máximo 5 MB por foto.
             </p>
+            {profile.status === 'active' && !canRemovePhoto && (
+              <p className="mt-2 text-xs text-amber-300">
+                Para trocar uma das três fotos obrigatórias, adicione a nova foto antes de remover a antiga.
+              </p>
+            )}
           </div>
 
           <div className="border-t border-slate-700 pt-4">

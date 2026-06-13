@@ -47,6 +47,26 @@ Este documento descreve as coleções usadas pelo next-app e as regras recomenda
   - **Create:** usuário autenticado, com `user = @request.auth.id` e `story` válido.
   - **Delete:** usuário só pode deletar o próprio like (`user = @request.auth.id`).
 
+### `profiles`
+
+- **Create:** `user = @request.auth.id && @request.body.status = "inactive"`
+- **Update:** `(user = @request.auth.id && @request.body.status:changed = false) || @request.auth.role = "admin"`
+- O usuário pode editar os dados e as relações do próprio perfil, mas não pode
+  alterar `status` diretamente no PocketBase.
+- A publicação passa por `POST /api/profiles/[id]/publish`, que valida
+  propriedade e mínimo de 3 fotos antes de usar o token administrativo.
+- A regra de Create impede a criação direta de um perfil já ativo.
+- Após publicar a versão do app que cria rascunhos, aplique as regras com:
+
+```bash
+npm run schema:apply-profile-publication
+npm run schema
+npm run schema:check
+```
+
+Não aplique a regra de Create antes do deploy desta versão, pois versões
+anteriores do app tentam criar o perfil diretamente como `active`.
+
 ---
 
 ## Outras coleções
