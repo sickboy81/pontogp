@@ -170,13 +170,23 @@ export default function HomeClient() {
         prevListGeoRef.current.gender !== genResolved)
     prevListGeoRef.current = { state: s, city, category: catResolved, gender: genResolved }
     listGeoInitializedRef.current = true
-    setFilters((prev) => ({
-      ...prev,
-      category: catResolved,
-      gender: genResolved,
-      ...(s ? { state: s } : { state: undefined }),
-      ...(city ? { city } : { city: undefined }),
-    }))
+    setFilters((prev) => {
+      if (
+        prev.category === catResolved &&
+        prev.gender === genResolved &&
+        (prev.state ?? '') === s &&
+        (prev.city ?? '') === city
+      ) {
+        return prev
+      }
+      return {
+        ...prev,
+        category: catResolved,
+        gender: genResolved,
+        ...(s ? { state: s } : { state: undefined }),
+        ...(city ? { city } : { city: undefined }),
+      }
+    })
     if (geoChanged) setTagMatchScope(null)
   }, [searchParams])
 
@@ -184,9 +194,10 @@ export default function HomeClient() {
     setPage(1)
     requestIdRef.current += 1
     const id = requestIdRef.current
+    const controller = new AbortController()
     setLoading(true)
     const qs = buildQuery(filters, 1, debouncedSearch, tagBlock)
-    fetch(`/api/profiles?${qs}`)
+    fetch(`/api/profiles?${qs}`, { signal: controller.signal })
       .then(async (res) => {
         const data = await res.json()
         if (requestIdRef.current !== id) return
@@ -220,12 +231,14 @@ export default function HomeClient() {
           }
         }
       })
-      .catch(() => {
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === 'AbortError') return
         if (requestIdRef.current === id) setProfiles([])
       })
       .finally(() => {
         if (requestIdRef.current === id) setLoading(false)
       })
+    return () => controller.abort()
   }, [filters, debouncedSearch, tagFromUrl, tagFieldFromUrl, excludeFromUrl, tagScopeUrlKey])
 
   const loadMore = useCallback(() => {

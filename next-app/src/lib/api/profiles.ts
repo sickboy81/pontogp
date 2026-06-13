@@ -176,6 +176,38 @@ const SORT_MAP: Record<string, string> = {
   views: '-views',
 }
 
+// Listagens usam apenas estes campos. Vídeos, áudio, biografia e demais dados
+// completos são carregados somente na página individual do perfil.
+const PROFILE_LIST_FIELDS = [
+  'id',
+  'user',
+  'name',
+  'age',
+  'city',
+  'state',
+  'category',
+  'gender',
+  'verified',
+  'featured',
+  'is_online',
+  'online_until',
+  'code',
+  'prices',
+  'price_30min',
+  'price_1h',
+  'price_2h',
+  'price_overnight',
+  'search_expires_at',
+  'status',
+  'plan',
+  'created',
+  'updated',
+  'expand.photos.id',
+  'expand.photos.file',
+  'expand.photos.collectionId',
+  'expand.plan.slug',
+].join(',')
+
 /** Campos JSON (array de strings) nos quais se pode filtrar por uma opção exata do perfil. */
 export const PROFILE_JSON_TAG_FIELDS = [
   'services',
@@ -252,8 +284,16 @@ export async function getProfiles(options: {
   let filterStr = parts.length ? `(${parts.join(' && ')}) && (${lifecycleFilter})` : lifecycleFilter
   const sort = SORT_MAP[sortKey] || SORT_MAP.default
   const page = Math.floor(offset / limit) + 1
+  const params = new URLSearchParams({
+    page: String(page),
+    perPage: String(limit),
+    filter: filterStr,
+    expand: 'photos,plan',
+    sort,
+    fields: PROFILE_LIST_FIELDS,
+  })
   const res = await fetch(
-    `${PB_URL}/api/collections/profiles/records?page=${page}&perPage=${limit}&filter=${encodeURIComponent(filterStr)}&expand=photos,videos,audio,plan&sort=${encodeURIComponent(sort)}`,
+    `${PB_URL}/api/collections/profiles/records?${params}`,
     { cache: 'no-store' }
   )
   if (!res.ok) return []

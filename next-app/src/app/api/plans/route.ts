@@ -4,6 +4,8 @@ import type { Plan } from '@/lib/types'
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
 export const dynamic = 'force-dynamic'
+const PUBLIC_CACHE_CONTROL = 'public, max-age=60, s-maxage=60, stale-while-revalidate=300'
+const PRIVATE_CACHE_CONTROL = 'private, no-store'
 
 function mapPlan(record: Record<string, unknown>): Plan {
   const subDays = record.subscription_days
@@ -31,13 +33,21 @@ export async function GET(request: NextRequest) {
   try {
     const filter = enabledOnly ? 'enabled = true' : ''
     const url = `${PB_URL}/api/collections/plans/records?perPage=50&sort=price_monthly${filter ? `&filter=${encodeURIComponent(filter)}` : ''}`
-    const res = await fetch(url, { cache: 'no-store' })
-    if (!res.ok) return Response.json([])
+    const res = await fetch(
+      url,
+      enabledOnly ? { next: { revalidate: 60 } } : { cache: 'no-store' }
+    )
+    const cacheControl = enabledOnly ? PUBLIC_CACHE_CONTROL : PRIVATE_CACHE_CONTROL
+    if (!res.ok) return Response.json([], { headers: { 'Cache-Control': cacheControl } })
     const data = await res.json()
     const items = (data.items || []) as Record<string, unknown>[]
     const plans = items.map(mapPlan)
-    return Response.json(plans)
+    return Response.json(plans, { headers: { 'Cache-Control': cacheControl } })
   } catch {
-    return Response.json([])
+    return Response.json([], {
+      headers: {
+        'Cache-Control': enabledOnly ? PUBLIC_CACHE_CONTROL : PRIVATE_CACHE_CONTROL,
+      },
+    })
   }
 }

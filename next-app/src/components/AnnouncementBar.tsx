@@ -16,7 +16,7 @@ export default function AnnouncementBar() {
   const [isAdvertiser, setIsAdvertiser] = useState(false)
 
   useEffect(() => {
-    fetch('/api/announcement', { cache: 'no-store' })
+    fetch('/api/announcement')
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => setData(d ?? { enabled: false, message: '', target: 'all' }))
       .catch(() => setData({ enabled: false, message: '', target: 'all' }))

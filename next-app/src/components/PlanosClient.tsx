@@ -44,7 +44,7 @@ export default function PlanosClient() {
       try {
         setLoading(true)
         const [plansRes, profilesRes] = await Promise.all([
-          fetch('/api/plans?enabledOnly=true', { cache: 'no-store' }),
+          fetch('/api/plans?enabledOnly=true'),
           isAuthenticated && user
             ? fetch('/api/profiles/me', { credentials: 'include' }).then((r) =>
                 r.ok ? r.json() : null

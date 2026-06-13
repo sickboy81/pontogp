@@ -8,6 +8,7 @@ import {
 import { getAuthCookieFromHeader, getUserIdFromToken } from '@/lib/auth-cookie'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
+const PUBLIC_CACHE_CONTROL = 'public, max-age=10, s-maxage=20, stale-while-revalidate=60'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -89,7 +90,7 @@ export async function GET(request: NextRequest) {
       const profiles = await fetchScoped(effectiveScope)
       return Response.json(
         { profiles, tag_match_scope: effectiveScope },
-        { headers: { 'Cache-Control': 'public, s-maxage=20, stale-while-revalidate=60' } }
+        { headers: { 'Cache-Control': PUBLIC_CACHE_CONTROL } }
       )
     }
 
@@ -105,7 +106,7 @@ export async function GET(request: NextRequest) {
       if (cityList.length > 0) {
         return Response.json(
           { profiles: cityList, tag_match_scope: 'city' as const },
-          { headers: { 'Cache-Control': 'public, s-maxage=20, stale-while-revalidate=60' } }
+          { headers: { 'Cache-Control': PUBLIC_CACHE_CONTROL } }
         )
       }
     }
@@ -114,20 +115,20 @@ export async function GET(request: NextRequest) {
       if (stateList.length > 0) {
         return Response.json(
           { profiles: stateList, tag_match_scope: 'state' as const },
-          { headers: { 'Cache-Control': 'public, s-maxage=20, stale-while-revalidate=60' } }
+          { headers: { 'Cache-Control': PUBLIC_CACHE_CONTROL } }
         )
       }
     }
     const brList = await fetchScoped('brasil')
     return Response.json(
       { profiles: brList, tag_match_scope: 'brasil' as const },
-      { headers: { 'Cache-Control': 'public, s-maxage=20, stale-while-revalidate=60' } }
+      { headers: { 'Cache-Control': PUBLIC_CACHE_CONTROL } }
     )
   }
 
   const profiles = await getProfiles({ filters, limit, offset, sort })
   return Response.json(profiles, {
-    headers: { 'Cache-Control': 'public, s-maxage=20, stale-while-revalidate=60' },
+    headers: { 'Cache-Control': PUBLIC_CACHE_CONTROL },
   })
 }
 

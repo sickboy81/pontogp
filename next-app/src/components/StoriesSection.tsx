@@ -25,7 +25,7 @@ export default function StoriesSection() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch('/api/stories', { cache: 'no-store' })
+    fetch('/api/stories')
       .then((r) => r.json())
       .then((items: Story[]) => {
         const byProfile = new Map<string, ProfileStories>()

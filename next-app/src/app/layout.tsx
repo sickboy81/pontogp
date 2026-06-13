@@ -109,8 +109,8 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
         />
-        <link rel="preconnect" href={APP_URL} crossOrigin="" />
-        <link rel="dns-prefetch" href={APP_URL} />
+        <link rel="preconnect" href="https://pocketbase.cerejavip.com" crossOrigin="" />
+        <link rel="dns-prefetch" href="https://pocketbase.cerejavip.com" />
         <script
           dangerouslySetInnerHTML={{
             __html: `(function(){var k='cerejavip_theme';try{var v=localStorage.getItem(k);if(v){var j=JSON.parse(v);var t=j&&j.state&&j.state.theme;}var theme=(typeof t==='string'&&(t==='light'||t==='dark'))?t:'dark';document.documentElement.classList.add(theme);}catch(e){document.documentElement.classList.add('dark');}})();`,

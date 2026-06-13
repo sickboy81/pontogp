@@ -163,7 +163,7 @@ export default function DashboardClient() {
 
   useEffect(() => {
     if (!profile) return
-    fetch('/api/plans?enabledOnly=true', { cache: 'no-store' })
+    fetch('/api/plans?enabledOnly=true')
       .then((r) => r.json())
       .then(
         (plans: { id?: string; slug: string; name?: string; daily_bumps?: number }[]) => {

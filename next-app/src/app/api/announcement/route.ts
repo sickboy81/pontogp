@@ -5,6 +5,7 @@ const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cer
 
 export const dynamic = 'force-dynamic'
 const ANNOUNCEMENT_CACHE_TTL_MS = 60 * 1000
+const CACHE_CONTROL = 'public, max-age=30, s-maxage=30, stale-while-revalidate=120'
 let cachedAnnouncement: { enabled: boolean; message: string; target: 'all' | 'guests' | 'logged_in' | 'advertiser' } | null = null
 let cachedAnnouncementAt = 0
 
@@ -13,7 +14,7 @@ export async function GET(_request: NextRequest) {
   const now = Date.now()
   if (cachedAnnouncement && now - cachedAnnouncementAt < ANNOUNCEMENT_CACHE_TTL_MS) {
     return Response.json(cachedAnnouncement, {
-      headers: { 'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=120' },
+      headers: { 'Cache-Control': CACHE_CONTROL },
     })
   }
 
@@ -21,7 +22,7 @@ export async function GET(_request: NextRequest) {
   if (!token) {
     return Response.json(
       { enabled: false, message: '', target: 'all' },
-      { headers: { 'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=120' } }
+      { headers: { 'Cache-Control': CACHE_CONTROL } }
     )
   }
 
@@ -43,12 +44,12 @@ export async function GET(_request: NextRequest) {
     cachedAnnouncement = payload
     cachedAnnouncementAt = now
     return Response.json(payload, {
-      headers: { 'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=120' },
+      headers: { 'Cache-Control': CACHE_CONTROL },
     })
   } catch {
     return Response.json(
       { enabled: false, message: '', target: 'all' },
-      { headers: { 'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=120' } }
+      { headers: { 'Cache-Control': CACHE_CONTROL } }
     )
   }
 }

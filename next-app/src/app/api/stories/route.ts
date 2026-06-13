@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
+const CACHE_CONTROL = 'public, max-age=15, s-maxage=20, stale-while-revalidate=60'
 
 export const dynamic = 'force-dynamic'
 
@@ -25,7 +26,7 @@ export async function GET(request: NextRequest) {
     )
     if (!res.ok) {
       return Response.json([], {
-        headers: { 'Cache-Control': 'public, s-maxage=20, stale-while-revalidate=60' },
+        headers: { 'Cache-Control': CACHE_CONTROL },
       })
     }
     const data = await res.json()
@@ -57,11 +58,11 @@ export async function GET(request: NextRequest) {
       }
     })
     return Response.json(items, {
-      headers: { 'Cache-Control': 'public, s-maxage=20, stale-while-revalidate=60' },
+      headers: { 'Cache-Control': CACHE_CONTROL },
     })
   } catch {
     return Response.json([], {
-      headers: { 'Cache-Control': 'public, s-maxage=20, stale-while-revalidate=60' },
+      headers: { 'Cache-Control': CACHE_CONTROL },
     })
   }
 }

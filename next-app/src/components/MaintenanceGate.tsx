@@ -51,7 +51,7 @@ export default function MaintenanceGate({ children }: { children: React.ReactNod
   }, [maintenance, pathname, authHydrated])
 
   useEffect(() => {
-    fetch('/api/maintenance', { cache: 'no-store' })
+    fetch('/api/maintenance')
       .then((r) => r.json())
       .then((d) => setMaintenance(d))
       .catch(() => setMaintenance({ enabled: false }))
