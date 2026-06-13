@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { getAuthCookieFromHeader, getUserIdFromToken } from '@/lib/auth-cookie'
 import { getAdminToken } from '@/lib/pocketbase-admin'
 import { buildProfilePlanRenewalFromPlanRef } from '@/lib/plan-renewal-dates'
+import { canSaveProfileContacts } from '@/lib/profile-publication.mjs'
 import type { Profile } from '@/lib/types'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
@@ -55,14 +56,23 @@ export async function PATCH(
 
   try {
     const res = await fetch(
-      `${PB_URL}/api/collections/profiles/records/${id}?fields=id,user`,
+      `${PB_URL}/api/collections/profiles/records/${id}?fields=id,user,status,whatsapp,telegram,phone,show_whatsapp,show_telegram,show_phone`,
       { headers: { Authorization: `Bearer ${token}` } }
     )
     if (!res.ok) {
       if (res.status === 404) return Response.json({ error: 'Perfil não encontrado' }, { status: 404 })
       return Response.json({ error: 'Erro ao carregar perfil' }, { status: res.status })
     }
-    const record = (await res.json()) as { user?: string }
+    const record = (await res.json()) as {
+      user?: string
+      status?: string
+      whatsapp?: string
+      telegram?: string
+      phone?: string
+      show_whatsapp?: boolean
+      show_telegram?: boolean
+      show_phone?: boolean
+    }
     if (record.user !== userId) {
       return Response.json({ error: 'Sem permissão para editar este perfil' }, { status: 403 })
     }
@@ -71,6 +81,13 @@ export async function PATCH(
     const update = prepareUpdateBody(body)
     if (Object.keys(update).length === 0) {
       return Response.json({ error: 'Nenhum campo válido para atualizar' }, { status: 400 })
+    }
+
+    if (!canSaveProfileContacts(record.status ?? '', { ...record, ...update })) {
+      return Response.json(
+        { error: 'Preencha e torne público pelo menos um contato.' },
+        { status: 400 }
+      )
     }
 
     let authForPatch = token

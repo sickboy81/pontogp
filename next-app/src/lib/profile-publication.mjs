@@ -18,6 +18,18 @@ export function canRemoveProfilePhoto(status, currentPhotoCount) {
   return normalizePhotoCount(currentPhotoCount) - 1 >= MIN_PROFILE_PHOTOS
 }
 
+export function hasPublicProfileContact(profile) {
+  return [
+    [profile?.whatsapp, profile?.show_whatsapp],
+    [profile?.telegram, profile?.show_telegram],
+    [profile?.phone, profile?.show_phone],
+  ].some(([value, visible]) => visible === true && String(value ?? '').trim().length > 0)
+}
+
+export function canSaveProfileContacts(status, profile) {
+  return status !== 'active' || hasPublicProfileContact(profile)
+}
+
 export function isPublicProfileStatus(status) {
   return status === 'active'
 }

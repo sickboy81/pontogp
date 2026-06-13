@@ -7,6 +7,7 @@ import {
   type ProfileJsonTagField,
 } from '@/lib/api/profiles'
 import { getAuthCookieFromHeader, getUserIdFromToken } from '@/lib/auth-cookie'
+import { hasPublicProfileContact } from '@/lib/profile-publication.mjs'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 const PUBLIC_CACHE_CONTROL = 'public, max-age=10, s-maxage=20, stale-while-revalidate=60'
@@ -142,6 +143,13 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = (await request.json()) as Record<string, unknown>
+    if (!hasPublicProfileContact(body)) {
+      return Response.json(
+        { error: 'Preencha e torne público pelo menos um contato.' },
+        { status: 400 }
+      )
+    }
+
     const data: Record<string, unknown> = {
       user: userId,
       name: body.name ?? '',
@@ -162,6 +170,9 @@ export async function POST(request: NextRequest) {
       status: 'inactive',
       plan: body.plan ?? 'gratis',
       verified: false,
+      show_whatsapp: body.show_whatsapp === true,
+      show_telegram: body.show_telegram === true,
+      show_phone: body.show_phone === true,
     }
     if (body.bio_title != null) data.bio_title = body.bio_title
     if (body.whatsapp != null) data.whatsapp = body.whatsapp

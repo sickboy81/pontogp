@@ -27,7 +27,9 @@ import {
   MIN_PROFILE_PHOTOS,
   canPublishProfile,
   canRemoveProfilePhoto,
+  canSaveProfileContacts,
   getMissingProfilePhotos,
+  hasPublicProfileContact,
 } from '@/lib/profile-publication.mjs'
 
 type FormData = {
@@ -376,7 +378,8 @@ export default function DashboardPerfilForm() {
   const mapLng = parseCoordinate(form.location_lng, -180, 180)
   const photoCount = profile?.photos?.length || 0
   const missingPhotoCount = getMissingProfilePhotos(photoCount)
-  const canPublish = canPublishProfile(photoCount)
+  const hasPublicContact = hasPublicProfileContact(form)
+  const canPublish = canPublishProfile(photoCount) && hasPublicContact
   const canRemovePhoto = profile
     ? canRemoveProfilePhoto(profile.status, photoCount)
     : false
@@ -596,6 +599,15 @@ export default function DashboardPerfilForm() {
     setError(null)
     setSaving(true)
     try {
+      const contactsAreValid = profile
+        ? canSaveProfileContacts(profile.status, form)
+        : hasPublicContact
+      if (!contactsAreValid) {
+        setError('Preencha e torne público pelo menos um contato.')
+        setSaving(false)
+        return
+      }
+
       const parsePrice = (s: string) => {
         const t = s.trim().replace(/\s/g, '').replace(',', '.')
         if (!t) return NaN
@@ -1317,7 +1329,13 @@ export default function DashboardPerfilForm() {
         </div>
 
         <div className="border-t border-slate-700 pt-4">
-          <h3 className="mb-3 font-medium text-slate-300">Contato</h3>
+          <h3 className="mb-1 font-medium text-slate-300">Contato</h3>
+          <p
+            className={`mb-3 text-xs ${hasPublicContact ? 'text-slate-500' : 'text-amber-400'}`}
+            aria-live="polite"
+          >
+            Preencha e torne público pelo menos um contato.
+          </p>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label className="mb-1 block text-xs text-slate-500">WhatsApp</label>
@@ -1573,7 +1591,9 @@ export default function DashboardPerfilForm() {
                     ? `Adicione mais ${missingPhotoCount} ${missingPhotoCount === 1 ? 'foto' : 'fotos'} para liberar a publicação.`
                     : profile.status === 'active'
                       ? 'Perfil publicado. Mantenha pelo menos 3 fotos.'
-                      : 'Quantidade mínima atingida. O perfil já pode ser publicado.'}
+                      : hasPublicContact
+                        ? 'Quantidade mínima atingida. O perfil já pode ser publicado.'
+                        : 'Fotos concluídas. Preencha e torne público pelo menos um contato.'}
                 </p>
               </div>
               {profile.status === 'inactive' && (
