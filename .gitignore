@@ -20,6 +20,7 @@ coverage
 !.vscode/extensions.json
 .idea
 .agent/
+.superpowers/
 .DS_Store
 *.suo
 *.ntvs*
