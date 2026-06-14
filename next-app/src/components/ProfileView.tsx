@@ -16,6 +16,7 @@ import { socialProfileHref } from '@/lib/social-links'
 import { profileTagSearchPath } from '@/lib/profile-tag-search'
 import { telegramContactHref, whatsAppContactHref } from '@/lib/contact-prefill'
 import { getProfileContactVisibilityState } from '@/lib/profile-contact-visibility.mjs'
+import { DEFAULT_INTERNAL_MESSAGES_NOTICE } from '@/lib/internal-messages-settings.mjs'
 
 interface ProfileViewProps {
   profile: Profile
@@ -23,6 +24,12 @@ interface ProfileViewProps {
   openStories?: boolean
   /** Abre o viewer nesse story (URL partilhada: ?story=...) */
   initialStoryId?: string
+}
+
+interface PublicInternalMessagesSettings {
+  loaded: boolean
+  enabled: boolean
+  notice: string
 }
 
 export default function ProfileView({
@@ -44,6 +51,11 @@ export default function ProfileView({
   const [reportReason, setReportReason] = useState('')
   const [reportDescription, setReportDescription] = useState('')
   const [reportSubmitting, setReportSubmitting] = useState(false)
+  const [messagesSettings, setMessagesSettings] = useState<PublicInternalMessagesSettings>({
+    loaded: false,
+    enabled: true,
+    notice: '',
+  })
   const photos = profile.photos?.length ? profile.photos : (profile.thumbnail ? [profile.thumbnail] : [])
 
   const tagChipClass =
@@ -158,6 +170,42 @@ export default function ProfileView({
   }
 
   const hasMobileContactBar = !contactExpired && !!(visibleWhatsapp || visibleTelegram || visiblePhone)
+  const shouldLoadMessagesSettings = Boolean(canMessage && canStartMessage && !contactExpired)
+  const canOpenMessageThread =
+    shouldLoadMessagesSettings &&
+    messagesSettings.loaded &&
+    messagesSettings.enabled
+  const messagesNotice =
+    messagesSettings.notice || DEFAULT_INTERNAL_MESSAGES_NOTICE
+
+  useEffect(() => {
+    if (!shouldLoadMessagesSettings) return
+
+    let active = true
+
+    fetch('/api/internal-messages-settings', { cache: 'no-store' })
+      .then(async (res) => {
+        if (!res.ok) throw new Error('Erro ao carregar configuração')
+        const data = (await res.json()) as Partial<PublicInternalMessagesSettings>
+        if (!active) return
+        const enabled = data.enabled !== false
+        const notice =
+          typeof data.notice === 'string' && data.notice.trim()
+            ? data.notice.trim()
+            : enabled
+              ? ''
+              : DEFAULT_INTERNAL_MESSAGES_NOTICE
+        setMessagesSettings({ loaded: true, enabled, notice })
+      })
+      .catch(() => {
+        if (!active) return
+        setMessagesSettings({ loaded: true, enabled: true, notice: '' })
+      })
+
+    return () => {
+      active = false
+    }
+  }, [shouldLoadMessagesSettings])
 
   return (
     <div className={`mx-auto max-w-4xl px-4 py-8 ${hasMobileContactBar ? 'pb-28 md:pb-8' : ''}`}>
@@ -483,14 +531,26 @@ export default function ProfileView({
               ) : (
                 <>
                   {canStartMessage && canMessage && (
-                    <Link
-                      href={`/mensagens?with=${encodeURIComponent(profile.user_id)}`}
-                      onClick={() => trackClick('message')}
-                      className="flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-500"
-                    >
-                      <MessageCircle className="h-4 w-4" />
-                      Enviar mensagem
-                    </Link>
+                    canOpenMessageThread ? (
+                      <Link
+                        href={`/mensagens?with=${encodeURIComponent(profile.user_id)}`}
+                        onClick={() => trackClick('message')}
+                        className="flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-500"
+                      >
+                        <MessageCircle className="h-4 w-4" />
+                        Enviar mensagem
+                      </Link>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled
+                        className="flex items-center gap-2 rounded-lg bg-slate-700 px-4 py-2 text-sm font-medium text-slate-300 opacity-80"
+                        title={messagesSettings.loaded ? messagesNotice : 'Verificando mensagens...'}
+                      >
+                        <MessageCircle className="h-4 w-4" />
+                        {messagesSettings.loaded ? 'Mensagens indisponíveis' : 'Verificando mensagens...'}
+                      </button>
+                    )
                   )}
                   {visibleWhatsapp && (
                     <a
@@ -528,6 +588,11 @@ export default function ProfileView({
                 </>
               )}
             </div>
+            {shouldLoadMessagesSettings && messagesSettings.loaded && !messagesSettings.enabled && (
+              <p className="mt-3 rounded-lg border border-amber-500/50 bg-amber-500/10 px-4 py-2 text-sm text-amber-200">
+                {messagesNotice}
+              </p>
+            )}
             {!contactExpired &&
               (socialProfileHref(profile.instagram, 'instagram') ||
                 socialProfileHref(profile.twitter, 'twitter') ||

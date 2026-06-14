@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useCallback } from 'react'
+import { useEffect, useCallback, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
@@ -10,10 +10,17 @@ import type { Profile } from '@/lib/types'
 import { socialProfileHref } from '@/lib/social-links'
 import { buildContactPrefillMessage, telegramContactHref, whatsAppContactHref } from '@/lib/contact-prefill'
 import { getProfileContactVisibilityState } from '@/lib/profile-contact-visibility.mjs'
+import { DEFAULT_INTERNAL_MESSAGES_NOTICE } from '@/lib/internal-messages-settings.mjs'
 
 interface LinkBioViewProps {
   profile: Profile
   profileUrl: string
+}
+
+interface PublicInternalMessagesSettings {
+  loaded: boolean
+  enabled: boolean
+  notice: string
 }
 
 function bioLinkHref(url: string): string {
@@ -76,6 +83,11 @@ export default function LinkBioView({ profile, profileUrl }: LinkBioViewProps) {
   const pathname = usePathname()
   const user = useAuthStore((s) => s.user)
   const canMessage = user && user.id !== profile.user_id
+  const [messagesSettings, setMessagesSettings] = useState<PublicInternalMessagesSettings>({
+    loaded: false,
+    enabled: true,
+    notice: '',
+  })
 
   useEffect(() => {
     if (!profile.id) return
@@ -104,6 +116,7 @@ export default function LinkBioView({ profile, profileUrl }: LinkBioViewProps) {
 
   const { contactExpired, canStartMessage, showCustomBioLinks } =
     getProfileContactVisibilityState(profile.contact_expires_at)
+  const shouldLoadMessagesSettings = Boolean(canMessage && canStartMessage && !contactExpired)
   const isUnavailable =
     profile.is_unavailable === true || profile.visibility_mode === 'unavailable'
   const photos = profile.photos?.length ? profile.photos : (profile.thumbnail ? [profile.thumbnail] : [])
@@ -145,6 +158,41 @@ export default function LinkBioView({ profile, profileUrl }: LinkBioViewProps) {
       ? 'border-white/40 bg-white/20 text-white hover:bg-white/30'
       : 'border-slate-300 bg-slate-100 text-slate-800 hover:bg-slate-200'
   const linkButtonClass = linkButtonStyle ? 'border text-white' : defaultLinkButtonClass
+  const canOpenMessageThread =
+    shouldLoadMessagesSettings &&
+    messagesSettings.loaded &&
+    messagesSettings.enabled
+  const messagesNotice =
+    messagesSettings.notice || DEFAULT_INTERNAL_MESSAGES_NOTICE
+
+  useEffect(() => {
+    if (!shouldLoadMessagesSettings) return
+
+    let active = true
+
+    fetch('/api/internal-messages-settings', { cache: 'no-store' })
+      .then(async (res) => {
+        if (!res.ok) throw new Error('Erro ao carregar configuração')
+        const data = (await res.json()) as Partial<PublicInternalMessagesSettings>
+        if (!active) return
+        const enabled = data.enabled !== false
+        const notice =
+          typeof data.notice === 'string' && data.notice.trim()
+            ? data.notice.trim()
+            : enabled
+              ? ''
+              : DEFAULT_INTERNAL_MESSAGES_NOTICE
+        setMessagesSettings({ loaded: true, enabled, notice })
+      })
+      .catch(() => {
+        if (!active) return
+        setMessagesSettings({ loaded: true, enabled: true, notice: '' })
+      })
+
+    return () => {
+      active = false
+    }
+  }, [shouldLoadMessagesSettings])
 
   return (
     <div className={`min-h-screen px-4 py-12 ${
@@ -232,15 +280,28 @@ export default function LinkBioView({ profile, profileUrl }: LinkBioViewProps) {
           ) : (
             <>
               {canStartMessage && canMessage && (
-                <Link
-                  href={`/mensagens?with=${encodeURIComponent(profile.user_id)}`}
-                  onClick={() => trackClick('message')}
-                  className={`flex w-full items-center justify-center gap-2 rounded-xl border py-3.5 font-medium transition hover:opacity-90 ${linkButtonClass}`}
-                  style={linkButtonStyle}
-                >
-                  <MessageCircle className="h-5 w-5" />
-                  Enviar mensagem
-                </Link>
+                canOpenMessageThread ? (
+                  <Link
+                    href={`/mensagens?with=${encodeURIComponent(profile.user_id)}`}
+                    onClick={() => trackClick('message')}
+                    className={`flex w-full items-center justify-center gap-2 rounded-xl border py-3.5 font-medium transition hover:opacity-90 ${linkButtonClass}`}
+                    style={linkButtonStyle}
+                  >
+                    <MessageCircle className="h-5 w-5" />
+                    Enviar mensagem
+                  </Link>
+                ) : (
+                  <button
+                    type="button"
+                    disabled
+                    className={`flex w-full items-center justify-center gap-2 rounded-xl border py-3.5 font-medium opacity-80 ${linkButtonClass}`}
+                    style={linkButtonStyle}
+                    title={messagesSettings.loaded ? messagesNotice : 'Verificando mensagens...'}
+                  >
+                    <MessageCircle className="h-5 w-5" />
+                    {messagesSettings.loaded ? 'Mensagens indisponíveis' : 'Verificando mensagens...'}
+                  </button>
+                )
               )}
               {visibleWhatsapp && !hasBioLink(whatsappHref) && (
                 <a
@@ -280,6 +341,17 @@ export default function LinkBioView({ profile, profileUrl }: LinkBioViewProps) {
             </>
           )}
         </div>
+        {shouldLoadMessagesSettings && messagesSettings.loaded && !messagesSettings.enabled && (
+          <p className={`mt-3 max-w-sm rounded-lg border px-4 py-3 text-center text-sm ${
+            theme === 'dark'
+              ? 'border-amber-500/50 bg-amber-500/10 text-amber-200'
+              : theme === 'sunset' || theme === 'cherry'
+                ? 'border-white/30 bg-black/15 text-white'
+                : 'border-amber-500/40 bg-amber-100 text-amber-900'
+          }`}>
+            {messagesNotice}
+          </p>
+        )}
 
         {visibleSocialLinks.length > 0 && (
             <div className="mt-6 w-full max-w-sm">

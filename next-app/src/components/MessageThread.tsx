@@ -11,6 +11,8 @@ interface MessageThreadProps {
   otherUserId: string
   otherUserName?: string
   otherUserAvatar?: string
+  messagesEnabled?: boolean
+  messagesDisabledNotice?: string
   onBack: () => void
 }
 
@@ -18,6 +20,8 @@ export default function MessageThread({
   otherUserId,
   otherUserName,
   otherUserAvatar,
+  messagesEnabled = true,
+  messagesDisabledNotice = '',
   onBack,
 }: MessageThreadProps) {
   const user = useAuthStore((s) => s.user)
@@ -109,6 +113,10 @@ export default function MessageThread({
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!messagesEnabled) {
+      if (messagesDisabledNotice) toast.error(messagesDisabledNotice)
+      return
+    }
     if (!newMessage.trim() || sending) return
     try {
       setSending(true)
@@ -134,6 +142,12 @@ export default function MessageThread({
   }
 
   const displayName = otherUserName || 'Usuário'
+  const sendDisabled = sending || blocked || !messagesEnabled
+  const inputPlaceholder = blocked
+    ? 'Conversa bloqueada'
+    : !messagesEnabled
+      ? messagesDisabledNotice || 'Mensagens temporariamente indisponíveis'
+      : 'Digite sua mensagem...'
 
   if (loading) {
     return (
@@ -230,19 +244,24 @@ export default function MessageThread({
           Esta conversa está bloqueada. Você não pode enviar mensagens.
         </p>
       )}
+      {!messagesEnabled && (
+        <p className="border-t border-slate-700 bg-amber-500/10 px-4 py-2 text-center text-sm text-amber-200">
+          {messagesDisabledNotice || 'As mensagens internas estão temporariamente indisponíveis.'}
+        </p>
+      )}
       <form onSubmit={handleSend} className="border-t border-slate-700 p-4">
         <div className="flex gap-2">
           <input
             type="text"
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
-            placeholder={blocked ? 'Conversa bloqueada' : 'Digite sua mensagem...'}
+            placeholder={inputPlaceholder}
             className="flex-1 rounded-xl border border-slate-600 bg-slate-800 px-4 py-2.5 text-white placeholder-slate-500 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 disabled:opacity-60"
-            disabled={sending || blocked}
+            disabled={sendDisabled}
           />
           <button
             type="submit"
-            disabled={sending || blocked || !newMessage.trim()}
+            disabled={sendDisabled || !newMessage.trim()}
             className="rounded-xl bg-primary-600 px-4 py-2.5 font-medium text-white transition hover:bg-primary-500 disabled:opacity-50"
           >
             <Send className="h-5 w-5" />

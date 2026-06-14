@@ -1,6 +1,7 @@
 export const INTERNAL_MESSAGES_SETTINGS_KEY = 'internal_messages'
 export const DEFAULT_INTERNAL_MESSAGES_NOTICE =
   'As mensagens internas estão temporariamente indisponíveis.'
+export const DEFAULT_PUBLIC_INTERNAL_MESSAGES_SETTINGS = { enabled: true, notice: '' }
 
 const MAX_INTERNAL_MESSAGES_NOTICE_LENGTH = 500
 
@@ -29,6 +30,29 @@ export function selectDeterministicSettingsRecord(records) {
   return [...records]
     .filter(isRecord)
     .sort(compareSettingsRecords)[0] ?? null
+}
+
+/**
+ * @param {unknown} records
+ * @returns {{ enabled: boolean, notice: string }}
+ */
+export function getPublicInternalMessagesSettings(records) {
+  const record = selectDeterministicSettingsRecord(records)
+  return record
+    ? parseInternalMessagesSettings(record.value)
+    : DEFAULT_PUBLIC_INTERNAL_MESSAGES_SETTINGS
+}
+
+/**
+ * @param {unknown} raw
+ * @returns {{ error: string, code: 'MESSAGES_DISABLED' }}
+ */
+export function buildInternalMessagesDisabledPayload(raw) {
+  const settings = parseInternalMessagesSettings(raw)
+  return {
+    error: settings.notice || DEFAULT_INTERNAL_MESSAGES_NOTICE,
+    code: 'MESSAGES_DISABLED',
+  }
 }
 
 /**
