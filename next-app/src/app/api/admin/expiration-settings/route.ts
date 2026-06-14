@@ -1,7 +1,10 @@
 import { NextRequest } from 'next/server'
 import { requireAdmin } from '@/lib/api/admin-auth'
 import { getAdminToken } from '@/lib/pocketbase-admin'
-import { serializeLegacyVisibilityPolicy } from '@/lib/expiration-settings-payload.mjs'
+import {
+  mergeVisibilityPolicyInput,
+  serializeLegacyVisibilityPolicy,
+} from '@/lib/expiration-settings-payload.mjs'
 import {
   parseExpirationDurationsValue,
   parseProfileVisibilityPolicy,
@@ -78,8 +81,6 @@ export async function PATCH(request: NextRequest) {
     if (typeof s === 'number' && s >= 1 && s <= 365) entry.search_days = Math.floor(s)
     if (Object.keys(entry).length) durations[slug] = entry as PlanExpiration
   }
-  const visibility_policy = parseProfileVisibilityPolicy(body.visibility_policy ?? null)
-
   try {
     const [listRes, visListRes] = await Promise.all([
       fetch(
@@ -96,6 +97,11 @@ export async function PATCH(request: NextRequest) {
     const existing = listData.items?.[0] as { id?: string; value?: unknown } | undefined
     const visListData = visListRes.ok ? await visListRes.json() : { items: [] }
     const visExisting = visListData.items?.[0] as { id?: string; value?: unknown } | undefined
+    const currentVisibilityPolicy = parseProfileVisibilityPolicy(visExisting?.value ?? null)
+    const visibility_policy = mergeVisibilityPolicyInput(
+      body.visibility_policy ?? null,
+      currentVisibilityPolicy,
+    )
 
     // Atualiza política primeiro e só confirma durações depois; se a 2ª parte falhar, tentamos rollback.
     let createdVisId: string | null = null

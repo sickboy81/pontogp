@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { serializeLegacyVisibilityPolicy } from './expiration-settings-payload.mjs'
+import {
+  mergeVisibilityPolicyInput,
+  serializeLegacyVisibilityPolicy,
+} from './expiration-settings-payload.mjs'
 
 test('adds the legacy unavailable alias only to the HTTP payload', () => {
   const policy = {
@@ -21,4 +24,23 @@ test('adds the legacy unavailable alias only to the HTTP payload', () => {
     remove_from_search_after_days: 30,
     archive_after_days: 90,
   })
+})
+
+test('preserves the canonical search removal threshold for a legacy round trip', () => {
+  const current = {
+    blur_after_days: 12,
+    remove_from_search_after_days: 40,
+    archive_after_days: 80,
+  }
+
+  assert.deepEqual(
+    mergeVisibilityPolicyInput(
+      {
+        unavailable_after_days: 12,
+        archive_after_days: 80,
+      },
+      current,
+    ),
+    current,
+  )
 })
