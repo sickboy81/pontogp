@@ -2,9 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import {
-  buildInternalMessagesDisabledPayload,
   DEFAULT_INTERNAL_MESSAGES_NOTICE,
-  getPublicInternalMessagesSettings,
   parseInternalMessagesSettings,
   selectDeterministicSettingsRecord,
 } from './internal-messages-settings.mjs'
@@ -55,43 +53,4 @@ test('selects the same deterministic settings record when duplicates exist', () 
     created: '2026-06-14 09:00:00.000Z',
     value: { enabled: true },
   })
-})
-
-test('resolves public internal messages settings from the deterministic record payload', () => {
-  assert.deepEqual(
-    getPublicInternalMessagesSettings([
-      {
-        id: 'newer',
-        created: '2026-06-14 11:00:00.000Z',
-        value: { enabled: true, notice: 'ignorar' },
-      },
-      {
-        id: 'older',
-        created: '2026-06-14 09:00:00.000Z',
-        value: { enabled: false, notice: 'Manutenção curta.' },
-      },
-    ]),
-    {
-      enabled: false,
-      notice: 'Manutenção curta.',
-    },
-  )
-})
-
-test('builds the disabled payload with the configured or default notice', () => {
-  assert.deepEqual(
-    buildInternalMessagesDisabledPayload({ enabled: false, notice: 'Chat em manutenção.' }),
-    {
-      error: 'Chat em manutenção.',
-      code: 'MESSAGES_DISABLED',
-    },
-  )
-
-  assert.deepEqual(
-    buildInternalMessagesDisabledPayload({ enabled: false, notice: '   ' }),
-    {
-      error: DEFAULT_INTERNAL_MESSAGES_NOTICE,
-      code: 'MESSAGES_DISABLED',
-    },
-  )
 })

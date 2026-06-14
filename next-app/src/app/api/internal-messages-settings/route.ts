@@ -1,8 +1,8 @@
 import { NextRequest } from 'next/server'
 import {
-  DEFAULT_PUBLIC_INTERNAL_MESSAGES_SETTINGS,
-  getPublicInternalMessagesSettings,
   INTERNAL_MESSAGES_SETTINGS_KEY,
+  parseInternalMessagesSettings,
+  selectDeterministicSettingsRecord,
 } from '@/lib/internal-messages-settings.mjs'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
@@ -10,6 +10,7 @@ const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cer
 export const dynamic = 'force-dynamic'
 const CACHE_CONTROL = 'public, max-age=10, s-maxage=15, stale-while-revalidate=30'
 const CACHE_TTL_MS = 15_000
+const DEFAULT_PUBLIC_SETTINGS = { enabled: true, notice: '' }
 let cachedSettings: { enabled: boolean; notice: string } | null = null
 let cachedSettingsAt = 0
 
@@ -26,18 +27,21 @@ export async function GET(_request: NextRequest) {
       { cache: 'no-store' },
     )
     if (!res.ok) {
-      return Response.json(DEFAULT_PUBLIC_INTERNAL_MESSAGES_SETTINGS, {
+      return Response.json(DEFAULT_PUBLIC_SETTINGS, {
         headers: { 'Cache-Control': CACHE_CONTROL },
       })
     }
 
     const data = await res.json()
-    const payload = getPublicInternalMessagesSettings(data.items)
+    const record = selectDeterministicSettingsRecord(data.items)
+    const payload = record
+      ? parseInternalMessagesSettings(record.value)
+      : DEFAULT_PUBLIC_SETTINGS
     cachedSettings = payload
     cachedSettingsAt = now
     return Response.json(payload, { headers: { 'Cache-Control': CACHE_CONTROL } })
   } catch {
-    return Response.json(DEFAULT_PUBLIC_INTERNAL_MESSAGES_SETTINGS, {
+    return Response.json(DEFAULT_PUBLIC_SETTINGS, {
       headers: { 'Cache-Control': CACHE_CONTROL },
     })
   }
