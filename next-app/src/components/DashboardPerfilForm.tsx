@@ -23,9 +23,7 @@ import {
   parseTwitterUsername,
   socialProfileHref,
 } from '@/lib/social-links'
-import * as profilePublication from '@/lib/profile-publication.mjs'
-
-const {
+import {
   MIN_PROFILE_BIO_LENGTH,
   MIN_PROFILE_PHOTOS,
   canPublishProfile,
@@ -35,11 +33,7 @@ const {
   getMissingProfilePhotos,
   hasPublishableProfileBio,
   hasPublicProfileContact,
-} = profilePublication as typeof profilePublication & {
-  MIN_PROFILE_BIO_LENGTH: number
-  getMissingProfileBioCharacters: (bio: unknown) => number
-  hasPublishableProfileBio: (bio: unknown) => boolean
-}
+} from '@/lib/profile-publication.mjs'
 
 type FormData = {
   name: string

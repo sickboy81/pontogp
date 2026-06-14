@@ -1,18 +1,13 @@
 import { NextRequest } from 'next/server'
 import { getAuthCookieFromHeader, getUserIdFromToken } from '@/lib/auth-cookie'
-import * as profilePublication from '@/lib/profile-publication.mjs'
-import { getAdminToken } from '@/lib/pocketbase-admin'
-
-const {
+import {
   canPublishProfile,
   hasPublishableProfileBio,
   hasPublicProfileContact,
   MIN_PROFILE_BIO_LENGTH,
   MIN_PROFILE_PHOTOS,
-} = profilePublication as typeof profilePublication & {
-  hasPublishableProfileBio: (bio: unknown) => boolean
-  MIN_PROFILE_BIO_LENGTH: number
-}
+} from '@/lib/profile-publication.mjs'
+import { getAdminToken } from '@/lib/pocketbase-admin'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 

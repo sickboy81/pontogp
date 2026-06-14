@@ -1,4 +1,7 @@
+export const MIN_PROFILE_BIO_LENGTH: number
 export const MIN_PROFILE_PHOTOS: number
+export function hasPublishableProfileBio(bio: unknown): boolean
+export function getMissingProfileBioCharacters(bio: unknown): number
 export function canPublishProfile(photoCount: number): boolean
 export function getMissingProfilePhotos(photoCount: number): number
 export function canRemoveProfilePhoto(status: string, currentPhotoCount: number): boolean
