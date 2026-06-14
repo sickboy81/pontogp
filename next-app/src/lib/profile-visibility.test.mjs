@@ -3,6 +3,7 @@ import test from 'node:test'
 
 import {
   applyProfileVisibilityState,
+  buildProfileArchiveCutoff,
   buildProfileListCutoff,
   DEFAULT_PROFILE_VISIBILITY_POLICY,
   getProfileVisibilityState,
@@ -89,6 +90,13 @@ test('builds the list cutoff from the search removal window', () => {
   assert.equal(
     buildProfileListCutoff(NOW).toISOString(),
     expiredDaysAgo(DEFAULT_PROFILE_VISIBILITY_POLICY.remove_from_search_after_days),
+  )
+})
+
+test('builds the archive cutoff from the configured archive window', () => {
+  assert.equal(
+    buildProfileArchiveCutoff(NOW).toISOString(),
+    expiredDaysAgo(DEFAULT_PROFILE_VISIBILITY_POLICY.archive_after_days),
   )
 })
 

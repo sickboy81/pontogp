@@ -54,8 +54,20 @@ schema; caso contrário, remova os controles/campos legados do código.
 ### Cleanup de expiração
 
 `next-app/scripts/cleanup_profiles.mjs` existe, mas não está no cron do
-Dockerfile. Defina explicitamente se perfis expirados devem ser
-mutados/arquivados automaticamente e, se sim, agende o job com logs.
+Dockerfile e deve continuar desativado até uma ativação explícita no Coolify.
+Antes de agendar:
+
+- faça backup verificável do banco e dos uploads do PocketBase;
+- execute `CLEANUP_DRY_RUN=true npm run cleanup-profiles` contra ambiente
+  não produtivo;
+- confira por amostragem que apenas perfis ativos além de
+  `profile_visibility_policy.archive_after_days` são candidatos;
+- valide que a execução preserva registros e uploads e altera somente o
+  status para `archived`;
+- configure logs, monitoramento e uma rotina de rollback.
+
+O cleanup não deve reagir a `contact_expires_at` nem arquivar um perfil assim
+que `search_expires_at` vence.
 
 ## Qualidade
 

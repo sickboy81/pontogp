@@ -146,6 +146,17 @@ export function buildProfileListCutoff(
 }
 
 /**
+ * @param {string | number | Date} [now]
+ * @param {ProfileVisibilityPolicy} [policy]
+ */
+export function buildProfileArchiveCutoff(
+  now = new Date(),
+  policy = DEFAULT_PROFILE_VISIBILITY_POLICY,
+) {
+  return new Date(new Date(now).getTime() - policy.archive_after_days * DAY_MS)
+}
+
+/**
  * @template {Record<string, unknown>} T
  * @param {T & { search_expires_at?: string | number | Date | null }} profile
  * @param {string | number | Date} [now]

@@ -43,6 +43,11 @@ export function buildProfileListCutoff(
   policy?: ProfileVisibilityPolicy,
 ): Date
 
+export function buildProfileArchiveCutoff(
+  now?: string | number | Date,
+  policy?: ProfileVisibilityPolicy,
+): Date
+
 export function applyProfileVisibilityState<
   T extends { search_expires_at?: string | number | Date | null },
 >(
