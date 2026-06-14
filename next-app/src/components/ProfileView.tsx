@@ -141,8 +141,7 @@ export default function ProfileView({
   }
 
   const contactExpired =
-    profile.is_unavailable === true ||
-    (!!profile.contact_expires_at && new Date(profile.contact_expires_at) <= new Date())
+    !!profile.contact_expires_at && new Date(profile.contact_expires_at) <= new Date()
   const isUnavailable = profile.is_unavailable === true
   const visibleWhatsapp = profile.show_whatsapp !== false ? profile.whatsapp : ''
   const visibleTelegram = profile.show_telegram !== false ? profile.telegram : ''
@@ -157,7 +156,7 @@ export default function ProfileView({
     profile.prices.forEach((p) => priceItems.push({ label: p.description, value: p.price }))
   }
 
-  const hasMobileContactBar = !contactExpired && !isUnavailable && !!(visibleWhatsapp || visibleTelegram || visiblePhone)
+  const hasMobileContactBar = !contactExpired && !!(visibleWhatsapp || visibleTelegram || visiblePhone)
 
   return (
     <div className={`mx-auto max-w-4xl px-4 py-8 ${hasMobileContactBar ? 'pb-28 md:pb-8' : ''}`}>
@@ -476,24 +475,22 @@ export default function ProfileView({
             )}
 
             <div className="mt-6 flex flex-wrap gap-2">
+              {canMessage && (
+                <Link
+                  href={`/mensagens?with=${encodeURIComponent(profile.user_id)}`}
+                  onClick={() => trackClick('message')}
+                  className="flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-500"
+                >
+                  <MessageCircle className="h-4 w-4" />
+                  Enviar mensagem
+                </Link>
+              )}
               {contactExpired ? (
                 <p className="rounded-lg border border-amber-500/50 bg-amber-500/10 px-4 py-2 text-sm text-amber-200">
-                  {isUnavailable
-                    ? 'Contato indisponível. O perfil está temporariamente indisponível.'
-                    : 'Contato indisponível. O anúncio expirou.'}
+                  Contato indisponível. O anúncio expirou.
                 </p>
               ) : (
                 <>
-                  {canMessage && (
-                    <Link
-                      href={`/mensagens?with=${encodeURIComponent(profile.user_id)}`}
-                      onClick={() => trackClick('message')}
-                      className="flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-500"
-                    >
-                      <MessageCircle className="h-4 w-4" />
-                      Enviar mensagem
-                    </Link>
-                  )}
                   {visibleWhatsapp && (
                     <a
                       href={whatsAppContactHref(visibleWhatsapp, profileUrl)}
@@ -531,7 +528,6 @@ export default function ProfileView({
               )}
             </div>
             {!contactExpired &&
-              !isUnavailable &&
               (socialProfileHref(profile.instagram, 'instagram') ||
                 socialProfileHref(profile.twitter, 'twitter') ||
                 socialProfileHref(profile.privacy, 'privacy') ||

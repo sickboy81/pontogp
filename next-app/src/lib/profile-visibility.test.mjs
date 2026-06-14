@@ -3,8 +3,11 @@ import test from 'node:test'
 
 import {
   applyProfileVisibilityState,
+  buildProfileListCutoff,
   DEFAULT_PROFILE_VISIBILITY_POLICY,
   getProfileVisibilityState,
+  isProfileDirectlyVisible,
+  isProfileListed,
   parseProfileVisibilityPolicy,
 } from './profile-visibility.mjs'
 
@@ -70,6 +73,23 @@ test('removes an unavailable profile from search from day 30 through day 89', ()
 
 test('archives an expired profile from day 90', () => {
   assert.deepEqual(getProfileVisibilityState(expiredDaysAgo(90), NOW), ARCHIVED)
+})
+
+test('uses the same tested criteria for listing and direct profile access', () => {
+  assert.equal(isProfileListed(expiredDaysAgo(29), NOW), true)
+  assert.equal(isProfileDirectlyVisible(expiredDaysAgo(29), NOW), true)
+
+  assert.equal(isProfileListed(expiredDaysAgo(30), NOW), false)
+  assert.equal(isProfileDirectlyVisible(expiredDaysAgo(30), NOW), true)
+
+  assert.equal(isProfileDirectlyVisible(expiredDaysAgo(90), NOW), false)
+})
+
+test('builds the list cutoff from the search removal window', () => {
+  assert.equal(
+    buildProfileListCutoff(NOW).toISOString(),
+    expiredDaysAgo(DEFAULT_PROFILE_VISIBILITY_POLICY.remove_from_search_after_days),
+  )
 })
 
 test('enriches a profile from the canonical visibility state', () => {

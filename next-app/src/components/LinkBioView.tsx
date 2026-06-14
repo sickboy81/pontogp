@@ -216,23 +216,23 @@ export default function LinkBioView({ profile, profileUrl }: LinkBioViewProps) {
           </div>
         )}
         <div className="mt-8 w-full max-w-sm space-y-3">
+          {canMessage && (
+            <Link
+              href={`/mensagens?with=${encodeURIComponent(profile.user_id)}`}
+              onClick={() => trackClick('message')}
+              className={`flex w-full items-center justify-center gap-2 rounded-xl border py-3.5 font-medium transition hover:opacity-90 ${linkButtonClass}`}
+              style={linkButtonStyle}
+            >
+              <MessageCircle className="h-5 w-5" />
+              Enviar mensagem
+            </Link>
+          )}
           {contactExpired ? (
             <p className="rounded-lg border border-amber-500/50 bg-amber-500/10 px-4 py-3 text-center text-sm text-amber-200">
               Contato indisponível. Anúncio expirado.
             </p>
           ) : (
             <>
-              {canMessage && (
-                <Link
-                  href={`/mensagens?with=${encodeURIComponent(profile.user_id)}`}
-                  onClick={() => trackClick('message')}
-                  className={`flex w-full items-center justify-center gap-2 rounded-xl border py-3.5 font-medium transition hover:opacity-90 ${linkButtonClass}`}
-                  style={linkButtonStyle}
-                >
-                  <MessageCircle className="h-5 w-5" />
-                  Enviar mensagem
-                </Link>
-              )}
               {visibleWhatsapp && !hasBioLink(whatsappHref) && (
                 <a
                   href={whatsappHref}

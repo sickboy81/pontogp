@@ -26,6 +26,23 @@ export function getProfileVisibilityState(
   policy?: ProfileVisibilityPolicy,
 ): ProfileVisibilityState
 
+export function isProfileListed(
+  expiration: string | number | Date | null | undefined,
+  now?: string | number | Date,
+  policy?: ProfileVisibilityPolicy,
+): boolean
+
+export function isProfileDirectlyVisible(
+  expiration: string | number | Date | null | undefined,
+  now?: string | number | Date,
+  policy?: ProfileVisibilityPolicy,
+): boolean
+
+export function buildProfileListCutoff(
+  now?: string | number | Date,
+  policy?: ProfileVisibilityPolicy,
+): Date
+
 export function applyProfileVisibilityState<
   T extends { search_expires_at?: string | number | Date | null },
 >(

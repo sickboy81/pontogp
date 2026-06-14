@@ -109,6 +109,43 @@ export function getProfileVisibilityState(
 }
 
 /**
+ * @param {string | number | Date | null | undefined} expiration
+ * @param {string | number | Date} [now]
+ * @param {ProfileVisibilityPolicy} [policy]
+ */
+export function isProfileListed(
+  expiration,
+  now = new Date(),
+  policy = DEFAULT_PROFILE_VISIBILITY_POLICY,
+) {
+  return getProfileVisibilityState(expiration, now, policy).listed
+}
+
+/**
+ * @param {string | number | Date | null | undefined} expiration
+ * @param {string | number | Date} [now]
+ * @param {ProfileVisibilityPolicy} [policy]
+ */
+export function isProfileDirectlyVisible(
+  expiration,
+  now = new Date(),
+  policy = DEFAULT_PROFILE_VISIBILITY_POLICY,
+) {
+  return getProfileVisibilityState(expiration, now, policy).direct
+}
+
+/**
+ * @param {string | number | Date} [now]
+ * @param {ProfileVisibilityPolicy} [policy]
+ */
+export function buildProfileListCutoff(
+  now = new Date(),
+  policy = DEFAULT_PROFILE_VISIBILITY_POLICY,
+) {
+  return new Date(new Date(now).getTime() - policy.remove_from_search_after_days * DAY_MS)
+}
+
+/**
  * @template {Record<string, unknown>} T
  * @param {T & { search_expires_at?: string | number | Date | null }} profile
  * @param {string | number | Date} [now]

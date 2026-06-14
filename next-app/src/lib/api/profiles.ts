@@ -1,7 +1,12 @@
 import type { Profile, Schedule } from '@/lib/types'
 import { parseProfileVisibilityPolicy, type ProfileVisibilityPolicy } from '@/lib/parse-expiration-settings'
 import { isPublicProfileStatus } from '@/lib/profile-publication.mjs'
-import { applyProfileVisibilityState } from '@/lib/profile-visibility.mjs'
+import {
+  applyProfileVisibilityState,
+  buildProfileListCutoff,
+  isProfileDirectlyVisible,
+  isProfileListed,
+} from '@/lib/profile-visibility.mjs'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
@@ -146,8 +151,7 @@ async function getProfileVisibilityPolicy(): Promise<ProfileVisibilityPolicy> {
 }
 
 function buildLifecycleFilter(policy: ProfileVisibilityPolicy, now = new Date()): string {
-  const cutoff = new Date(now)
-  cutoff.setDate(cutoff.getDate() - policy.remove_from_search_after_days)
+  const cutoff = buildProfileListCutoff(now, policy)
   return `status = "active" && (search_expires_at = "" || search_expires_at > "${toPBDate(cutoff)}")`
 }
 
@@ -286,8 +290,8 @@ export async function getProfiles(options: {
     .map(mapProfile)
     .filter((p: Profile | null): p is Profile => p !== null)
     .filter((profile: Profile) => isPublicProfileStatus(profile.status))
+    .filter((profile: Profile) => isProfileListed(profile.search_expires_at, now, policy))
     .map((profile: Profile) => applyProfileVisibilityState(profile, now, policy))
-    .filter(({ state }: ReturnType<typeof applyProfileVisibilityState<Profile>>) => state.listed)
     .map(({ profile }: ReturnType<typeof applyProfileVisibilityState<Profile>>) => profile)
 }
 
@@ -325,8 +329,9 @@ export async function getProfile(id: string): Promise<Profile | null> {
     const mapped = mapProfile(record)
     if (!mapped) return null
     if (!isPublicProfileStatus(mapped.status)) return null
+    if (!isProfileDirectlyVisible(mapped.search_expires_at, now, policy)) return null
     const visibility = applyProfileVisibilityState(mapped, now, policy)
-    return visibility.state.direct ? visibility.profile : null
+    return visibility.profile
   } catch {
     return null
   }
@@ -348,8 +353,9 @@ export async function getProfileBySlug(slug: string): Promise<Profile | null> {
     const mapped = item ? mapProfile(item) : null
     if (!mapped) return null
     if (!isPublicProfileStatus(mapped.status)) return null
+    if (!isProfileDirectlyVisible(mapped.search_expires_at, now, policy)) return null
     const visibility = applyProfileVisibilityState(mapped, now, policy)
-    return visibility.state.direct ? visibility.profile : null
+    return visibility.profile
   } catch {
     return null
   }
@@ -371,8 +377,8 @@ export async function getProfileSlugs(): Promise<string[]> {
       .map(mapProfile)
       .filter((profile: Profile | null): profile is Profile => profile !== null)
       .filter((profile: Profile) => isPublicProfileStatus(profile.status))
+      .filter((profile: Profile) => isProfileListed(profile.search_expires_at, now, policy))
       .map((profile: Profile) => applyProfileVisibilityState(profile, now, policy))
-      .filter(({ state }: ReturnType<typeof applyProfileVisibilityState<Profile>>) => state.listed)
       .map(({ profile }: ReturnType<typeof applyProfileVisibilityState<Profile>>) => profile.slug)
       .filter((slug: string | undefined): slug is string => Boolean(slug))
   } catch {
