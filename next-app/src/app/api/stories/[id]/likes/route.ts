@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { getAuthCookieFromHeader, getUserIdFromToken } from '@/lib/auth-cookie'
 import { getAdminToken } from '@/lib/pocketbase-admin'
+import { canInteractWithStory } from '@/lib/story-interactions.mjs'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
@@ -20,14 +21,33 @@ export async function GET(
 
   try {
     const adminToken = await getAdminToken()
-    const countHeaders: HeadersInit | undefined = adminToken
-      ? { Authorization: `Bearer ${adminToken}` }
-      : undefined
+    if (!adminToken) {
+      return Response.json({ error: 'Não foi possível validar a story' }, { status: 503 })
+    }
+
+    const storyRes = await fetch(
+      `${PB_URL}/api/collections/stories/records/${storyId}?fields=id,active,expires_at`,
+      { headers: { Authorization: `Bearer ${adminToken}` }, cache: 'no-store' },
+    )
+    if (storyRes.status === 404) {
+      return Response.json({ error: 'Story não encontrada' }, { status: 404 })
+    }
+    if (!storyRes.ok) {
+      return Response.json({ error: 'Não foi possível validar a story' }, { status: 502 })
+    }
+    const story = (await storyRes.json()) as { active?: boolean; expires_at?: string }
+    if (!canInteractWithStory(story)) {
+      return Response.json({ error: 'Esta story não aceita mais interações' }, { status: 410 })
+    }
+
     const countRes = await fetch(
       `${PB_URL}/api/collections/story_likes/records?filter=${encodeURIComponent(`story="${storyId}"`)}&perPage=1`,
-      { headers: countHeaders, cache: 'no-store' }
+      { headers: { Authorization: `Bearer ${adminToken}` }, cache: 'no-store' }
     )
-    const total = countRes.ok ? ((await countRes.json()) as { totalItems?: number }).totalItems ?? 0 : 0
+    if (!countRes.ok) {
+      return Response.json({ error: 'Não foi possível carregar curtidas' }, { status: countRes.status })
+    }
+    const total = ((await countRes.json()) as { totalItems?: number }).totalItems ?? 0
 
     const token = getToken(request)
     let liked = false
@@ -35,18 +55,19 @@ export async function GET(
       const userId = getUserIdFromToken(token)
       if (userId) {
         const myRes = await fetch(
-          `${PB_URL}/api/collections/story_likes/records?filter=${encodeURIComponent(`story="${storyId}" && user="${userId}"`)}&perPage=1&fields=id`,
+          `${PB_URL}/api/collections/story_likes/records?filter=${encodeURIComponent(`story="${storyId}" && user="${userId}"`)}&perPage=2&fields=id`,
           { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' }
         )
-        if (myRes.ok) {
-          const myData = (await myRes.json()) as { items?: unknown[] }
-          liked = (myData.items?.length ?? 0) > 0
+        if (!myRes.ok) {
+          return Response.json({ error: 'Não foi possível verificar sua curtida' }, { status: myRes.status })
         }
+        const myData = (await myRes.json()) as { items?: unknown[] }
+        liked = (myData.items?.length ?? 0) > 0
       }
     }
 
     return Response.json({ count: total, liked })
   } catch {
-    return Response.json({ count: 0, liked: false })
+    return Response.json({ error: 'Erro ao carregar curtidas' }, { status: 500 })
   }
 }

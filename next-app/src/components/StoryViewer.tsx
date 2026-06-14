@@ -62,6 +62,8 @@ export default function StoryViewer({
   const [progress, setProgress] = useState(0)
   const [likes, setLikes] = useState({ count: 0, liked: false })
   const [comments, setComments] = useState<StoryComment[]>([])
+  const [likesError, setLikesError] = useState<string | null>(null)
+  const [commentsError, setCommentsError] = useState<string | null>(null)
   const [commentInput, setCommentInput] = useState('')
   const [commentSending, setCommentSending] = useState(false)
   const [likeLoading, setLikeLoading] = useState(false)
@@ -84,6 +86,8 @@ export default function StoryViewer({
   const storyNavRef = useRef<HTMLDivElement | null>(null)
 
   const story = stories[currentIndex]
+  const storyId = story?.id
+  const storyType = story?.type
   const hasNext = currentIndex < stories.length - 1
   const hasPrev = currentIndex > 0
   const storyCreatedLabel = (() => {
@@ -118,6 +122,41 @@ export default function StoryViewer({
     }
   }, [hasPrev])
 
+  const loadLikes = useCallback(() => {
+    if (!story?.id) return
+    setLikesError(null)
+    fetch(`/api/stories/${story.id}/likes`, { credentials: 'include' })
+      .then(async (r) => {
+        const d = (await r.json().catch(() => ({}))) as {
+          count?: number
+          liked?: boolean
+          error?: string
+        }
+        if (!r.ok) throw new Error(d.error || 'Não foi possível carregar curtidas')
+        setLikes({ count: d.count ?? 0, liked: !!d.liked })
+      })
+      .catch((error: unknown) => {
+        setLikesError(error instanceof Error ? error.message : 'Não foi possível carregar curtidas')
+      })
+  }, [story?.id])
+
+  const loadComments = useCallback(() => {
+    if (!story?.id) return
+    setCommentsError(null)
+    fetch(`/api/stories/${story.id}/comments`, { credentials: 'include' })
+      .then(async (r) => {
+        const d = (await r.json().catch(() => ({}))) as {
+          items?: StoryComment[]
+          error?: string
+        }
+        if (!r.ok) throw new Error(d.error || 'Não foi possível carregar comentários')
+        setComments(Array.isArray(d.items) ? d.items : [])
+      })
+      .catch((error: unknown) => {
+        setCommentsError(error instanceof Error ? error.message : 'Não foi possível carregar comentários')
+      })
+  }, [story?.id])
+
   useEffect(() => {
     const v = videoRef.current
     if (!v) return
@@ -132,7 +171,7 @@ export default function StoryViewer({
   }, [story?.type, story?.file, isPaused, showComments, reportOpen, videoMuted, currentIndex])
 
   useEffect(() => {
-    if (!story || story.type === 'video' || isPaused || showComments || reportOpen) return
+    if (!storyId || storyType === 'video' || isPaused || showComments || reportOpen) return
     const start = Date.now()
     const t = setInterval(() => {
       const elapsed = Date.now() - start
@@ -143,7 +182,7 @@ export default function StoryViewer({
       }
     }, 50)
     return () => clearInterval(t)
-  }, [currentIndex, story?.type, story?.id, goNext, isPaused, showComments, reportOpen])
+  }, [currentIndex, storyId, storyType, goNext, isPaused, showComments, reportOpen])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -182,16 +221,12 @@ export default function StoryViewer({
     if (!story?.id) return
     setLikes({ count: 0, liked: false })
     setComments([])
+    setLikesError(null)
+    setCommentsError(null)
     setIsPaused(false)
-    fetch(`/api/stories/${story.id}/likes`, { credentials: 'include' })
-      .then((r) => r.json())
-      .then((d) => setLikes({ count: d.count ?? 0, liked: !!d.liked }))
-      .catch(() => {})
-    fetch(`/api/stories/${story.id}/comments`, { credentials: 'include' })
-      .then((r) => r.json())
-      .then((d) => setComments(d.items ?? []))
-      .catch(() => {})
-  }, [story?.id])
+    loadLikes()
+    loadComments()
+  }, [story?.id, loadLikes, loadComments])
 
   const handleShare = useCallback(async () => {
     if (!story?.profile?.id) {
@@ -254,6 +289,7 @@ export default function StoryViewer({
             count: d.count ?? (prev.count + (liked ? 1 : -1)),
             liked,
           }))
+          setLikesError(null)
         }
       })
       .finally(() => setLikeLoading(false))
@@ -309,6 +345,7 @@ export default function StoryViewer({
               },
             ])
             setCommentInput('')
+            setCommentsError(null)
           } else {
             toast.error('Resposta inesperada do servidor')
           }
@@ -667,6 +704,18 @@ export default function StoryViewer({
               </span>
               <span className="text-xs font-semibold tabular-nums">{likes.count > 999 ? '999+' : likes.count}</span>
             </button>
+            {likesError && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  loadLikes()
+                }}
+                className="max-w-[4.75rem] rounded-2xl border border-amber-400/40 bg-amber-500/15 px-2 py-2 text-[11px] font-semibold text-amber-100"
+              >
+                Retry likes
+              </button>
+            )}
             <button
               type="button"
               onClick={(e) => {
@@ -776,7 +825,18 @@ export default function StoryViewer({
               </button>
             </div>
             <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 py-2">
-              {comments.length === 0 ? (
+              {commentsError ? (
+                <div className="py-6 text-center text-sm text-amber-100">
+                  <p>{commentsError}</p>
+                  <button
+                    type="button"
+                    onClick={loadComments}
+                    className="mt-3 rounded-full border border-amber-400/40 bg-amber-500/15 px-4 py-2 text-xs font-semibold text-amber-100"
+                  >
+                    Tentar novamente
+                  </button>
+                </div>
+              ) : comments.length === 0 ? (
                 <p className="py-6 text-center text-sm text-white/50">Nenhum comentário ainda.</p>
               ) : (
                 comments.map((c) => (
