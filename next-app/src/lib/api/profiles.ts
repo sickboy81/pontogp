@@ -1,6 +1,7 @@
 import type { Profile, Schedule } from '@/lib/types'
 import { parseProfileVisibilityPolicy, type ProfileVisibilityPolicy } from '@/lib/parse-expiration-settings'
 import { isPublicProfileStatus } from '@/lib/profile-publication.mjs'
+import { isProfileEffectivelyOnline } from '@/lib/profile-presence.mjs'
 import {
   applyProfileVisibilityState,
   buildProfileListCutoff,
@@ -49,8 +50,7 @@ export function mapProfile(record: Record<string, unknown> & { expand?: Record<s
   const created = (record.created ?? record.date_created ?? record.created_at) as string
   const updated = (record.updated ?? record.date_updated ?? record.updated_at) as string
   const onlineUntil = record.online_until as string | undefined
-  const isOnline =
-    record.is_online === true && (!onlineUntil || new Date(onlineUntil) > new Date())
+  const isOnline = isProfileEffectivelyOnline(record.is_online, onlineUntil)
 
   const planEx = expand.plan
   let plan_slug: string | undefined
@@ -80,6 +80,7 @@ export function mapProfile(record: Record<string, unknown> & { expand?: Record<s
     views: (record.views as number) || 0,
     clicks: (record.clicks as number) || 0,
     is_online: isOnline,
+    online_until: onlineUntil,
     contact_expires_at: record.contact_expires_at as string | undefined,
     search_expires_at: record.search_expires_at as string | undefined,
     last_bump_at: record.last_bump_at as string | undefined,

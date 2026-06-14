@@ -29,6 +29,7 @@ import toast from 'react-hot-toast'
 import { useAuthStore } from '@/store/auth'
 import { MIN_PROFILE_PHOTOS, getMissingProfilePhotos } from '@/lib/profile-publication.mjs'
 import { isProfileBumpEligible } from '@/lib/profile-bump-eligibility.mjs'
+import { isProfileEffectivelyOnline } from '@/lib/profile-presence.mjs'
 
 function formatExpiresAt(iso: string | undefined): string | null {
   if (!iso) return null
@@ -112,6 +113,10 @@ function storyExpiresLine(s: MyStoryRow, durationHours: number): { main: string;
 const STORY_CAPTION_MAX = 2000
 const STORY_DURATION_HOURS = 12
 const ONLINE_DURATION_OPTIONS = [1, 2, 4, 6, 8, 12, 24] as const
+
+function normalizeOnlineUntil(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim() ? value : undefined
+}
 
 function isVideoFile(f: File): boolean {
   const t = (f.type || '').toLowerCase()
@@ -199,6 +204,41 @@ export default function DashboardClient() {
     if (!profile?.id) return
     loadMyStories()
   }, [profile?.id])
+
+  useEffect(() => {
+    if (!profile?.id || !profile.is_online) return
+
+    if (!profile.online_until) return
+
+    const deadline = parsePocketBaseDateInput(profile.online_until) ?? new Date(profile.online_until)
+    if (Number.isNaN(deadline.getTime())) {
+      setProfile((current) => {
+        if (!current || current.id !== profile.id || current.is_online === false) return current
+        return { ...current, is_online: false }
+      })
+      return
+    }
+
+    const remainingMs = deadline.getTime() - Date.now()
+    if (remainingMs <= 0) {
+      setProfile((current) => {
+        if (!current || current.id !== profile.id || current.is_online === false) return current
+        return { ...current, is_online: false }
+      })
+      return
+    }
+
+    const timer = window.setTimeout(() => {
+      setProfile((current) => {
+        if (!current || current.id !== profile.id) return current
+        return isProfileEffectivelyOnline(current.is_online, current.online_until)
+          ? { ...current, is_online: false }
+          : current
+      })
+    }, remainingMs + 250)
+
+    return () => window.clearTimeout(timer)
+  }, [profile?.id, profile?.is_online, profile?.online_until])
 
   const closeStoryCompose = useCallback(() => {
     setStoryDraft((d) => {
@@ -349,24 +389,41 @@ export default function DashboardClient() {
 
   const handleToggleOnline = async () => {
     if (!profile) return
+    const nextShouldBeOnline = !isProfileEffectivelyOnline(profile.is_online, profile.online_until)
+    const requestedOnlineUntil = nextShouldBeOnline
+      ? new Date(Date.now() + onlineDurationHours * 60 * 60 * 1000).toISOString().slice(0, 19).replace('T', ' ')
+      : null
+
     try {
       const res = await fetch(`/api/profiles/${profile.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          is_online: !profile.is_online,
-          online_until: !profile.is_online
-            ? new Date(Date.now() + onlineDurationHours * 60 * 60 * 1000).toISOString().slice(0, 19).replace('T', ' ')
-            : null,
+          is_online: nextShouldBeOnline,
+          online_until: requestedOnlineUntil,
         }),
       })
       if (!res.ok) throw new Error('Erro ao atualizar')
-      setProfile({ ...profile, is_online: !profile.is_online })
+
+      const updated = (await res.json().catch(() => ({}))) as {
+        is_online?: boolean
+        online_until?: string | null
+      }
+      const nextOnlineUntil = normalizeOnlineUntil(updated.online_until)
+      const nextIsOnline = isProfileEffectivelyOnline(updated.is_online === true, nextOnlineUntil)
+
+      setProfile({
+        ...profile,
+        is_online: nextIsOnline,
+        online_until: nextOnlineUntil,
+      })
       toast.success(
-        profile.is_online
-          ? 'Você está offline'
-          : `Você está online por ${onlineDurationHours} hora${onlineDurationHours > 1 ? 's' : ''}`
+        nextIsOnline
+          ? `Você está online por ${onlineDurationHours} hora${onlineDurationHours > 1 ? 's' : ''}`
+          : nextShouldBeOnline
+            ? 'Seu status online expirou.'
+            : 'Você está offline'
       )
     } catch {
       toast.error('Erro ao atualizar status')
