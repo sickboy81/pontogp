@@ -298,3 +298,51 @@ html.light .animate-pulse .bg-slate-800,
 html.light .animate-pulse .bg-slate-700 {
   background-color: #cbd5e1 !important;
 }
+
+.profile-reveal {
+  animation: profile-reveal-up 0.55s ease both;
+}
+
+.profile-featured-glow {
+  box-shadow:
+    0 0 0 1px rgba(244, 63, 94, 0.18),
+    0 24px 60px rgba(244, 63, 94, 0.14);
+}
+
+.profile-media-hover {
+  transition:
+    transform 220ms ease,
+    box-shadow 220ms ease,
+    filter 220ms ease;
+}
+
+.profile-media-hover:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.28);
+}
+
+.profile-gallery-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.6) transparent;
+}
+
+@keyframes profile-reveal-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .profile-reveal,
+  .profile-featured-glow,
+  .profile-media-hover {
+    animation: none;
+    transition: none;
+    transform: none;
+  }
+}
