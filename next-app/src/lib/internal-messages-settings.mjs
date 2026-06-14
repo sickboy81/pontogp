@@ -1,5 +1,6 @@
 export const INTERNAL_MESSAGES_SETTINGS_KEY = 'internal_messages'
-export const DEFAULT_INTERNAL_MESSAGES_NOTICE = ''
+export const DEFAULT_INTERNAL_MESSAGES_NOTICE =
+  'As mensagens internas estão temporariamente indisponíveis.'
 
 const MAX_INTERNAL_MESSAGES_NOTICE_LENGTH = 500
 
@@ -9,11 +10,25 @@ const MAX_INTERNAL_MESSAGES_NOTICE_LENGTH = 500
  */
 export function parseInternalMessagesSettings(raw) {
   const value = parseInternalMessagesSettingsSource(raw)
+  const enabled = value?.enabled === false ? false : true
+  const notice = normalizeInternalMessagesNotice(value?.notice)
 
   return {
-    enabled: value?.enabled === false ? false : true,
-    notice: normalizeInternalMessagesNotice(value?.notice),
+    enabled,
+    notice: !enabled && !notice ? DEFAULT_INTERNAL_MESSAGES_NOTICE : notice,
   }
+}
+
+/**
+ * @param {unknown} records
+ * @returns {{ id?: unknown, created?: unknown, value?: unknown } | null}
+ */
+export function selectDeterministicSettingsRecord(records) {
+  if (!Array.isArray(records) || records.length === 0) return null
+
+  return [...records]
+    .filter(isRecord)
+    .sort(compareSettingsRecords)[0] ?? null
 }
 
 /**
@@ -39,8 +54,30 @@ function parseInternalMessagesSettingsSource(raw) {
  * @returns {string}
  */
 function normalizeInternalMessagesNotice(value) {
-  if (typeof value !== 'string') return DEFAULT_INTERNAL_MESSAGES_NOTICE
+  if (typeof value !== 'string') return ''
   return value.trim().slice(0, MAX_INTERNAL_MESSAGES_NOTICE_LENGTH)
+}
+
+/**
+ * @param {{ id?: unknown, created?: unknown }} left
+ * @param {{ id?: unknown, created?: unknown }} right
+ */
+function compareSettingsRecords(left, right) {
+  const createdOrder = compareText(left.created, right.created)
+  if (createdOrder !== 0) return createdOrder
+  return compareText(left.id, right.id)
+}
+
+/**
+ * @param {unknown} left
+ * @param {unknown} right
+ */
+function compareText(left, right) {
+  const leftText = typeof left === 'string' ? left : ''
+  const rightText = typeof right === 'string' ? right : ''
+  if (leftText < rightText) return -1
+  if (leftText > rightText) return 1
+  return 0
 }
 
 /**

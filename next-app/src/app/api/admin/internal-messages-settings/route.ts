@@ -3,11 +3,22 @@ import { requireAdmin } from '@/lib/api/admin-auth'
 import {
   INTERNAL_MESSAGES_SETTINGS_KEY,
   parseInternalMessagesSettings,
+  selectDeterministicSettingsRecord,
 } from '@/lib/internal-messages-settings.mjs'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
 export const dynamic = 'force-dynamic'
+
+type SettingsRecord = {
+  id?: string
+  created?: string
+  value?: unknown
+}
+
+function settingsListUrl() {
+  return `${PB_URL}/api/collections/settings/records?filter=${encodeURIComponent(`key = "${INTERNAL_MESSAGES_SETTINGS_KEY}"`)}&sort=${encodeURIComponent('created,id')}&perPage=50&fields=id,created,value`
+}
 
 /** GET: lê configuração global das mensagens internas. */
 export async function GET(request: NextRequest) {
@@ -15,14 +26,15 @@ export async function GET(request: NextRequest) {
   if (!auth) return Response.json({ error: 'Não autorizado' }, { status: 401 })
 
   try {
-    const res = await fetch(
-      `${PB_URL}/api/collections/settings/records?filter=${encodeURIComponent(`key = "${INTERNAL_MESSAGES_SETTINGS_KEY}"`)}&perPage=1&fields=id,value`,
-      { headers: { Authorization: `Bearer ${auth.token}` }, cache: 'no-store' },
-    )
+    const res = await fetch(settingsListUrl(), {
+      headers: { Authorization: `Bearer ${auth.token}` },
+      cache: 'no-store',
+    })
     if (!res.ok) return Response.json(parseInternalMessagesSettings(null))
 
     const data = await res.json()
-    return Response.json(parseInternalMessagesSettings(data.items?.[0]?.value))
+    const record = selectDeterministicSettingsRecord(data.items) as SettingsRecord | null
+    return Response.json(parseInternalMessagesSettings(record?.value))
   } catch {
     return Response.json(parseInternalMessagesSettings(null))
   }
@@ -37,14 +49,14 @@ export async function PATCH(request: NextRequest) {
     const body = await request.json()
     const payload = parseInternalMessagesSettings(body)
 
-    const listRes = await fetch(
-      `${PB_URL}/api/collections/settings/records?filter=${encodeURIComponent(`key = "${INTERNAL_MESSAGES_SETTINGS_KEY}"`)}&perPage=1&fields=id`,
-      { headers: { Authorization: `Bearer ${auth.token}` }, cache: 'no-store' },
-    )
+    const listRes = await fetch(settingsListUrl(), {
+      headers: { Authorization: `Bearer ${auth.token}` },
+      cache: 'no-store',
+    })
     if (!listRes.ok) throw new Error('Erro ao buscar configuração')
 
     const listData = await listRes.json()
-    const existing = listData.items?.[0] as { id?: string } | undefined
+    const existing = selectDeterministicSettingsRecord(listData.items) as SettingsRecord | null
 
     if (existing?.id) {
       const res = await fetch(`${PB_URL}/api/collections/settings/records/${existing.id}`, {
