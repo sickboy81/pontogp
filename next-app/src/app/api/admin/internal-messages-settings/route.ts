@@ -68,7 +68,7 @@ export async function PATCH(request: NextRequest) {
       if (!res.ok) throw new Error('Erro ao criar configuração')
     }
 
-    return Response.json({ ok: true, ...payload })
+    return Response.json(payload)
   } catch (error) {
     return Response.json(
       { error: error instanceof Error ? error.message : 'Erro ao salvar' },
