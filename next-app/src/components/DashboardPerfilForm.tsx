@@ -384,15 +384,24 @@ export default function DashboardPerfilForm() {
   const bioLength = form.bio.trim().length
   const missingBioCharacters = getMissingProfileBioCharacters(form.bio)
   const hasPublishableBio = hasPublishableProfileBio(form.bio)
+  const persistedBio = profile?.bio ?? ''
+  const missingPersistedBioCharacters = getMissingProfileBioCharacters(persistedBio)
+  const hasPersistedPublishableBio = hasPublishableProfileBio(persistedBio)
+  const hasUnsavedBioChanges = Boolean(profile) && form.bio.trim() !== persistedBio.trim()
   const hasPublicContact = hasPublicProfileContact(form)
-  const canPublish = canPublishProfile(photoCount) && hasPublishableBio && hasPublicContact
+  const canPublish =
+    canPublishProfile(photoCount) &&
+    hasPersistedPublishableBio &&
+    hasPublicContact &&
+    !hasUnsavedBioChanges
   const publicationPendingMessages = [
     missingPhotoCount > 0
       ? `${missingPhotoCount} ${missingPhotoCount === 1 ? 'foto' : 'fotos'}`
       : null,
-    missingBioCharacters > 0
-      ? `${missingBioCharacters} ${missingBioCharacters === 1 ? 'caractere na bio' : 'caracteres na bio'}`
+    missingPersistedBioCharacters > 0
+      ? `${missingPersistedBioCharacters} ${missingPersistedBioCharacters === 1 ? 'caractere na bio salva' : 'caracteres na bio salva'}`
       : null,
+    hasUnsavedBioChanges ? 'salvar as alterações da bio' : null,
     !hasPublicContact ? 'um contato público' : null,
   ].filter((message): message is string => Boolean(message))
   const canRemovePhoto = profile
@@ -1324,6 +1333,7 @@ export default function DashboardPerfilForm() {
             {missingBioCharacters > 0
               ? ` Faltam ${missingBioCharacters} para publicar; você pode salvar o rascunho agora.`
               : ' Bio pronta para publicação.'}
+            {hasUnsavedBioChanges ? ' Salve as alterações antes de publicar.' : ''}
           </p>
         </div>
         <div>
