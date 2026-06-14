@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Save, Loader2 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { DEFAULT_INTERNAL_MESSAGES_NOTICE } from '@/lib/internal-messages-settings.mjs'
 
 export default function AdminConfiguracaoPage() {
   const [loading, setLoading] = useState(true)
@@ -14,6 +15,9 @@ export default function AdminConfiguracaoPage() {
   const [announcementMessage, setAnnouncementMessage] = useState('')
   const [announcementTarget, setAnnouncementTarget] = useState<'all' | 'guests' | 'logged_in' | 'advertiser'>('all')
   const [savingAnnouncement, setSavingAnnouncement] = useState(false)
+  const [messagesEnabled, setMessagesEnabled] = useState(true)
+  const [messagesNotice, setMessagesNotice] = useState('')
+  const [savingMessages, setSavingMessages] = useState(false)
   /** Valores em settings (PocketBase `expiration_durations`); vazio = sem override, o PIX herda o plano. */
   const [expirationDurations, setExpirationDurations] = useState<
     Record<string, { contact_days?: number; search_days?: number }>
@@ -36,10 +40,11 @@ export default function AdminConfiguracaoPage() {
     Promise.all([
       fetch('/api/admin/maintenance', { credentials: 'include' }).then((r) => (r.ok ? r.json() : null)),
       fetch('/api/admin/announcement', { credentials: 'include' }).then((r) => (r.ok ? r.json() : null)),
+      fetch('/api/admin/internal-messages-settings', { credentials: 'include' }).then((r) => (r.ok ? r.json() : null)),
       fetch('/api/admin/expiration-settings', { credentials: 'include' }).then((r) => (r.ok ? r.json() : null)),
       fetch('/api/plans?enabledOnly=false', { cache: 'no-store' }).then((r) => (r.ok ? r.json() : [])),
     ])
-      .then(([maint, ann, exp, plansList]) => {
+      .then(([maint, ann, messages, exp, plansList]) => {
         if (maint) {
           setEnabled(maint.enabled ?? false)
           setMessage(maint.message ?? 'Site em manutenção. Voltaremos em breve!')
@@ -48,6 +53,10 @@ export default function AdminConfiguracaoPage() {
           setAnnouncementEnabled(ann.enabled ?? false)
           setAnnouncementMessage(ann.message ?? '')
           setAnnouncementTarget(ann.target === 'guests' || ann.target === 'logged_in' || ann.target === 'advertiser' ? ann.target : 'all')
+        }
+        if (messages) {
+          setMessagesEnabled(messages.enabled !== false)
+          setMessagesNotice(messages.notice ?? '')
         }
         if (exp?.durations && typeof exp.durations === 'object') {
           setExpirationDurations(exp.durations as Record<string, { contact_days?: number; search_days?: number }>)
@@ -192,6 +201,35 @@ export default function AdminConfiguracaoPage() {
     }
   }
 
+  const handleSaveMessages = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSavingMessages(true)
+    try {
+      const res = await fetch('/api/admin/internal-messages-settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ enabled: messagesEnabled, notice: messagesNotice }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        throw new Error((data as { error?: string }).error || 'Erro ao salvar')
+      }
+
+      setMessagesEnabled((data as { enabled?: boolean }).enabled !== false)
+      setMessagesNotice(typeof (data as { notice?: string }).notice === 'string' ? (data as { notice: string }).notice : '')
+      toast.success(
+        (data as { enabled?: boolean }).enabled === false
+          ? 'Mensagens internas desativadas.'
+          : 'Mensagens internas reativadas.',
+      )
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erro ao salvar')
+    } finally {
+      setSavingMessages(false)
+    }
+  }
+
   return (
     <div>
       <Link
@@ -214,6 +252,7 @@ export default function AdminConfiguracaoPage() {
             <div className="flex flex-wrap gap-2 text-xs">
               <Link href="#manutencao" className="rounded border border-slate-600 px-2 py-1 text-slate-300 hover:border-primary-500 hover:text-white">Manutenção</Link>
               <Link href="#aviso-topo" className="rounded border border-slate-600 px-2 py-1 text-slate-300 hover:border-primary-500 hover:text-white">Aviso do topo</Link>
+              <Link href="#mensagens-internas" className="rounded border border-slate-600 px-2 py-1 text-slate-300 hover:border-primary-500 hover:text-white">Mensagens internas</Link>
               <Link href="#expiracao-planos" className="rounded border border-slate-600 px-2 py-1 text-slate-300 hover:border-primary-500 hover:text-white">Expiração por plano</Link>
             </div>
           </div>
@@ -299,6 +338,65 @@ export default function AdminConfiguracaoPage() {
             >
               {savingAnnouncement ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
               {savingAnnouncement ? 'Salvando...' : 'Salvar aviso'}
+            </button>
+          </form>
+
+          <hr className="my-8 border-slate-700" />
+          <form
+            id="mensagens-internas"
+            onSubmit={handleSaveMessages}
+            className="space-y-4 scroll-mt-20"
+          >
+            <div>
+              <h2 className="text-lg font-semibold text-white">Mensagens internas</h2>
+              <p className="mt-1 text-sm text-slate-400">
+                Quando desativadas, o histórico continua visível, mas novos envios ficam bloqueados em todo o site.
+              </p>
+            </div>
+            <label className="flex cursor-pointer items-center gap-3">
+              <input
+                type="checkbox"
+                checked={messagesEnabled}
+                onChange={(e) => setMessagesEnabled(e.target.checked)}
+                className="h-4 w-4 rounded border-slate-600 bg-slate-800 text-primary-600 focus:ring-primary-500"
+              />
+              <span className="text-slate-300">
+                {messagesEnabled ? 'Mensagens internas habilitadas' : 'Mensagens internas desabilitadas'}
+              </span>
+            </label>
+            <div className="rounded-lg border border-slate-700 bg-slate-900/40 p-3 text-xs text-slate-400">
+              {messagesEnabled
+                ? 'Com a opção ligada, visitantes logados podem abrir conversas e enviar mensagens normalmente.'
+                : 'Com a opção desligada, o botão de compor fica indisponível e o aviso abaixo é exibido para o usuário.'}
+            </div>
+            <div>
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <label className="block text-sm font-medium text-slate-300">
+                  Aviso exibido ao desabilitar
+                </label>
+                <span className="text-xs text-slate-500">
+                  {messagesNotice.trim().length}/500
+                </span>
+              </div>
+              <textarea
+                value={messagesNotice}
+                onChange={(e) => setMessagesNotice(e.target.value.slice(0, 500))}
+                rows={3}
+                maxLength={500}
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white placeholder-slate-500 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                placeholder={DEFAULT_INTERNAL_MESSAGES_NOTICE}
+              />
+              <p className="mt-2 text-xs text-slate-500">
+                Se deixar vazio ao salvar com as mensagens desligadas, o sistema usa o aviso padrão.
+              </p>
+            </div>
+            <button
+              type="submit"
+              disabled={savingMessages}
+              className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-6 py-2.5 font-semibold text-white transition hover:bg-primary-500 disabled:opacity-50"
+            >
+              {savingMessages ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              {savingMessages ? 'Salvando...' : 'Salvar mensagens'}
             </button>
           </form>
 
