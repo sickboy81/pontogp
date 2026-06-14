@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server'
 import { getAuthCookieFromHeader, getUserIdFromToken } from '@/lib/auth-cookie'
+import { enforceUserRateLimit, RATE_LIMIT_POLICIES } from '@/lib/api-rate-limit.mjs'
 import { maybeVideoToCompactMp4, resolveVideoMime } from '@/lib/server/media-upload'
 
 export const maxDuration = 300
@@ -36,6 +37,8 @@ export async function POST(
   if (!token) return Response.json({ error: 'Não autorizado' }, { status: 401 })
   const userId = getUserIdFromToken(token)
   if (!userId) return Response.json({ error: 'Token inválido' }, { status: 401 })
+  const limited = enforceUserRateLimit(request, 'video-upload', userId, RATE_LIMIT_POLICIES.upload)
+  if (limited) return limited
 
   const { id: profileId } = await params
   if (!profileId) return Response.json({ error: 'ID do perfil obrigatório' }, { status: 400 })

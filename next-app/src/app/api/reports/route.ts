@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server'
 import { getAuthCookieFromHeader, getUserIdFromToken } from '@/lib/auth-cookie'
+import { enforceUserRateLimit, RATE_LIMIT_POLICIES } from '@/lib/api-rate-limit.mjs'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
@@ -15,6 +16,8 @@ export async function POST(request: NextRequest) {
   if (!token) return Response.json({ error: 'Faça login para denunciar' }, { status: 401 })
   const userId = getUserIdFromToken(token)
   if (!userId) return Response.json({ error: 'Token inválido' }, { status: 401 })
+  const limited = enforceUserRateLimit(request, 'report-create', userId, RATE_LIMIT_POLICIES.write)
+  if (limited) return limited
 
   try {
     const body = (await request.json()) as {

@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server'
 import { getAuthCookieFromHeader, getUserIdFromToken } from '@/lib/auth-cookie'
+import { enforceUserRateLimit, RATE_LIMIT_POLICIES } from '@/lib/api-rate-limit.mjs'
 import { maybeAudioToCompactM4a, pocketbaseAcceptsAudioMime, resolveAudioMime } from '@/lib/server/media-upload'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
@@ -35,6 +36,8 @@ export async function POST(
   if (!token) return Response.json({ error: 'Não autorizado' }, { status: 401 })
   const userId = getUserIdFromToken(token)
   if (!userId) return Response.json({ error: 'Token inválido' }, { status: 401 })
+  const limited = enforceUserRateLimit(request, 'audio-upload', userId, RATE_LIMIT_POLICIES.upload)
+  if (limited) return limited
 
   const { id: profileId } = await params
   if (!profileId) return Response.json({ error: 'ID do perfil obrigatório' }, { status: 400 })

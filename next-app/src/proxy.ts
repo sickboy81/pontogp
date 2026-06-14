@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { getAuthCookieFromHeader } from '@/lib/auth-cookie'
+import { getAuthCookieFromHeader, getUserIdFromToken } from '@/lib/auth-cookie'
+import {
+  enforceIpRateLimit,
+  enforceUserRateLimit,
+  RATE_LIMIT_POLICIES,
+} from '@/lib/api-rate-limit.mjs'
 import { resolveHomeRedirectPath } from '@/lib/seo-home'
 
 const PROTECTED_PREFIXES = ['/dashboard', '/mensagens', '/diretrizes-fotos-videos', '/admin', '/favoritos']
@@ -34,6 +39,22 @@ export function proxy(request: NextRequest) {
     canonicalUrl.host = 'cerejavip.com'
     canonicalUrl.port = ''
     return NextResponse.redirect(canonicalUrl, 308)
+  }
+
+  if (pathname.startsWith('/api/') && !pathname.startsWith('/api/map-tiles/')) {
+    const isAdminApi = pathname.startsWith('/api/admin/')
+    const token = isAdminApi
+      ? getAuthCookieFromHeader(request.headers.get('cookie'))
+      : null
+    const userId = token ? getUserIdFromToken(token) : null
+    const limited = userId
+      ? enforceUserRateLimit(request, 'api-admin', userId, RATE_LIMIT_POLICIES.admin)
+      : enforceIpRateLimit(
+          request,
+          isAdminApi ? 'api-admin' : 'api-general',
+          isAdminApi ? RATE_LIMIT_POLICIES.admin : RATE_LIMIT_POLICIES.general
+        )
+    if (limited) return limited
   }
 
   if (pathname === '/' && request.nextUrl.search) {

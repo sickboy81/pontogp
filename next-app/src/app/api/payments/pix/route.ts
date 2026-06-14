@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server'
 import { getAuthCookieFromHeader, getUserIdFromToken } from '@/lib/auth-cookie'
+import { enforceUserRateLimit, RATE_LIMIT_POLICIES } from '@/lib/api-rate-limit.mjs'
 import { isValidCpfOrCnpj, onlyDigits } from '@/lib/brazil-document'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
@@ -18,6 +19,8 @@ export async function POST(request: NextRequest) {
   if (!token) return Response.json({ error: 'Não autorizado' }, { status: 401 })
   const userId = getUserIdFromToken(token)
   if (!userId) return Response.json({ error: 'Token inválido' }, { status: 401 })
+  const limited = enforceUserRateLimit(request, 'pix-create', userId, RATE_LIMIT_POLICIES.pix)
+  if (limited) return limited
 
   if (!PIXGO_API_KEY || PIXGO_API_KEY.length < 32) {
     return Response.json(

@@ -3,7 +3,7 @@ import crypto from 'crypto'
 import { COUPONS_COLLECTION } from '@/lib/coupons-collection'
 import { getAdminToken } from '@/lib/pocketbase-admin'
 import { parseExpirationDurationsValue } from '@/lib/parse-expiration-settings'
-import { checkRateLimit } from '@/lib/rate-limit'
+import { enforceIpRateLimit, RATE_LIMIT_POLICIES } from '@/lib/api-rate-limit.mjs'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 const PIXGO_URL = 'https://pixgo.org/api/v1'
@@ -38,11 +38,8 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: 'Formato inválido' }, { status: 415 })
     }
 
-    const forwardedFor = request.headers.get('x-forwarded-for') || 'unknown'
-    const ip = forwardedFor.split(',')[0].trim()
-    if (!checkRateLimit(`pix-webhook:${ip}`, 240, 60 * 1000)) {
-      return Response.json({ error: 'Rate limit excedido' }, { status: 429 })
-    }
+    const limited = enforceIpRateLimit(request, 'pix-webhook', RATE_LIMIT_POLICIES.webhook)
+    if (limited) return limited
 
     const rawBody = await request.text()
     if (!rawBody.trim()) {

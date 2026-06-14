@@ -3,6 +3,7 @@ import { getAuthCookieFromHeader, getUserIdFromToken } from '@/lib/auth-cookie'
 import { getProfileByUserId } from '@/lib/api/profiles'
 import { getAdminToken } from '@/lib/pocketbase-admin'
 import { isProfileBumpEligible } from '@/lib/profile-bump-eligibility.mjs'
+import { enforceUserRateLimit, RATE_LIMIT_POLICIES } from '@/lib/api-rate-limit.mjs'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
@@ -29,6 +30,8 @@ export async function POST(request: NextRequest) {
   if (!token) return Response.json({ error: 'Não autorizado' }, { status: 401 })
   const userId = getUserIdFromToken(token)
   if (!userId) return Response.json({ error: 'Token inválido' }, { status: 401 })
+  const limited = enforceUserRateLimit(request, 'profile-bump', userId, RATE_LIMIT_POLICIES.write)
+  if (limited) return limited
 
   const profile = await getProfileByUserId(userId, token)
   if (!profile) return Response.json({ error: 'Perfil não encontrado' }, { status: 404 })
