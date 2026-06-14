@@ -9,6 +9,7 @@ import { useAuthStore } from '@/store/auth'
 import type { Profile } from '@/lib/types'
 import { socialProfileHref } from '@/lib/social-links'
 import { buildContactPrefillMessage, telegramContactHref, whatsAppContactHref } from '@/lib/contact-prefill'
+import { getProfileContactVisibilityState } from '@/lib/profile-contact-visibility.mjs'
 
 interface LinkBioViewProps {
   profile: Profile
@@ -101,8 +102,10 @@ export default function LinkBioView({ profile, profileUrl }: LinkBioViewProps) {
     }).catch(() => {})
   }, [profile.id])
 
-  const contactExpired =
-    !!profile.contact_expires_at && new Date(profile.contact_expires_at) <= new Date()
+  const { contactExpired, canStartMessage, showCustomBioLinks } =
+    getProfileContactVisibilityState(profile.contact_expires_at)
+  const isUnavailable =
+    profile.is_unavailable === true || profile.visibility_mode === 'unavailable'
   const photos = profile.photos?.length ? profile.photos : (profile.thumbnail ? [profile.thumbnail] : [])
   const avatarIndex =
     profile.bio_avatar_index != null && profile.bio_avatar_index >= 0 && profile.bio_avatar_index < photos.length
@@ -112,7 +115,8 @@ export default function LinkBioView({ profile, profileUrl }: LinkBioViewProps) {
   const description = profile.short_description?.trim() || profile.bio_title?.trim() || (profile.bio ? profile.bio.slice(0, 120) + (profile.bio.length > 120 ? '...' : '') : '')
   const theme = profile.bio_theme === 'light' ? 'light' : profile.bio_theme === 'minimal' ? 'minimal' : profile.bio_theme === 'sunset' ? 'sunset' : profile.bio_theme === 'cherry' ? 'cherry' : 'dark'
   const bioLinks = Array.isArray(profile.bio_links) ? profile.bio_links.filter((l) => l?.label && l?.url) : []
-  const bioLinkUrls = new Set(bioLinks.map((link) => normalizeLinkUrl(bioLinkHref(link.url))).filter(Boolean))
+  const visibleBioLinks = showCustomBioLinks ? bioLinks : []
+  const bioLinkUrls = new Set(visibleBioLinks.map((link) => normalizeLinkUrl(bioLinkHref(link.url))).filter(Boolean))
   const hasBioLink = (url: string | null | undefined) => {
     const normalized = normalizeLinkUrl(url || '')
     return normalized ? bioLinkUrls.has(normalized) : false
@@ -162,7 +166,7 @@ export default function LinkBioView({ profile, profileUrl }: LinkBioViewProps) {
                 alt={profile.name}
                 fill
                 sizes="128px"
-                className="object-cover"
+                className={`object-cover ${isUnavailable ? 'blur-md grayscale' : ''}`}
               />
             </div>
           ) : (
@@ -198,10 +202,15 @@ export default function LinkBioView({ profile, profileUrl }: LinkBioViewProps) {
             </span>
           )}
         </div>
+        {isUnavailable && (
+          <p className="mt-3 rounded-lg border border-amber-500/50 bg-amber-500/10 px-3 py-2 text-center text-sm text-amber-200">
+            Perfil indisponível no momento. A foto fica desfocada até a renovação do anúncio.
+          </p>
+        )}
 
-        {bioLinks.length > 0 && (
+        {visibleBioLinks.length > 0 && (
           <div className="mt-6 w-full max-w-sm space-y-2">
-            {bioLinks.map((link, i) => (
+            {visibleBioLinks.map((link, i) => (
               <a
                 key={i}
                 href={withContactPrefillIfNeeded(link.url, profileUrl)}
@@ -216,23 +225,23 @@ export default function LinkBioView({ profile, profileUrl }: LinkBioViewProps) {
           </div>
         )}
         <div className="mt-8 w-full max-w-sm space-y-3">
-          {canMessage && (
-            <Link
-              href={`/mensagens?with=${encodeURIComponent(profile.user_id)}`}
-              onClick={() => trackClick('message')}
-              className={`flex w-full items-center justify-center gap-2 rounded-xl border py-3.5 font-medium transition hover:opacity-90 ${linkButtonClass}`}
-              style={linkButtonStyle}
-            >
-              <MessageCircle className="h-5 w-5" />
-              Enviar mensagem
-            </Link>
-          )}
           {contactExpired ? (
             <p className="rounded-lg border border-amber-500/50 bg-amber-500/10 px-4 py-3 text-center text-sm text-amber-200">
               Contato indisponível. Anúncio expirado.
             </p>
           ) : (
             <>
+              {canStartMessage && canMessage && (
+                <Link
+                  href={`/mensagens?with=${encodeURIComponent(profile.user_id)}`}
+                  onClick={() => trackClick('message')}
+                  className={`flex w-full items-center justify-center gap-2 rounded-xl border py-3.5 font-medium transition hover:opacity-90 ${linkButtonClass}`}
+                  style={linkButtonStyle}
+                >
+                  <MessageCircle className="h-5 w-5" />
+                  Enviar mensagem
+                </Link>
+              )}
               {visibleWhatsapp && !hasBioLink(whatsappHref) && (
                 <a
                   href={whatsappHref}
@@ -272,8 +281,7 @@ export default function LinkBioView({ profile, profileUrl }: LinkBioViewProps) {
           )}
         </div>
 
-        {!contactExpired &&
-          visibleSocialLinks.length > 0 && (
+        {visibleSocialLinks.length > 0 && (
             <div className="mt-6 w-full max-w-sm">
               <p className="mb-2 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">
                 Redes sociais

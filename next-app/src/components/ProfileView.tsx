@@ -15,6 +15,7 @@ import toast from 'react-hot-toast'
 import { socialProfileHref } from '@/lib/social-links'
 import { profileTagSearchPath } from '@/lib/profile-tag-search'
 import { telegramContactHref, whatsAppContactHref } from '@/lib/contact-prefill'
+import { getProfileContactVisibilityState } from '@/lib/profile-contact-visibility.mjs'
 
 interface ProfileViewProps {
   profile: Profile
@@ -140,8 +141,8 @@ export default function ProfileView({
     }
   }
 
-  const contactExpired =
-    !!profile.contact_expires_at && new Date(profile.contact_expires_at) <= new Date()
+  const { contactExpired, canStartMessage } =
+    getProfileContactVisibilityState(profile.contact_expires_at)
   const isUnavailable = profile.is_unavailable === true
   const visibleWhatsapp = profile.show_whatsapp !== false ? profile.whatsapp : ''
   const visibleTelegram = profile.show_telegram !== false ? profile.telegram : ''
@@ -475,22 +476,22 @@ export default function ProfileView({
             )}
 
             <div className="mt-6 flex flex-wrap gap-2">
-              {canMessage && (
-                <Link
-                  href={`/mensagens?with=${encodeURIComponent(profile.user_id)}`}
-                  onClick={() => trackClick('message')}
-                  className="flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-500"
-                >
-                  <MessageCircle className="h-4 w-4" />
-                  Enviar mensagem
-                </Link>
-              )}
               {contactExpired ? (
                 <p className="rounded-lg border border-amber-500/50 bg-amber-500/10 px-4 py-2 text-sm text-amber-200">
                   Contato indisponível. O anúncio expirou.
                 </p>
               ) : (
                 <>
+                  {canStartMessage && canMessage && (
+                    <Link
+                      href={`/mensagens?with=${encodeURIComponent(profile.user_id)}`}
+                      onClick={() => trackClick('message')}
+                      className="flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-500"
+                    >
+                      <MessageCircle className="h-4 w-4" />
+                      Enviar mensagem
+                    </Link>
+                  )}
                   {visibleWhatsapp && (
                     <a
                       href={whatsAppContactHref(visibleWhatsapp, profileUrl)}

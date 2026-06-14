@@ -368,7 +368,7 @@ export async function getProfileSlugs(): Promise<string[]> {
     const lifecycleFilter = buildLifecycleFilter(policy)
     const res = await fetch(
       `${PB_URL}/api/collections/profiles/records?perPage=500&fields=id,slug,status,search_expires_at&filter=${encodeURIComponent(lifecycleFilter)}`,
-      { next: { revalidate: 300 } }
+      { cache: 'no-store' }
     )
     if (!res.ok) return []
     const data = await res.json()
