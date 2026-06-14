@@ -350,7 +350,7 @@ export default function SiteHeader() {
                   )}
                 </div>
                 <Link href="/login" className={iconBtnClass} aria-label="Favoritos (entrar)"> <Heart className="h-5 w-5" /> </Link>
-                <Link href="/register" className="ml-1 rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-500">Anunciar Grátis</Link>
+                <Link href="/register?tipo=advertiser" className="ml-1 rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-500">Anunciar Grátis</Link>
               </>
             )}
           </div>
@@ -445,7 +445,7 @@ export default function SiteHeader() {
               </>
             ) : (
               <>
-                <Link href="/register" className="rounded-lg bg-primary-600 px-4 py-2 text-center font-semibold text-white hover:bg-primary-500" onClick={closeAll}>Anunciar Grátis</Link>
+                <Link href="/register?tipo=advertiser" className="rounded-lg bg-primary-600 px-4 py-2 text-center font-semibold text-white hover:bg-primary-500" onClick={closeAll}>Anunciar Grátis</Link>
                 <Link href="/login" className="text-slate-300 hover:text-white" onClick={closeAll}>Entrar</Link>
                 <Link href="/register" className="text-slate-300 hover:text-white" onClick={closeAll}>Cadastrar</Link>
               </>

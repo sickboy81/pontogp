@@ -104,7 +104,7 @@ export default function AnunciantesPage() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
               <Link
-                href="/register"
+                href="/register?tipo=advertiser"
                 className="group inline-flex h-14 items-center justify-center bg-white px-8 font-medium text-black transition-all hover:bg-primary-600 hover:text-white hover:scale-105"
               >
                 <span className="mr-2 text-sm uppercase tracking-widest">Anunciar Grátis</span>
@@ -322,7 +322,7 @@ export default function AnunciantesPage() {
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-4">
             <Link
-              href="/register"
+              href="/register?tipo=advertiser"
               className="group inline-flex items-center justify-center gap-2 bg-primary-600 text-white px-10 py-5 text-lg font-bold uppercase tracking-widest hover:bg-primary-500 transition-all hover:scale-105"
             >
               <span>Criar Perfil Grátis</span>

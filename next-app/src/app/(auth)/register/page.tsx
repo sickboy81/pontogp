@@ -1,16 +1,44 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuthStore } from '@/store/auth'
-import { Eye, EyeOff } from 'lucide-react'
+import { ArrowLeft, Eye, EyeOff, Heart, Sparkles } from 'lucide-react'
 import toast from 'react-hot-toast'
+import RegistrationRoleChooser from '@/components/RegistrationRoleChooser'
+import { parseRegistrationRole } from '@/lib/registration-role.mjs'
 
-export default function RegisterPage() {
+type RegistrationRole = 'user' | 'advertiser'
+
+const ROLE_COPY: Record<
+  RegistrationRole,
+  {
+    label: string
+    title: string
+    description: string
+    nextStep: string
+  }
+> = {
+  advertiser: {
+    label: 'Anunciante',
+    title: 'Crie sua conta de anunciante',
+    description: 'Depois do cadastro você poderá criar, completar e publicar seu perfil no CerejaVIP.',
+    nextStep: 'Após verificar o email, você segue para montar e publicar seu perfil.',
+  },
+  user: {
+    label: 'Cliente',
+    title: 'Crie sua conta de cliente',
+    description: 'Depois do cadastro você poderá favoritar perfis, enviar mensagens internas e acompanhar anúncios.',
+    nextStep: 'Após verificar o email, você já poderá explorar favoritos e conversas.',
+  },
+}
+
+function RegisterPageContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { register } = useAuthStore()
-  const [role, setRole] = useState<'user' | 'advertiser'>('advertiser')
+  const [role, setRole] = useState<RegistrationRole | null>(null)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -20,8 +48,26 @@ export default function RegisterPage() {
   const [acceptedTerms, setAcceptedTerms] = useState(false)
   const [loading, setLoading] = useState(false)
 
+  useEffect(() => {
+    setRole(parseRegistrationRole(searchParams.get('tipo')))
+  }, [searchParams])
+
+  const selectRole = (nextRole: RegistrationRole) => {
+    setRole(nextRole)
+    router.replace(`/register?tipo=${nextRole}`, { scroll: false })
+  }
+
+  const resetRole = () => {
+    setRole(null)
+    router.replace('/register', { scroll: false })
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!role) {
+      toast.error('Escolha primeiro o tipo da conta')
+      return
+    }
     if (password !== confirmPassword) {
       toast.error('As senhas não coincidem')
       return
@@ -49,7 +95,7 @@ export default function RegisterPage() {
         // ignora falha
       }
       toast.success('Conta criada! Verifique seu email para ativar.')
-      router.push(`/verificar-email-pendente?email=${encodeURIComponent(email)}`)
+      router.push(`/verificar-email-pendente?email=${encodeURIComponent(email)}&tipo=${role}`)
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Erro ao criar conta'
       toast.error(message)
@@ -61,29 +107,55 @@ export default function RegisterPage() {
   return (
     <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-6">
       <h1 className="text-2xl font-bold text-white">Criar conta</h1>
-      <p className="mt-2 text-slate-400">Escolha como deseja utilizar o CerejaVIP</p>
+      <p className="mt-2 text-slate-400">Escolha como deseja utilizar o CerejaVIP.</p>
 
-      <div className="mt-6 flex rounded-xl border border-slate-600 bg-slate-900/50 p-1">
-        <button
-          type="button"
-          onClick={() => setRole('advertiser')}
-          className={`flex-1 rounded-lg py-3 text-sm font-medium transition ${
-            role === 'advertiser'
-              ? 'bg-primary-500 text-white'
-              : 'text-slate-400 hover:text-white'
-          }`}
-        >
-          Quero anunciar
-        </button>
-        <button
-          type="button"
-          onClick={() => setRole('user')}
-          className={`flex-1 rounded-lg py-3 text-sm font-medium transition ${
-            role === 'user' ? 'bg-primary-500 text-white' : 'text-slate-400 hover:text-white'
-          }`}
-        >
-          Cliente
-        </button>
+      {!role ? (
+        <>
+          <RegistrationRoleChooser onSelect={selectRole} />
+          <p className="mt-6 text-center text-sm text-slate-400">
+            Já tem conta?{' '}
+            <Link href="/login" className="text-primary-400 hover:text-primary-300">
+              Entrar
+            </Link>
+          </p>
+          <p className="mt-2 text-center">
+            <Link href="/" className="text-sm text-slate-500 hover:text-white">
+              ← Voltar ao início
+            </Link>
+          </p>
+        </>
+      ) : (
+      <>
+      <div className="mt-6 rounded-2xl border border-slate-700 bg-slate-900/60 p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary-300">
+              Tipo selecionado
+            </p>
+            <h2 className="mt-2 flex items-center gap-2 text-xl font-semibold text-white">
+              {role === 'advertiser' ? (
+                <Sparkles className="h-5 w-5 text-primary-400" />
+              ) : (
+                <Heart className="h-5 w-5 text-sky-300" />
+              )}
+              {ROLE_COPY[role].label}
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-slate-300">
+              {ROLE_COPY[role].description}
+            </p>
+            <p className="mt-2 text-xs text-slate-500">
+              {ROLE_COPY[role].nextStep}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={resetRole}
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-600 px-3 py-2 text-sm text-slate-300 transition hover:bg-slate-800 hover:text-white"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Trocar tipo de conta
+          </button>
+        </div>
       </div>
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-4">
@@ -173,7 +245,7 @@ export default function RegisterPage() {
           disabled={loading}
           className="w-full rounded-lg bg-primary-500 py-3 font-medium text-white hover:bg-primary-600 disabled:opacity-50"
         >
-          {loading ? 'Criando conta...' : 'Criar conta'}
+          {loading ? 'Criando conta...' : ROLE_COPY[role].title}
         </button>
       </form>
 
@@ -188,6 +260,22 @@ export default function RegisterPage() {
           ← Voltar ao início
         </Link>
       </p>
+      </>
+      )}
     </div>
+  )
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-6 text-slate-400">
+          Carregando cadastro...
+        </div>
+      }
+    >
+      <RegisterPageContent />
+    </Suspense>
   )
 }
