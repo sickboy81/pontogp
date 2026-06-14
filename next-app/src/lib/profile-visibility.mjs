@@ -1,5 +1,21 @@
 const DAY_MS = 24 * 60 * 60 * 1000
 
+/**
+ * @typedef {object} ProfileVisibilityPolicy
+ * @property {number} blur_after_days
+ * @property {number} remove_from_search_after_days
+ * @property {number} archive_after_days
+ */
+
+/**
+ * @typedef {object} ProfileVisibilityState
+ * @property {'normal' | 'unavailable' | 'archived'} mode
+ * @property {boolean} listed
+ * @property {boolean} direct
+ * @property {boolean} archived
+ */
+
+/** @type {Readonly<ProfileVisibilityPolicy>} */
 export const DEFAULT_PROFILE_VISIBILITY_POLICY = Object.freeze({
   blur_after_days: 7,
   remove_from_search_after_days: 30,
@@ -11,6 +27,7 @@ function asPolicyInteger(value, fallback) {
   return Math.min(365, Math.max(1, Math.floor(value)))
 }
 
+/** @param {unknown} raw @returns {ProfileVisibilityPolicy} */
 export function parseProfileVisibilityPolicy(raw) {
   let source = raw
   if (typeof source === 'string') {
@@ -51,6 +68,10 @@ export function parseProfileVisibilityPolicy(raw) {
   }
 }
 
+/**
+ * @param {string | number | Date | null | undefined} expiration
+ * @param {string | number | Date} [now]
+ */
 export function getExpiredDays(expiration, now = new Date()) {
   if (expiration == null || expiration === '') return null
 
@@ -63,6 +84,12 @@ export function getExpiredDays(expiration, now = new Date()) {
   return Math.floor((nowTime - expirationTime) / DAY_MS)
 }
 
+/**
+ * @param {string | number | Date | null | undefined} expiration
+ * @param {string | number | Date} [now]
+ * @param {ProfileVisibilityPolicy} [policy]
+ * @returns {ProfileVisibilityState}
+ */
 export function getProfileVisibilityState(
   expiration,
   now = new Date(),
@@ -70,13 +97,13 @@ export function getProfileVisibilityState(
 ) {
   const expiredDays = getExpiredDays(expiration, now)
   if (expiredDays == null || expiredDays < policy.blur_after_days) {
-    return { state: 'normal', listed: true, direct: true, archived: false }
+    return { mode: 'normal', listed: true, direct: true, archived: false }
   }
   if (expiredDays < policy.remove_from_search_after_days) {
-    return { state: 'unavailable', listed: true, direct: true, archived: false }
+    return { mode: 'unavailable', listed: true, direct: true, archived: false }
   }
   if (expiredDays < policy.archive_after_days) {
-    return { state: 'unavailable', listed: false, direct: true, archived: false }
+    return { mode: 'unavailable', listed: false, direct: true, archived: false }
   }
-  return { state: 'archived', listed: false, direct: false, archived: true }
+  return { mode: 'archived', listed: false, direct: false, archived: true }
 }

@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { requireAdmin } from '@/lib/api/admin-auth'
 import { getAdminToken } from '@/lib/pocketbase-admin'
+import { serializeLegacyVisibilityPolicy } from '@/lib/expiration-settings-payload.mjs'
 import {
   parseExpirationDurationsValue,
   parseProfileVisibilityPolicy,
@@ -38,11 +39,15 @@ export async function GET(request: NextRequest) {
     const visData = visRes.ok ? await visRes.json() : { items: [] }
     const durations = parseExpirationDurationsValue(durData.items?.[0]?.value)
     const visibility_policy = parseProfileVisibilityPolicy(visData.items?.[0]?.value)
-    return Response.json({ durations, visibility_policy })
+    return Response.json({
+      durations,
+      visibility_policy: serializeLegacyVisibilityPolicy(visibility_policy),
+    })
   } catch {
+    const visibility_policy = parseProfileVisibilityPolicy(null)
     return Response.json({
       durations: {},
-      visibility_policy: parseProfileVisibilityPolicy(null),
+      visibility_policy: serializeLegacyVisibilityPolicy(visibility_policy),
     })
   }
 }
@@ -57,7 +62,9 @@ export async function PATCH(request: NextRequest) {
 
   const body = (await request.json()) as {
     durations?: ExpirationDurations
-    visibility_policy?: Partial<ProfileVisibilityPolicy>
+    visibility_policy?: Partial<ProfileVisibilityPolicy> & {
+      unavailable_after_days?: number
+    }
   }
   const raw = body.durations && typeof body.durations === 'object' ? body.durations : {}
   /** Normaliza: só inteiros >= 1; chaves vazias são omitidas. */
@@ -182,7 +189,11 @@ export async function PATCH(request: NextRequest) {
       }
       throw err
     }
-    return Response.json({ ok: true, durations, visibility_policy })
+    return Response.json({
+      ok: true,
+      durations,
+      visibility_policy: serializeLegacyVisibilityPolicy(visibility_policy),
+    })
   } catch (e) {
     return Response.json(
       { error: e instanceof Error ? e.message : 'Erro ao salvar' },

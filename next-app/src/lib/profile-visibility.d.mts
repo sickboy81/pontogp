@@ -5,7 +5,7 @@ export type ProfileVisibilityPolicy = {
 }
 
 export type ProfileVisibilityState = {
-  state: 'normal' | 'unavailable' | 'archived'
+  mode: 'normal' | 'unavailable' | 'archived'
   listed: boolean
   direct: boolean
   archived: boolean

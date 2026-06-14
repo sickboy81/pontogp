@@ -15,25 +15,25 @@ function expiredDaysAgo(days) {
 }
 
 const NORMAL = {
-  state: 'normal',
+  mode: 'normal',
   listed: true,
   direct: true,
   archived: false,
 }
 const UNAVAILABLE_LISTED = {
-  state: 'unavailable',
+  mode: 'unavailable',
   listed: true,
   direct: true,
   archived: false,
 }
 const UNAVAILABLE_DIRECT = {
-  state: 'unavailable',
+  mode: 'unavailable',
   listed: false,
   direct: true,
   archived: false,
 }
 const ARCHIVED = {
-  state: 'archived',
+  mode: 'archived',
   listed: false,
   direct: false,
   archived: true,
