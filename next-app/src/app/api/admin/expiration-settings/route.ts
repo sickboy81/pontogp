@@ -149,7 +149,9 @@ export async function PATCH(request: NextRequest) {
             const currentPolicy = parseProfileVisibilityPolicy(current.value ?? null)
             const attemptedPolicy = parseProfileVisibilityPolicy(visibility_policy)
             const stillOwnedByThisRequest =
-              currentPolicy.unavailable_after_days === attemptedPolicy.unavailable_after_days &&
+              currentPolicy.blur_after_days === attemptedPolicy.blur_after_days &&
+              currentPolicy.remove_from_search_after_days ===
+                attemptedPolicy.remove_from_search_after_days &&
               currentPolicy.archive_after_days === attemptedPolicy.archive_after_days
             if (stillOwnedByThisRequest) {
               const restoreRes = await fetch(`${PB_URL}/api/collections/settings/records/${visExisting.id}`, {

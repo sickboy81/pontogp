@@ -308,7 +308,7 @@ export async function getProfiles(options: {
       return {
         ...p,
         search_expired_days: searchExpiredDays,
-        is_unavailable: searchExpiredDays >= policy.unavailable_after_days,
+        is_unavailable: searchExpiredDays >= policy.blur_after_days,
       } as Profile
     })
     .filter((p: Profile) => !isProfileBeyondArchiveWindow(p, policy, now))
@@ -353,7 +353,7 @@ export async function getProfile(id: string): Promise<Profile | null> {
     return {
       ...mapped,
       search_expired_days: searchExpiredDays,
-      is_unavailable: searchExpiredDays >= policy.unavailable_after_days,
+      is_unavailable: searchExpiredDays >= policy.blur_after_days,
     }
   } catch {
     return null
@@ -380,7 +380,7 @@ export async function getProfileBySlug(slug: string): Promise<Profile | null> {
     return {
       ...mapped,
       search_expired_days: searchExpiredDays,
-      is_unavailable: searchExpiredDays >= policy.unavailable_after_days,
+      is_unavailable: searchExpiredDays >= policy.blur_after_days,
     }
   } catch {
     return null

@@ -11,16 +11,6 @@ function asPolicyInteger(value, fallback) {
   return Math.min(365, Math.max(1, Math.floor(value)))
 }
 
-function withLegacyUnavailableAlias(policy) {
-  return Object.defineProperty(policy, 'unavailable_after_days', {
-    configurable: false,
-    enumerable: false,
-    get() {
-      return policy.blur_after_days
-    },
-  })
-}
-
 export function parseProfileVisibilityPolicy(raw) {
   let source = raw
   if (typeof source === 'string') {
@@ -31,7 +21,7 @@ export function parseProfileVisibilityPolicy(raw) {
     }
   }
   if (!source || typeof source !== 'object' || Array.isArray(source)) {
-    return withLegacyUnavailableAlias({ ...DEFAULT_PROFILE_VISIBILITY_POLICY })
+    return { ...DEFAULT_PROFILE_VISIBILITY_POLICY }
   }
 
   const legacyBlur = source.unavailable_after_days
@@ -54,11 +44,11 @@ export function parseProfileVisibilityPolicy(raw) {
   if (remove >= archive) remove = archive - 1
   if (blur >= remove) blur = remove - 1
 
-  return withLegacyUnavailableAlias({
+  return {
     blur_after_days: blur,
     remove_from_search_after_days: remove,
     archive_after_days: archive,
-  })
+  }
 }
 
 export function getExpiredDays(expiration, now = new Date()) {

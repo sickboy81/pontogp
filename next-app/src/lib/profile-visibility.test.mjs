@@ -113,17 +113,17 @@ test('parses object and JSON policies into ordered integer values', () => {
 })
 
 test('migrates unavailable_after_days and preserves archive_after_days', () => {
-  assert.deepEqual(
-    parseProfileVisibilityPolicy({
-      unavailable_after_days: 12,
-      archive_after_days: 80,
-    }),
-    {
-      blur_after_days: 12,
-      remove_from_search_after_days: 30,
-      archive_after_days: 80,
-    },
-  )
+  const policy = parseProfileVisibilityPolicy({
+    unavailable_after_days: 12,
+    archive_after_days: 80,
+  })
+
+  assert.deepEqual(policy, {
+    blur_after_days: 12,
+    remove_from_search_after_days: 30,
+    archive_after_days: 80,
+  })
+  assert.equal(Object.hasOwn(policy, 'unavailable_after_days'), false)
 })
 
 test('normalizes invalid and unordered policy values within 1 and 365 days', () => {
