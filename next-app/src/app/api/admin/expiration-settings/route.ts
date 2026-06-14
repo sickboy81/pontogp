@@ -4,6 +4,7 @@ import { getAdminToken } from '@/lib/pocketbase-admin'
 import {
   mergeVisibilityPolicyInput,
   serializeLegacyVisibilityPolicy,
+  validateCanonicalVisibilityPolicyOrder,
 } from '@/lib/expiration-settings-payload.mjs'
 import {
   parseExpirationDurationsValue,
@@ -68,6 +69,12 @@ export async function PATCH(request: NextRequest) {
     visibility_policy?: Partial<ProfileVisibilityPolicy> & {
       unavailable_after_days?: number
     }
+  }
+  if (!validateCanonicalVisibilityPolicyOrder(body.visibility_policy)) {
+    return Response.json(
+      { error: 'Use a ordem: desfocar < retirar das buscas < arquivar.' },
+      { status: 400 }
+    )
   }
   const raw = body.durations && typeof body.durations === 'object' ? body.durations : {}
   /** Normaliza: só inteiros >= 1; chaves vazias são omitidas. */

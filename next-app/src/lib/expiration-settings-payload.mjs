@@ -40,3 +40,29 @@ export function mergeVisibilityPolicyInput(input, current) {
       : base.archive_after_days,
   })
 }
+
+/**
+ * Canonical clients submit all three lifecycle fields and must preserve their strict order.
+ * Legacy or partial payloads remain compatible and are normalized by mergeVisibilityPolicyInput.
+ *
+ * @param {unknown} input
+ */
+export function validateCanonicalVisibilityPolicyOrder(input) {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) return true
+
+  const keys = [
+    'blur_after_days',
+    'remove_from_search_after_days',
+    'archive_after_days',
+  ]
+  if (!keys.every((key) => Object.hasOwn(input, key))) return true
+
+  const blur = input.blur_after_days
+  const remove = input.remove_from_search_after_days
+  const archive = input.archive_after_days
+  if (![blur, remove, archive].every((value) => typeof value === 'number' && Number.isFinite(value))) {
+    return false
+  }
+
+  return blur < remove && remove < archive
+}

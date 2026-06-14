@@ -107,3 +107,28 @@ export function getProfileVisibilityState(
   }
   return { mode: 'archived', listed: false, direct: false, archived: true }
 }
+
+/**
+ * @template {Record<string, unknown>} T
+ * @param {T & { search_expires_at?: string | number | Date | null }} profile
+ * @param {string | number | Date} [now]
+ * @param {ProfileVisibilityPolicy} [policy]
+ */
+export function applyProfileVisibilityState(
+  profile,
+  now = new Date(),
+  policy = DEFAULT_PROFILE_VISIBILITY_POLICY,
+) {
+  const state = getProfileVisibilityState(profile.search_expires_at, now, policy)
+  const searchExpiredDays = getExpiredDays(profile.search_expires_at, now) ?? 0
+
+  return {
+    profile: {
+      ...profile,
+      visibility_mode: state.mode,
+      search_expired_days: searchExpiredDays,
+      is_unavailable: state.mode === 'unavailable',
+    },
+    state,
+  }
+}

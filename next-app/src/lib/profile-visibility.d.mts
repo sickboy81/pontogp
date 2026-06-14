@@ -25,3 +25,18 @@ export function getProfileVisibilityState(
   now?: string | number | Date,
   policy?: ProfileVisibilityPolicy,
 ): ProfileVisibilityState
+
+export function applyProfileVisibilityState<
+  T extends { search_expires_at?: string | number | Date | null },
+>(
+  profile: T,
+  now?: string | number | Date,
+  policy?: ProfileVisibilityPolicy,
+): {
+  profile: T & {
+    visibility_mode: ProfileVisibilityState['mode']
+    search_expired_days: number
+    is_unavailable: boolean
+  }
+  state: ProfileVisibilityState
+}

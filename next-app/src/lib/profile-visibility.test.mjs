@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import {
+  applyProfileVisibilityState,
   DEFAULT_PROFILE_VISIBILITY_POLICY,
   getProfileVisibilityState,
   parseProfileVisibilityPolicy,
@@ -69,6 +70,23 @@ test('removes an unavailable profile from search from day 30 through day 89', ()
 
 test('archives an expired profile from day 90', () => {
   assert.deepEqual(getProfileVisibilityState(expiredDaysAgo(90), NOW), ARCHIVED)
+})
+
+test('enriches a profile from the canonical visibility state', () => {
+  const profile = {
+    id: 'profile-1',
+    search_expires_at: expiredDaysAgo(30),
+  }
+
+  assert.deepEqual(applyProfileVisibilityState(profile, NOW), {
+    profile: {
+      ...profile,
+      visibility_mode: 'unavailable',
+      search_expired_days: 30,
+      is_unavailable: true,
+    },
+    state: UNAVAILABLE_DIRECT,
+  })
 })
 
 test('accepts a custom ordered visibility policy', () => {

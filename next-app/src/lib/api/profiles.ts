@@ -1,6 +1,7 @@
 import type { Profile, Schedule } from '@/lib/types'
 import { parseProfileVisibilityPolicy, type ProfileVisibilityPolicy } from '@/lib/parse-expiration-settings'
 import { isPublicProfileStatus } from '@/lib/profile-publication.mjs'
+import { applyProfileVisibilityState } from '@/lib/profile-visibility.mjs'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
@@ -144,29 +145,10 @@ async function getProfileVisibilityPolicy(): Promise<ProfileVisibilityPolicy> {
   }
 }
 
-function getSearchExpiredDays(searchExpiresAt: string | undefined, now = new Date()): number {
-  if (!searchExpiresAt) return 0
-  const expires = new Date(searchExpiresAt)
-  if (Number.isNaN(expires.getTime())) return 0
-  const deltaMs = now.getTime() - expires.getTime()
-  if (deltaMs <= 0) return 0
-  return Math.floor(deltaMs / (24 * 60 * 60 * 1000))
-}
-
-function isProfileBeyondArchiveWindow(
-  profile: { status?: string; search_expires_at?: string },
-  policy: ProfileVisibilityPolicy,
-  now = new Date()
-): boolean {
-  if (profile.status === 'archived') return true
-  const days = getSearchExpiredDays(profile.search_expires_at, now)
-  return days >= policy.archive_after_days
-}
-
-function buildLifecycleFilter(policy: ProfileVisibilityPolicy): string {
-  const cutoff = new Date()
-  cutoff.setDate(cutoff.getDate() - policy.archive_after_days)
-  return `status != "archived" && (search_expires_at = "" || search_expires_at > "${toPBDate(cutoff)}")`
+function buildLifecycleFilter(policy: ProfileVisibilityPolicy, now = new Date()): string {
+  const cutoff = new Date(now)
+  cutoff.setDate(cutoff.getDate() - policy.remove_from_search_after_days)
+  return `status = "active" && (search_expires_at = "" || search_expires_at > "${toPBDate(cutoff)}")`
 }
 
 const SORT_MAP: Record<string, string> = {
@@ -261,7 +243,7 @@ export async function getProfiles(options: {
   const lifecycleFilter = buildLifecycleFilter(policy)
   const parts: string[] = []
   Object.entries(filters).forEach(([key, val]) => {
-    if (key === 'min_age' || key === 'max_age' || key === 'search' || key === 'min_price' || key === 'max_price') return
+    if (key === 'status' || key === 'min_age' || key === 'max_age' || key === 'search' || key === 'min_price' || key === 'max_price') return
     const k = key === 'user_id' ? 'user' : key
     if (val === null || val === undefined) return
     if (typeof val === 'boolean') parts.push(`${k} = ${val}`)
@@ -303,15 +285,10 @@ export async function getProfiles(options: {
   return (data.items || [])
     .map(mapProfile)
     .filter((p: Profile | null): p is Profile => p !== null)
-    .map((p: Profile) => {
-      const searchExpiredDays = getSearchExpiredDays(p.search_expires_at, now)
-      return {
-        ...p,
-        search_expired_days: searchExpiredDays,
-        is_unavailable: searchExpiredDays >= policy.blur_after_days,
-      } as Profile
-    })
-    .filter((p: Profile) => !isProfileBeyondArchiveWindow(p, policy, now))
+    .filter((profile: Profile) => isPublicProfileStatus(profile.status))
+    .map((profile: Profile) => applyProfileVisibilityState(profile, now, policy))
+    .filter(({ state }: ReturnType<typeof applyProfileVisibilityState<Profile>>) => state.listed)
+    .map(({ profile }: ReturnType<typeof applyProfileVisibilityState<Profile>>) => profile)
 }
 
 /** Busca perfil do usuário por user id (servidor). Não aplica LIFECYCLE para permitir edição mesmo expirado. */
@@ -348,13 +325,8 @@ export async function getProfile(id: string): Promise<Profile | null> {
     const mapped = mapProfile(record)
     if (!mapped) return null
     if (!isPublicProfileStatus(mapped.status)) return null
-    if (isProfileBeyondArchiveWindow(mapped, policy, now)) return null
-    const searchExpiredDays = getSearchExpiredDays(mapped.search_expires_at, now)
-    return {
-      ...mapped,
-      search_expired_days: searchExpiredDays,
-      is_unavailable: searchExpiredDays >= policy.blur_after_days,
-    }
+    const visibility = applyProfileVisibilityState(mapped, now, policy)
+    return visibility.state.direct ? visibility.profile : null
   } catch {
     return null
   }
@@ -375,13 +347,9 @@ export async function getProfileBySlug(slug: string): Promise<Profile | null> {
     const item = data.items?.[0]
     const mapped = item ? mapProfile(item) : null
     if (!mapped) return null
-    if (isProfileBeyondArchiveWindow(mapped, policy, now)) return null
-    const searchExpiredDays = getSearchExpiredDays(mapped.search_expires_at, now)
-    return {
-      ...mapped,
-      search_expired_days: searchExpiredDays,
-      is_unavailable: searchExpiredDays >= policy.blur_after_days,
-    }
+    if (!isPublicProfileStatus(mapped.status)) return null
+    const visibility = applyProfileVisibilityState(mapped, now, policy)
+    return visibility.state.direct ? visibility.profile : null
   } catch {
     return null
   }
@@ -393,12 +361,20 @@ export async function getProfileSlugs(): Promise<string[]> {
     const policy = await getProfileVisibilityPolicy()
     const lifecycleFilter = buildLifecycleFilter(policy)
     const res = await fetch(
-      `${PB_URL}/api/collections/profiles/records?perPage=500&fields=slug&filter=${encodeURIComponent(lifecycleFilter)}`,
+      `${PB_URL}/api/collections/profiles/records?perPage=500&fields=id,slug,status,search_expires_at&filter=${encodeURIComponent(lifecycleFilter)}`,
       { next: { revalidate: 300 } }
     )
     if (!res.ok) return []
     const data = await res.json()
-    return (data.items || []).map((r: { slug?: string }) => r.slug).filter(Boolean)
+    const now = new Date()
+    return (data.items || [])
+      .map(mapProfile)
+      .filter((profile: Profile | null): profile is Profile => profile !== null)
+      .filter((profile: Profile) => isPublicProfileStatus(profile.status))
+      .map((profile: Profile) => applyProfileVisibilityState(profile, now, policy))
+      .filter(({ state }: ReturnType<typeof applyProfileVisibilityState<Profile>>) => state.listed)
+      .map(({ profile }: ReturnType<typeof applyProfileVisibilityState<Profile>>) => profile.slug)
+      .filter((slug: string | undefined): slug is string => Boolean(slug))
   } catch {
     return []
   }

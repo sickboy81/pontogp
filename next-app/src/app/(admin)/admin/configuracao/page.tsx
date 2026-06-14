@@ -23,9 +23,14 @@ export default function AdminConfiguracaoPage() {
   >([])
   const [savingExpiration, setSavingExpiration] = useState(false)
   const [visibilityPolicy, setVisibilityPolicy] = useState<{
-    unavailable_after_days: number
+    blur_after_days: number
+    remove_from_search_after_days: number
     archive_after_days: number
-  }>({ unavailable_after_days: 30, archive_after_days: 90 })
+  }>({
+    blur_after_days: 7,
+    remove_from_search_after_days: 30,
+    archive_after_days: 90,
+  })
 
   useEffect(() => {
     Promise.all([
@@ -49,22 +54,19 @@ export default function AdminConfiguracaoPage() {
         }
         if (exp?.visibility_policy && typeof exp.visibility_policy === 'object') {
           const p = exp.visibility_policy as Partial<{
-            unavailable_after_days: number
+            blur_after_days: number
+            remove_from_search_after_days: number
             archive_after_days: number
           }>
-          const unavailable =
-            typeof p.unavailable_after_days === 'number' && p.unavailable_after_days >= 1
-              ? Math.floor(p.unavailable_after_days)
-              : 30
-          let archive =
-            // Compat com políticas antigas que possam ter salvo valor 1.
-            typeof p.archive_after_days === 'number' && p.archive_after_days >= 1
-              ? Math.floor(p.archive_after_days)
-              : 90
-          if (archive <= unavailable) archive = unavailable + 1
           setVisibilityPolicy({
-            unavailable_after_days: unavailable,
-            archive_after_days: archive,
+            blur_after_days:
+              typeof p.blur_after_days === 'number' ? Math.floor(p.blur_after_days) : 7,
+            remove_from_search_after_days:
+              typeof p.remove_from_search_after_days === 'number'
+                ? Math.floor(p.remove_from_search_after_days)
+                : 30,
+            archive_after_days:
+              typeof p.archive_after_days === 'number' ? Math.floor(p.archive_after_days) : 90,
           })
         }
         if (Array.isArray(plansList)) {
@@ -129,6 +131,13 @@ export default function AdminConfiguracaoPage() {
 
   const handleSaveExpiration = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (
+      visibilityPolicy.blur_after_days >= visibilityPolicy.remove_from_search_after_days ||
+      visibilityPolicy.remove_from_search_after_days >= visibilityPolicy.archive_after_days
+    ) {
+      toast.error('Use a ordem: desfocar < retirar das buscas < arquivar.')
+      return
+    }
     setSavingExpiration(true)
     try {
       const res = await fetch('/api/admin/expiration-settings', {
@@ -153,19 +162,12 @@ export default function AdminConfiguracaoPage() {
   }
 
   const setVisibilityField = (
-    key: 'unavailable_after_days' | 'archive_after_days',
+    key: 'blur_after_days' | 'remove_from_search_after_days' | 'archive_after_days',
     raw: string
   ) => {
     const n = parseInt(raw, 10)
     if (Number.isNaN(n)) return
-    setVisibilityPolicy((prev) => {
-      const min = key === 'archive_after_days' ? 2 : 1
-      const next = { ...prev, [key]: Math.max(min, Math.min(365, n)) }
-      if (next.archive_after_days <= next.unavailable_after_days) {
-        next.archive_after_days = next.unavailable_after_days + 1
-      }
-      return next
-    })
+    setVisibilityPolicy((prev) => ({ ...prev, [key]: Math.max(1, Math.min(365, n)) }))
   }
 
   const handleSaveAnnouncement = async (e: React.FormEvent) => {
@@ -311,23 +313,34 @@ export default function AdminConfiguracaoPage() {
             <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
               Visibilidade pós-vencimento
             </p>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-3 sm:grid-cols-3">
               <label className="text-sm text-slate-300">
-                <span className="mb-1 block text-xs text-slate-500">Indisponível após (dias)</span>
+                <span className="mb-1 block text-xs text-slate-500">Desfocar após (dias)</span>
                 <input
                   type="number"
                   min={1}
                   max={365}
-                  value={visibilityPolicy.unavailable_after_days}
-                  onChange={(e) => setVisibilityField('unavailable_after_days', e.target.value)}
+                  value={visibilityPolicy.blur_after_days}
+                  onChange={(e) => setVisibilityField('blur_after_days', e.target.value)}
                   className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1.5 text-white"
                 />
               </label>
               <label className="text-sm text-slate-300">
-                <span className="mb-1 block text-xs text-slate-500">Excluir após (dias)</span>
+                <span className="mb-1 block text-xs text-slate-500">Retirar das buscas após (dias)</span>
                 <input
                   type="number"
-                  min={2}
+                  min={1}
+                  max={365}
+                  value={visibilityPolicy.remove_from_search_after_days}
+                  onChange={(e) => setVisibilityField('remove_from_search_after_days', e.target.value)}
+                  className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1.5 text-white"
+                />
+              </label>
+              <label className="text-sm text-slate-300">
+                <span className="mb-1 block text-xs text-slate-500">Arquivar após (dias)</span>
+                <input
+                  type="number"
+                  min={1}
                   max={365}
                   value={visibilityPolicy.archive_after_days}
                   onChange={(e) => setVisibilityField('archive_after_days', e.target.value)}
@@ -336,7 +349,7 @@ export default function AdminConfiguracaoPage() {
               </label>
             </div>
             <p className="mt-2 text-xs text-slate-500">
-              Entre esses prazos, o anúncio fica visível no site com fotos desfocadas e etiqueta de indisponível.
+              Os valores devem respeitar a ordem: desfocar, retirar das buscas e arquivar.
             </p>
           </div>
           <p className="mb-2 text-xs text-amber-400/90">

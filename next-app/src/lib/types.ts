@@ -89,9 +89,11 @@ export interface Profile {
   visual_highlight?: boolean
   contact_expires_at?: string
   search_expires_at?: string
+  /** Estado público derivado exclusivamente da política de visibilidade da busca. */
+  visibility_mode?: 'normal' | 'unavailable' | 'archived'
   /** Dias corridos desde o vencimento da busca (0 quando ainda não venceu). */
   search_expired_days?: number
-  /** true quando já passou do prazo configurado para indisponível. */
+  /** true somente quando visibility_mode é unavailable. */
   is_unavailable?: boolean
   last_bump_at?: string
   auto_bump?: boolean
