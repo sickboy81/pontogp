@@ -1,14 +1,29 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
+  MIN_PROFILE_BIO_LENGTH,
   MIN_PROFILE_PHOTOS,
   canPublishProfile,
   canSaveProfileContacts,
   canRemoveProfilePhoto,
+  getMissingProfileBioCharacters,
   getMissingProfilePhotos,
+  hasPublishableProfileBio,
   hasPublicProfileContact,
   isPublicProfileStatus,
 } from './profile-publication.mjs'
+
+test('requires a 700-character trimmed bio to publish a profile', () => {
+  assert.equal(MIN_PROFILE_BIO_LENGTH, 700)
+  assert.equal(hasPublishableProfileBio('a'.repeat(699)), false)
+  assert.equal(hasPublishableProfileBio(`  ${'a'.repeat(700)}  `), true)
+})
+
+test('reports how many trimmed bio characters are missing for publication', () => {
+  assert.equal(getMissingProfileBioCharacters('a'.repeat(699)), 1)
+  assert.equal(getMissingProfileBioCharacters(`  ${'a'.repeat(700)}  `), 0)
+  assert.equal(getMissingProfileBioCharacters('  curta  '), 695)
+})
 
 test('requires at least three photos to publish a profile', () => {
   assert.equal(MIN_PROFILE_PHOTOS, 3)

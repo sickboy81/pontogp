@@ -23,14 +23,23 @@ import {
   parseTwitterUsername,
   socialProfileHref,
 } from '@/lib/social-links'
-import {
+import * as profilePublication from '@/lib/profile-publication.mjs'
+
+const {
+  MIN_PROFILE_BIO_LENGTH,
   MIN_PROFILE_PHOTOS,
   canPublishProfile,
   canRemoveProfilePhoto,
   canSaveProfileContacts,
+  getMissingProfileBioCharacters,
   getMissingProfilePhotos,
+  hasPublishableProfileBio,
   hasPublicProfileContact,
-} from '@/lib/profile-publication.mjs'
+} = profilePublication as typeof profilePublication & {
+  MIN_PROFILE_BIO_LENGTH: number
+  getMissingProfileBioCharacters: (bio: unknown) => number
+  hasPublishableProfileBio: (bio: unknown) => boolean
+}
 
 type FormData = {
   name: string
@@ -378,8 +387,20 @@ export default function DashboardPerfilForm() {
   const mapLng = parseCoordinate(form.location_lng, -180, 180)
   const photoCount = profile?.photos?.length || 0
   const missingPhotoCount = getMissingProfilePhotos(photoCount)
+  const bioLength = form.bio.trim().length
+  const missingBioCharacters = getMissingProfileBioCharacters(form.bio)
+  const hasPublishableBio = hasPublishableProfileBio(form.bio)
   const hasPublicContact = hasPublicProfileContact(form)
-  const canPublish = canPublishProfile(photoCount) && hasPublicContact
+  const canPublish = canPublishProfile(photoCount) && hasPublishableBio && hasPublicContact
+  const publicationPendingMessages = [
+    missingPhotoCount > 0
+      ? `${missingPhotoCount} ${missingPhotoCount === 1 ? 'foto' : 'fotos'}`
+      : null,
+    missingBioCharacters > 0
+      ? `${missingBioCharacters} ${missingBioCharacters === 1 ? 'caractere na bio' : 'caracteres na bio'}`
+      : null,
+    !hasPublicContact ? 'um contato público' : null,
+  ].filter((message): message is string => Boolean(message))
   const canRemovePhoto = profile
     ? canRemoveProfilePhoto(profile.status, photoCount)
     : false
@@ -1294,14 +1315,22 @@ export default function DashboardPerfilForm() {
           />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-300">Bio *</label>
+          <label className="mb-1 block text-sm font-medium text-slate-300">Bio</label>
           <textarea
-            required
             rows={4}
             value={form.bio}
             onChange={(e) => setForm((f) => ({ ...f, bio: e.target.value }))}
             className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
           />
+          <p
+            className={`mt-1 text-xs ${hasPublishableBio ? 'text-slate-500' : 'text-amber-400'}`}
+            aria-live="polite"
+          >
+            {bioLength}/{MIN_PROFILE_BIO_LENGTH} caracteres após remover espaços externos.
+            {missingBioCharacters > 0
+              ? ` Faltam ${missingBioCharacters} para publicar; você pode salvar o rascunho agora.`
+              : ' Bio pronta para publicação.'}
+          </p>
         </div>
         <div>
           <label className="mb-1 block text-sm font-medium text-slate-300">Descrição curta</label>
@@ -1587,13 +1616,11 @@ export default function DashboardPerfilForm() {
                   {photoCount}/{MIN_PROFILE_PHOTOS} fotos obrigatórias
                 </p>
                 <p className="mt-1 text-xs text-slate-400">
-                  {missingPhotoCount > 0
-                    ? `Adicione mais ${missingPhotoCount} ${missingPhotoCount === 1 ? 'foto' : 'fotos'} para liberar a publicação.`
-                    : profile.status === 'active'
-                      ? 'Perfil publicado. Mantenha pelo menos 3 fotos.'
-                      : hasPublicContact
-                        ? 'Quantidade mínima atingida. O perfil já pode ser publicado.'
-                        : 'Fotos concluídas. Preencha e torne público pelo menos um contato.'}
+                  {profile.status === 'active'
+                    ? 'Perfil publicado. Mantenha pelo menos 3 fotos e a bio completa.'
+                    : publicationPendingMessages.length > 0
+                      ? `Pendências para publicar: ${publicationPendingMessages.join(', ')}.`
+                      : 'Fotos, bio e contato concluídos. O perfil já pode ser publicado.'}
                 </p>
               </div>
               {profile.status === 'inactive' && (

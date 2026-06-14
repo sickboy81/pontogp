@@ -1,11 +1,18 @@
 import { NextRequest } from 'next/server'
 import { getAuthCookieFromHeader, getUserIdFromToken } from '@/lib/auth-cookie'
-import {
-  canPublishProfile,
-  hasPublicProfileContact,
-  MIN_PROFILE_PHOTOS,
-} from '@/lib/profile-publication.mjs'
+import * as profilePublication from '@/lib/profile-publication.mjs'
 import { getAdminToken } from '@/lib/pocketbase-admin'
+
+const {
+  canPublishProfile,
+  hasPublishableProfileBio,
+  hasPublicProfileContact,
+  MIN_PROFILE_BIO_LENGTH,
+  MIN_PROFILE_PHOTOS,
+} = profilePublication as typeof profilePublication & {
+  hasPublishableProfileBio: (bio: unknown) => boolean
+  MIN_PROFILE_BIO_LENGTH: number
+}
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
@@ -30,7 +37,7 @@ export async function POST(
 
   try {
     const profileRes = await fetch(
-      `${PB_URL}/api/collections/profiles/records/${profileId}?fields=id,user,status,photos,whatsapp,telegram,phone,show_whatsapp,show_telegram,show_phone`,
+      `${PB_URL}/api/collections/profiles/records/${profileId}?fields=id,user,status,photos,bio,whatsapp,telegram,phone,show_whatsapp,show_telegram,show_phone`,
       { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' }
     )
 
@@ -45,6 +52,7 @@ export async function POST(
       user?: string
       status?: string
       photos?: string[]
+      bio?: string
       whatsapp?: string
       telegram?: string
       phone?: string
@@ -55,6 +63,18 @@ export async function POST(
 
     if (profile.user !== userId) {
       return Response.json({ error: 'Sem permissão para publicar este perfil' }, { status: 403 })
+    }
+
+    const bioLength = String(profile.bio ?? '').trim().length
+    if (!hasPublishableProfileBio(profile.bio)) {
+      return Response.json(
+        {
+          error: `Complete a bio com pelo menos ${MIN_PROFILE_BIO_LENGTH} caracteres antes de publicar o perfil.`,
+          bioLength,
+          minimumBioLength: MIN_PROFILE_BIO_LENGTH,
+        },
+        { status: 400 }
+      )
     }
 
     const photoCount = Array.isArray(profile.photos) ? profile.photos.length : 0
