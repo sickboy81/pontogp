@@ -6,16 +6,10 @@ WORKDIR /app
 ARG NEXT_PUBLIC_POCKETBASE_URL=https://pocketbase.cerejavip.com
 ARG NEXT_PUBLIC_APP_URL=https://cerejavip.com
 ARG NEXT_PUBLIC_TURNSTILE_SITE_KEY
-ARG TURNSTILE_SECRET_KEY
-ARG PIXGO_API_KEY
-ARG PIXGO_WEBHOOK_SECRET
 
 ENV NEXT_PUBLIC_POCKETBASE_URL=$NEXT_PUBLIC_POCKETBASE_URL
 ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
 ENV NEXT_PUBLIC_TURNSTILE_SITE_KEY=$NEXT_PUBLIC_TURNSTILE_SITE_KEY
-ENV TURNSTILE_SECRET_KEY=$TURNSTILE_SECRET_KEY
-ENV PIXGO_API_KEY=$PIXGO_API_KEY
-ENV PIXGO_WEBHOOK_SECRET=$PIXGO_WEBHOOK_SECRET
 
 COPY next-app/package*.json ./
 RUN npm ci
@@ -46,7 +40,7 @@ COPY scripts/reset-daily-bumps.mjs ./scripts/reset-daily-bumps.mjs
 # Refresh cron env on each container start
 RUN printf '%s\n' \
   '#!/bin/sh' \
-  'printenv | grep -E "^(VITE_|NEXT_PUBLIC_|POCKETBASE_|PB_ADMIN_|DIRECTUS_|ADMIN_|PIXGO_|TURNSTILE_)" > /etc/environment.sh' \
+  'printenv | grep -E "^(VITE_|NEXT_PUBLIC_|POCKETBASE_|PB_ADMIN_|DIRECTUS_|ADMIN_|PIXGO_|TURNSTILE_)" > /etc/environment.sh || true' \
   > /usr/local/bin/export-cron-env.sh \
   && chmod +x /usr/local/bin/export-cron-env.sh
 
