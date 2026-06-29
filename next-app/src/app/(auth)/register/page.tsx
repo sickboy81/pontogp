@@ -73,7 +73,7 @@ export default function RegisterPage() {
               : 'text-slate-400 hover:text-white'
           }`}
         >
-          Quero anunciar
+          Sou Acompanhante
         </button>
         <button
           type="button"
@@ -82,7 +82,7 @@ export default function RegisterPage() {
             role === 'user' ? 'bg-primary-500 text-white' : 'text-slate-400 hover:text-white'
           }`}
         >
-          Cliente
+          Sou Cliente
         </button>
       </div>
 

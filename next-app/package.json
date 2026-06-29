@@ -9,6 +9,7 @@
     "test": "node --test src/**/*.test.mjs",
     "lint": "eslint .",
     "schema": "node scripts/export-pocketbase-schema.mjs",
+    "schema:import": "node scripts/import-pocketbase-schema.mjs",
     "schema:check": "node scripts/check-schema-contracts.mjs",
     "schema:apply-profile-publication": "node scripts/apply-profile-publication-rules.mjs",
     "auto-bump": "node scripts/auto_bump.mjs",
