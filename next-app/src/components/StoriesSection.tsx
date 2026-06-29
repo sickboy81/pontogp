@@ -55,7 +55,7 @@ export default function StoriesSection() {
 
   return (
     <div className="mb-8">
-      <h2 className="mb-4 text-lg font-semibold text-white">Stories</h2>
+      <h2 className="mb-4 text-lg font-semibold text-white">Cereja Stories</h2>
       <div className="flex gap-4 overflow-x-auto pb-2">
         {grouped.map((g) => (
           <Link

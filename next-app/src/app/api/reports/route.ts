@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
     const userDesc = (body.description || '').trim()
     const sid = (body.storyId || '').trim()
     const description = sid
-      ? [`[Denúncia de story — ID: ${sid}]`, userDesc || undefined].filter(Boolean).join('\n\n')
+      ? [`[Denúncia de Cereja Story - ID: ${sid}]`, userDesc || undefined].filter(Boolean).join('\n\n')
       : userDesc
 
     const res = await fetch(`${PB_URL}/api/collections/reports/records`, {

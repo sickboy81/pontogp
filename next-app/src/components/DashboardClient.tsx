@@ -29,6 +29,7 @@ import toast from 'react-hot-toast'
 import { useAuthStore } from '@/store/auth'
 import { MIN_PROFILE_PHOTOS, getMissingProfilePhotos } from '@/lib/profile-publication.mjs'
 import { isProfileBumpEligible } from '@/lib/profile-bump-eligibility.mjs'
+import { CEREJA_STORIES_DURATION_HOURS } from '@/lib/cereja-stories.mjs'
 
 function formatExpiresAt(iso: string | undefined): string | null {
   if (!iso) return null
@@ -110,7 +111,6 @@ function storyExpiresLine(s: MyStoryRow, durationHours: number): { main: string;
 }
 
 const STORY_CAPTION_MAX = 2000
-const STORY_DURATION_HOURS = 12
 const ONLINE_DURATION_OPTIONS = [1, 2, 4, 6, 8, 12, 24] as const
 
 function isVideoFile(f: File): boolean {
@@ -237,15 +237,15 @@ export default function DashboardClient() {
       })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
-        throw new Error((data as { error?: string }).error || 'Erro ao enviar story')
+        throw new Error((data as { error?: string }).error || 'Erro ao enviar Cereja Story')
       }
       toast.success(
-        `Story publicada! Fica visível ${STORY_DURATION_HOURS}h (home e perfil) e some depois disso.`
+        `Cereja Story publicada! Fica visível ${CEREJA_STORIES_DURATION_HOURS}h (home e perfil) e some depois disso.`
       )
       closeStoryCompose()
       loadMyStories()
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Erro ao enviar story'
+      const msg = err instanceof Error ? err.message : 'Erro ao enviar Cereja Story'
       toast.error(msg)
     } finally {
       setStoryUploading(false)
@@ -419,7 +419,7 @@ export default function DashboardClient() {
   }
 
   const handleDeleteStory = async (id: string) => {
-    if (!confirm('Excluir esta story? Não dá para desfazer.')) return
+    if (!confirm('Excluir esta Cereja Story? Não dá para desfazer.')) return
     setStoryDeletingId(id)
     try {
       const res = await fetch(`/api/stories/${id}`, { method: 'DELETE', credentials: 'include' })
@@ -428,7 +428,7 @@ export default function DashboardClient() {
         toast.error((data as { error?: string }).error || 'Erro ao excluir')
         return
       }
-      toast.success('Story excluída.')
+      toast.success('Cereja Story excluída.')
       setMyStories((prev) => prev.filter((s) => s.id !== id))
       if (editingStory?.id === id) setEditingStory(null)
     } finally {
@@ -486,10 +486,10 @@ export default function DashboardClient() {
             <div className="flex items-center justify-between border-b border-slate-700 px-4 py-3">
               <div>
                 <h2 id="story-compose-title" className="text-lg font-semibold text-white">
-                  Nova story
+                  Nova Cereja Story
                 </h2>
                 <p className="mt-1 text-sm text-slate-200">
-                  Fica visível <strong className="text-white">{STORY_DURATION_HOURS} horas</strong> na
+                  Fica visível <strong className="text-white">{CEREJA_STORIES_DURATION_HOURS} horas</strong> na
                   home e no seu perfil; depois some automaticamente.
                 </p>
               </div>
@@ -516,7 +516,7 @@ export default function DashboardClient() {
                 ) : (
                   <Image
                     src={storyDraft.previewUrl}
-                    alt="Pré-visualização do story"
+                    alt="Pré-visualização da Cereja Story"
                     width={900}
                     height={1200}
                     unoptimized
@@ -533,7 +533,7 @@ export default function DashboardClient() {
                 onChange={(e) => setStoryCaption(e.target.value.slice(0, STORY_CAPTION_MAX))}
                 rows={3}
                 maxLength={STORY_CAPTION_MAX}
-                placeholder="Escreva algo para acompanhar o story…"
+                placeholder="Escreva algo para acompanhar a Cereja Story…"
                 className="mt-1.5 w-full rounded-xl border border-slate-600 bg-slate-800/80 px-3 py-2.5 text-sm text-white placeholder:text-slate-500 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
                 disabled={storyUploading}
               />
@@ -559,7 +559,7 @@ export default function DashboardClient() {
                 className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary-600 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-500 disabled:opacity-50"
               >
                 {storyUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                Publicar story
+                Publicar Cereja Story
               </button>
             </div>
           </div>
@@ -628,7 +628,7 @@ export default function DashboardClient() {
             ) : (
               <ImagePlus className="h-5 w-5" />
             )}
-            Nova story
+            Nova Cereja Story
           </label>
         </div>
       </div>
@@ -638,8 +638,8 @@ export default function DashboardClient() {
       >
         <Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-primary-300" aria-hidden />
         <p>
-          <span className="font-medium text-white">Duração:</span> cada story fica publicada na
-          home e no perfil <strong className="text-white">{STORY_DURATION_HOURS} horas</strong> a
+          <span className="font-medium text-white">Duração:</span> cada Cereja Story fica publicada na
+          home e no perfil <strong className="text-white">{CEREJA_STORIES_DURATION_HOURS} horas</strong> a
           partir do envio, depois deixa de aparecer.
         </p>
       </div>
@@ -647,13 +647,13 @@ export default function DashboardClient() {
       {/* Os meus stories */}
       <div className="mt-6 rounded-xl border border-slate-700 bg-slate-800/50 p-4">
         <p className="mb-3 text-sm leading-relaxed text-slate-300">
-          Para evitar uma lista gigante no dashboard, mostramos apenas as stories mais recentes aqui.
+          Para evitar uma lista gigante no dashboard, mostramos apenas as Cereja Stories mais recentes aqui.
           O histórico completo fica numa página separada.
         </p>
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-slate-400">
             <ImagePlus className="h-4 w-4" />
-            Os meus stories
+            Minhas Cereja Stories
           </h3>
           <button
             type="button"
@@ -685,11 +685,11 @@ export default function DashboardClient() {
         {storiesLoading && myStories.length === 0 ? (
           <div className="flex items-center gap-2 py-6 text-slate-400">
             <Loader2 className="h-5 w-5 animate-spin" />
-            A carregar as suas stories…
+            Carregando suas Cereja Stories…
           </div>
         ) : myStories.length === 0 ? (
           <p className="py-2 text-sm text-slate-400">
-            Ainda não tem stories publicadas. Use &quot;Nova story&quot; acima para publicar.
+            Ainda não há Cereja Stories publicadas. Use &quot;Nova Cereja Story&quot; acima para publicar.
           </p>
         ) : (
           <>
@@ -739,7 +739,7 @@ export default function DashboardClient() {
                     </span>
                     <span className="text-slate-500">{s.type === 'video' ? 'Vídeo' : 'Imagem'}</span>
                     {(() => {
-                      const { main, hint } = storyExpiresLine(s, STORY_DURATION_HOURS)
+                      const { main, hint } = storyExpiresLine(s, CEREJA_STORIES_DURATION_HOURS)
                       return (
                         <span className="text-slate-400" title={hint || undefined}>
                           {main}
@@ -769,7 +769,7 @@ export default function DashboardClient() {
                         rows={3}
                         maxLength={2000}
                         className="w-full rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                        placeholder="Legenda da story (opcional)"
+                        placeholder="Legenda da Cereja Story (opcional)"
                       />
                       <div className="flex flex-wrap gap-2">
                         <button
@@ -832,7 +832,7 @@ export default function DashboardClient() {
                 href="/dashboard/stories"
                 className="rounded-lg border border-slate-600 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-slate-700"
               >
-                Ver todos os stories
+                Ver todas as Cereja Stories
               </Link>
             </div>
           </>

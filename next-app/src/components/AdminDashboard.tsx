@@ -96,7 +96,7 @@ export default function AdminDashboard() {
         { title: 'Novos usuários (7 dias)', value: s.newUsers7d ?? 0, href: '/admin/usuarios', icon: UserPlus, color: 'text-cyan-400' },
         { title: 'Perfis (todos os status)', value: s.totalProfiles ?? 0, href: '/admin/perfis', icon: UserCircle, color: 'text-green-400' },
         { title: 'Perfis ativos', value: s.activeProfiles ?? 0, href: '/admin/perfis', icon: CheckCircle2, color: 'text-emerald-400' },
-        { title: 'Stories (registros no sistema)', value: s.totalStories ?? 0, href: '/admin/perfis', icon: Film, color: 'text-fuchsia-400' },
+        { title: 'Cereja Stories (registros no sistema)', value: s.totalStories ?? 0, href: '/admin/perfis', icon: Film, color: 'text-fuchsia-400' },
         { title: 'Receita total (pagamentos ok)', value: formatMoney(s.totalRevenue ?? 0), href: '/admin/pagamentos', icon: CreditCard, color: 'text-amber-400' },
       ],
     },

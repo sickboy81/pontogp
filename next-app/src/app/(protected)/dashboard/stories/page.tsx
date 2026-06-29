@@ -1,8 +1,8 @@
 import DashboardStoriesClient from '@/components/DashboardStoriesClient'
 
 export const metadata = {
-  title: 'Stories',
-  description: 'Gerencie o histórico de stories no CerejaVIP.',
+  title: 'Cereja Stories',
+  description: 'Gerencie o histórico das suas Cereja Stories no CerejaVIP.',
 }
 
 export const dynamic = 'force-dynamic'

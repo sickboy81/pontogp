@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server'
+import { getLegacyCerejaStoryCutoff } from '@/lib/cereja-stories.mjs'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 const CACHE_CONTROL = 'public, max-age=15, s-maxage=20, stale-while-revalidate=60'
@@ -13,9 +14,9 @@ function toPBDate(d: Date = new Date()) {
 export async function GET(request: NextRequest) {
   const profileId = request.nextUrl.searchParams.get('profileId')
   const now = toPBDate()
-  const twelveHoursAgo = toPBDate(new Date(Date.now() - 12 * 60 * 60 * 1000))
+  const legacyCutoff = toPBDate(getLegacyCerejaStoryCutoff())
 
-  const parts = [`(expires_at > "${now}" || (expires_at = "" && created > "${twelveHoursAgo}"))`]
+  const parts = [`(expires_at > "${now}" || (expires_at = "" && created > "${legacyCutoff}"))`]
   if (profileId) parts.push(`profile = "${profileId}"`)
   const filter = parts.join(' && ')
 

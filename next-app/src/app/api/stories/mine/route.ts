@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { getAuthCookieFromHeader, getUserIdFromToken } from '@/lib/auth-cookie'
 import { getAdminToken } from '@/lib/pocketbase-admin'
+import { getLegacyCerejaStoryCutoff } from '@/lib/cereja-stories.mjs'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
@@ -107,7 +108,7 @@ export async function GET(req: NextRequest) {
     }
 
     const now = toPBDate()
-    const twelveHoursAgo = toPBDate(new Date(Date.now() - 12 * 60 * 60 * 1000))
+    const legacyCutoff = toPBDate(getLegacyCerejaStoryCutoff())
 
     const items = raw.map((r) => {
       const file = r.file
@@ -116,7 +117,7 @@ export async function GET(req: NextRequest) {
       const hasExpiry = expRaw != null && String(expRaw).trim() !== ''
       const active = hasExpiry
         ? String(expRaw) > now
-        : (r.created || '') > twelveHoursAgo
+        : (r.created || '') > legacyCutoff
       return {
         id: r.id,
         type: r.type || 'image',

@@ -37,7 +37,7 @@ export async function DELETE(
     if (!delRes.ok) return Response.json({ error: 'Erro ao excluir' }, { status: delRes.status })
     return Response.json({ ok: true })
   } catch {
-    return Response.json({ error: 'Erro ao excluir story' }, { status: 500 })
+    return Response.json({ error: 'Erro ao excluir Cereja Story' }, { status: 500 })
   }
 }
 
@@ -51,13 +51,13 @@ async function assertStoryOwner(
     { headers: { Authorization: `Bearer ${token}` } }
   )
   if (!res.ok) {
-    if (res.status === 404) return { error: 'Story não encontrada', status: 404 }
+    if (res.status === 404) return { error: 'Cereja Story não encontrada', status: 404 }
     return { error: 'Erro ao carregar', status: res.status }
   }
   const story = (await res.json()) as { profile?: string; expand?: { profile?: { user?: string } } }
   const profileId = story.profile
   const ownerId = story.expand?.profile?.user
-  if (!profileId) return { error: 'Story inválida', status: 400 }
+  if (!profileId) return { error: 'Cereja Story inválida', status: 400 }
   if (!ownerId) {
     const profileRes = await fetch(
       `${PB_URL}/api/collections/profiles/records/${profileId}?fields=user`,
@@ -117,6 +117,6 @@ export async function PATCH(
     const updated = (await patchRes.json()) as { id: string; text?: string }
     return Response.json({ id: updated.id, text: updated.text ?? text })
   } catch {
-    return Response.json({ error: 'Erro ao atualizar story' }, { status: 500 })
+    return Response.json({ error: 'Erro ao atualizar Cereja Story' }, { status: 500 })
   }
 }

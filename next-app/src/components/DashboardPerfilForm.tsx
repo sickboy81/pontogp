@@ -1806,7 +1806,7 @@ export default function DashboardPerfilForm() {
                   <h3 className="mb-1 font-medium text-white">Resumo do seu anúncio</h3>
                   <p className="text-sm text-slate-500">
                     Disponível em <strong className="text-slate-400">todos os planos</strong>. Os dados detalhados usam
-                    registros reais de visualizações, cliques, stories e favoritos.
+                    registros reais de visualizações, cliques, Cereja Stories e favoritos.
                   </p>
                 </div>
                 {statsLoading && <Loader2 className="h-5 w-5 animate-spin text-slate-500" />}
@@ -1922,9 +1922,9 @@ export default function DashboardPerfilForm() {
                 </div>
 
                 <div className="rounded-xl border border-slate-600 bg-slate-800/50 p-4">
-                  <h4 className="mb-2 text-sm font-semibold text-slate-400">Performance dos Stories</h4>
+                  <h4 className="mb-2 text-sm font-semibold text-slate-400">Performance das Cereja Stories</h4>
                   <p className="text-2xl font-bold text-white">{stats?.totals.storyViews ?? 0} views acumuladas</p>
-                  <p className="mt-1 text-xs text-slate-500">{stats?.totals.stories ?? 0} stories publicados no histórico deste perfil.</p>
+                  <p className="mt-1 text-xs text-slate-500">{stats?.totals.stories ?? 0} Cereja Stories publicadas no histórico deste perfil.</p>
                 </div>
               </div>
 
@@ -1936,7 +1936,7 @@ export default function DashboardPerfilForm() {
                 <ul className="space-y-2 text-sm text-slate-300">
                   <li className="flex gap-2">
                     <span className="text-emerald-500">✓</span>
-                    Mantenha fotos e stories atualizados para aumentar a chance de cliques.
+                    Mantenha fotos e Cereja Stories atualizadas para aumentar a chance de cliques.
                   </li>
                   <li className="flex gap-2">
                     <span className="text-emerald-500">✓</span>

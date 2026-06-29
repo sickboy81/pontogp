@@ -206,12 +206,14 @@ export default function StoryViewer({
     try {
       if (typeof navigator !== 'undefined' && navigator.share) {
         await navigator.share({
-          title: story.profile?.name ? `Story — ${story.profile.name}` : 'Story — CerejaVIP',
+          title: story.profile?.name
+            ? `Cereja Story - ${story.profile.name}`
+            : 'Cereja Stories - CerejaVIP',
           text:
             story.text?.trim() ||
             (story.profile?.name
-              ? `Confira o story de ${story.profile.name} no CerejaVIP.`
-              : 'Confira este story no CerejaVIP.'),
+              ? `Confira a Cereja Story de ${story.profile.name} no CerejaVIP.`
+              : 'Confira esta Cereja Story no CerejaVIP.'),
           url,
         })
         return
@@ -438,7 +440,7 @@ export default function StoryViewer({
           >
             <div className="mb-4 flex items-center justify-between">
               <h3 id="story-report-title" className="text-lg font-bold text-white">
-                Denunciar story
+                Denunciar Cereja Story
               </h3>
               <button
                 type="button"
@@ -520,7 +522,7 @@ export default function StoryViewer({
         onTouchEnd={onTouchEnd}
         onWheel={onWheel}
         role="application"
-        aria-label="Stories"
+        aria-label="Cereja Stories"
       >
         {/* Barras de progresso (tipo TikTok / IG) */}
         <div className="pointer-events-none absolute left-0 right-0 top-0 z-20 flex gap-1 px-2 pt-[max(0.5rem,env(safe-area-inset-top))]">
@@ -564,7 +566,7 @@ export default function StoryViewer({
           <div
             ref={storyNavRef}
             role="group"
-            aria-label="Story: toque esquerda anterior, centro pausar, direita próximo; duplo toque no centro curte"
+            aria-label="Cereja Story: toque à esquerda para voltar, no centro para pausar e à direita para avançar; toque duplo no centro para curtir"
             className="absolute inset-y-0 left-0 right-[5.5rem] z-10 flex cursor-default touch-manipulation items-stretch bg-transparent md:right-24"
             onTouchEnd={(e) => e.preventDefault()}
             onClick={(e) => {
@@ -611,7 +613,7 @@ export default function StoryViewer({
               )}
               <div className="min-w-0">
                 <span className="truncate text-sm font-semibold tracking-tight text-white drop-shadow-md">
-                  {story.profile?.name || 'Story'}
+                  {story.profile?.name || 'Cereja Story'}
                 </span>
                 <p className="text-xs text-white/60 drop-shadow-md">{storyCreatedLabel}</p>
               </div>
@@ -732,11 +734,11 @@ export default function StoryViewer({
                           return
                         }
                         if (!story.profile?.id) {
-                          toast.error('Não foi possível identificar o autor desta story')
+                          toast.error('Não foi possível identificar o autor desta Cereja Story')
                           return
                         }
                         if (!canReport) {
-                          toast.error('Você não pode denunciar a própria story')
+                          toast.error('Você não pode denunciar a própria Cereja Story')
                           return
                         }
                         setReportOpen(true)

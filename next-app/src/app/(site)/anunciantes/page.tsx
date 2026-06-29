@@ -12,13 +12,13 @@ const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://cerejavip.com'
 const testimonials = [
   { name: 'Juliana M.', location: 'São Paulo, SP', text: 'Meus contatos aumentaram mais de 200% no primeiro mês! O dashboard mostra tudo em tempo real — sei exatamente de onde vêm meus clientes.', rating: 5, plan: 'Ouro' },
   { name: 'Ana Paula', location: 'Rio de Janeiro, RJ', text: 'O link na bio mudou meu jogo. Coloquei no Instagram e os contatos não param. A plataforma é muito profissional e o suporte é excelente.', rating: 5, plan: 'Prata' },
-  { name: 'Mariana S.', location: 'Belo Horizonte, MG', text: 'Comecei no plano grátis e em uma semana já fiz upgrade pro Bronze. Os stories e o sistema de verificação fazem toda a diferença na credibilidade.', rating: 5, plan: 'Bronze' },
+  { name: 'Mariana S.', location: 'Belo Horizonte, MG', text: 'Comecei no plano grátis e em uma semana já fiz upgrade pro Bronze. As Cereja Stories e o sistema de verificação fazem toda a diferença na credibilidade.', rating: 5, plan: 'Bronze' },
   { name: 'Fernanda L.', location: 'Curitiba, PR', text: 'O que mais gosto é a privacidade. Tenho controle total sobre quem vê meu perfil. O painel é intuitivo e moderno.', rating: 5, plan: 'Ouro' },
 ]
 
 const features = [
   { icon: Camera, title: 'Galeria HD Ilimitada', description: 'Upload de fotos em alta resolução com watermark automática para proteger suas imagens.', color: 'text-pink-500', bgColor: 'bg-pink-500/10', borderColor: 'border-pink-500/20' },
-  { icon: Sparkles, title: 'Stories Dinâmicos', description: 'Publique stories que ficam ativos por 24h. Mostre seu dia-a-dia e engaje seus visitantes.', color: 'text-amber-500', bgColor: 'bg-amber-500/10', borderColor: 'border-amber-500/20' },
+  { icon: Sparkles, title: 'Cereja Stories', description: 'Publique Cereja Stories que ficam ativas por 24 horas. Mostre seu dia a dia e engaje seus visitantes.', color: 'text-amber-500', bgColor: 'bg-amber-500/10', borderColor: 'border-amber-500/20' },
   { icon: Link2, title: 'Link na Bio', description: 'Ganhe uma URL exclusiva cerejavip.com/@seunome para usar no Instagram, Twitter e mais.', color: 'text-cyan-500', bgColor: 'bg-cyan-500/10', borderColor: 'border-cyan-500/20' },
   { icon: BarChart3, title: 'Dashboard Analytics', description: 'Acompanhe visualizações, cliques, contatos e favoritos em tempo real no seu painel.', color: 'text-emerald-500', bgColor: 'bg-emerald-500/10', borderColor: 'border-emerald-500/20' },
   { icon: MessageCircle, title: 'Chat Interno', description: 'Receba mensagens diretamente pela plataforma. Comunicação segura sem expor seu número.', color: 'text-blue-500', bgColor: 'bg-blue-500/10', borderColor: 'border-blue-500/20' },

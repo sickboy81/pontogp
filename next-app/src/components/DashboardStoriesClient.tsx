@@ -6,8 +6,7 @@ import Link from 'next/link'
 import { ArrowLeft, Edit, Eye, Heart, ImagePlus, Loader2, MessageCircle, Trash2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { parsePocketBaseDateInput } from '@/utils/format'
-
-const STORY_DURATION_HOURS = 12
+import { CEREJA_STORIES_DURATION_HOURS } from '@/lib/cereja-stories.mjs'
 
 type MyStoryRow = {
   id: string
@@ -41,7 +40,7 @@ function storyExpiresLine(s: MyStoryRow): string {
 
   const created = s.created != null && String(s.created).trim() !== '' ? parsePocketBaseDateInput(s.created) : null
   if (created) {
-    const end = new Date(created.getTime() + STORY_DURATION_HOURS * 60 * 60 * 1000)
+    const end = new Date(created.getTime() + CEREJA_STORIES_DURATION_HOURS * 60 * 60 * 1000)
     if (!isNaN(end.getTime())) {
       return `Até ${end.toLocaleString('pt-BR', {
         day: '2-digit',
@@ -53,7 +52,7 @@ function storyExpiresLine(s: MyStoryRow): string {
     }
   }
 
-  return `Fica visível ${STORY_DURATION_HOURS}h após publicar`
+  return `Fica visível ${CEREJA_STORIES_DURATION_HOURS}h após publicar`
 }
 
 export default function DashboardStoriesClient() {
@@ -79,7 +78,7 @@ export default function DashboardStoriesClient() {
   }, [])
 
   const handleDeleteStory = async (id: string) => {
-    if (!confirm('Excluir esta story? Não dá para desfazer.')) return
+    if (!confirm('Excluir esta Cereja Story? Não dá para desfazer.')) return
     setDeletingId(id)
     try {
       const res = await fetch(`/api/stories/${id}`, { method: 'DELETE', credentials: 'include' })
@@ -90,7 +89,7 @@ export default function DashboardStoriesClient() {
       }
       setStories((prev) => prev.filter((s) => s.id !== id))
       if (editingStory?.id === id) setEditingStory(null)
-      toast.success('Story excluída.')
+      toast.success('Cereja Story excluída.')
     } finally {
       setDeletingId(null)
     }
@@ -132,7 +131,7 @@ export default function DashboardStoriesClient() {
 
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Todos os stories</h1>
+          <h1 className="text-2xl font-bold text-white">Cereja Stories</h1>
           <p className="mt-1 text-sm text-slate-400">
             Histórico completo para editar textos, acompanhar desempenho e excluir publicações antigas.
           </p>
@@ -167,10 +166,10 @@ export default function DashboardStoriesClient() {
         {loading && stories.length === 0 ? (
           <div className="flex items-center gap-2 py-8 text-slate-400">
             <Loader2 className="h-5 w-5 animate-spin" />
-            Carregando stories...
+            Carregando Cereja Stories...
           </div>
         ) : stories.length === 0 ? (
-          <p className="py-4 text-sm text-slate-400">Ainda não há stories publicadas.</p>
+          <p className="py-4 text-sm text-slate-400">Ainda não há Cereja Stories publicadas.</p>
         ) : (
           <ul className="space-y-3">
             {stories.map((s) => (
@@ -234,7 +233,7 @@ export default function DashboardStoriesClient() {
                         rows={3}
                         maxLength={2000}
                         className="w-full rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                        placeholder="Legenda da story (opcional)"
+                        placeholder="Legenda da Cereja Story (opcional)"
                       />
                       <div className="flex flex-wrap gap-2">
                         <button

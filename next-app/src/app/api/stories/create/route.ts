@@ -5,6 +5,7 @@ import {
   isRasterImageMime,
   maybeVideoToCompactMp4,
 } from '@/lib/server/media-upload'
+import { getCerejaStoryExpiresAt } from '@/lib/cereja-stories.mjs'
 
 export const maxDuration = 300
 
@@ -70,7 +71,7 @@ export async function POST(request: NextRequest) {
     if (!res.ok) return Response.json({ error: 'Perfil não encontrado' }, { status: 404 })
     const profile = (await res.json()) as { user?: string }
     if (profile.user !== userId) {
-      return Response.json({ error: 'Sem permissão para criar story neste perfil' }, { status: 403 })
+      return Response.json({ error: 'Sem permissão para criar Cereja Story neste perfil' }, { status: 403 })
     }
 
     const allowedTypes = [
@@ -124,7 +125,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const expiresAt = toPBDate(new Date(Date.now() + 12 * 60 * 60 * 1000))
+    const expiresAt = toPBDate(getCerejaStoryExpiresAt())
 
     const pbForm = new FormData()
     pbForm.append('profile', profileId)
@@ -143,7 +144,7 @@ export async function POST(request: NextRequest) {
     if (!createRes.ok) {
       const err = await createRes.json().catch(() => ({}))
       return Response.json(
-        { error: (err as { message?: string }).message || 'Erro ao criar story' },
+        { error: (err as { message?: string }).message || 'Erro ao criar Cereja Story' },
         { status: createRes.status }
       )
     }
@@ -158,6 +159,6 @@ export async function POST(request: NextRequest) {
       file: fileUrl,
     })
   } catch (e) {
-    return Response.json({ error: 'Erro ao criar story' }, { status: 500 })
+    return Response.json({ error: 'Erro ao criar Cereja Story' }, { status: 500 })
   }
 }

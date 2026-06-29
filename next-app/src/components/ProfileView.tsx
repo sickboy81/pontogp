@@ -177,7 +177,7 @@ export default function ProfileView({
                   ? 'cursor-pointer bg-gradient-to-br from-pink-500 via-rose-500 to-orange-400 hover:brightness-110'
                   : 'cursor-default bg-slate-700'
               }`}
-              aria-label={stories.length > 0 ? 'Abrir stories ativas' : 'Sem stories ativas'}
+              aria-label={stories.length > 0 ? 'Abrir Cereja Stories ativas' : 'Sem Cereja Stories ativas'}
             >
               <div className="h-full w-full overflow-hidden rounded-[7px] bg-slate-700">
                 {profile.thumbnail ? (
@@ -194,7 +194,7 @@ export default function ProfileView({
               {stories.length > 0 && (
                 <span className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full bg-black/70 px-2 py-1 text-[11px] font-semibold text-white">
                   <Play className="h-3 w-3" />
-                  Story
+                  Cereja Story
                 </span>
               )}
             </button>
