@@ -390,6 +390,17 @@ export default function SiteHeader() {
         <div className="mt-6 pb-3 md:mt-4 md:pb-1">
           {categoryGenderNav}
         </div>
+        {!isAuthenticated && (
+          <div className="pb-3 md:hidden">
+            <Link
+              href="/register"
+              className="flex w-full items-center justify-center rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-500"
+              onClick={closeAll}
+            >
+              Anunciar Grátis
+            </Link>
+          </div>
+        )}
       </div>
 
       {isMobile && mobileOpen && (
@@ -436,7 +447,6 @@ export default function SiteHeader() {
               </>
             ) : (
               <>
-                <Link href="/register" className="rounded-lg bg-primary-600 px-4 py-2 text-center font-semibold text-white hover:bg-primary-500" onClick={closeAll}>Anunciar Grátis</Link>
                 <Link href="/login" className="text-slate-300 hover:text-white" onClick={closeAll}>Entrar</Link>
                 <Link href="/register" className="text-slate-300 hover:text-white" onClick={closeAll}>Cadastrar</Link>
               </>
