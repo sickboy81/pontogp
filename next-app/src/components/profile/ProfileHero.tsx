@@ -26,7 +26,7 @@ export default function ProfileHero({
     profile.price_1h ?? profile.price_30min ?? profile.price_2h ?? profile.price_overnight ?? null
 
   return (
-    <div className="profile-reveal shrink-0 space-y-4 lg:w-[44%]">
+    <div className="profile-reveal shrink-0 space-y-4 lg:w-[41%] xl:w-[39%]">
       <button
         type="button"
         onClick={() => {

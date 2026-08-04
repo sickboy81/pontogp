@@ -57,10 +57,15 @@ export default function ProfileSummary({
 }: ProfileSummaryProps) {
   const primaryPrices = priceItems.slice(0, 4)
   const secondaryPrices = priceItems.slice(4)
+  const availabilityLabel = unavailable
+    ? 'Indisponível'
+    : profile.is_online
+      ? 'Online agora'
+      : 'Sob consulta'
 
   return (
     <div className="profile-reveal flex-1 space-y-6">
-      <div className="grid gap-4 lg:grid-cols-[1.4fr_0.8fr]">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.24fr)_minmax(280px,0.76fr)]">
         <section className="rounded-[1.75rem] border border-slate-700/70 bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800/80 p-6">
           <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
             <span className="inline-flex items-center gap-2 rounded-full border border-primary-500/20 bg-primary-500/10 px-3 py-1 text-primary-200">
@@ -92,10 +97,15 @@ export default function ProfileSummary({
 
         <aside className="space-y-4">
           <section className="rounded-[1.75rem] border border-slate-700/70 bg-slate-900/70 p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-              Resumo rápido
-            </p>
-            <div className="mt-4 grid grid-cols-2 gap-3">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                Resumo rápido
+              </p>
+              <span className="text-[11px] uppercase tracking-[0.16em] text-slate-600">
+                visão geral
+              </span>
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-3 xl:grid-cols-1">
               <div className="rounded-2xl border border-slate-700 bg-slate-800/60 p-3">
                 <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Cidade</p>
                 <p className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-white">
@@ -114,7 +124,7 @@ export default function ProfileSummary({
               <div className="rounded-2xl border border-slate-700 bg-slate-800/60 p-3">
                 <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Status</p>
                 <p className={`mt-2 text-sm font-semibold ${unavailable ? 'text-amber-300' : profile.is_online ? 'text-green-300' : 'text-slate-200'}`}>
-                  {unavailable ? 'Indisponível' : profile.is_online ? 'Online' : 'Offline'}
+                  {availabilityLabel}
                 </p>
               </div>
             </div>
@@ -124,30 +134,26 @@ export default function ProfileSummary({
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
               Confiança e disponibilidade
             </p>
-            <div className="mt-4 space-y-3 text-sm text-slate-300">
-              <div className="flex items-start gap-3 rounded-2xl border border-slate-700 bg-slate-800/60 p-3">
-                <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
-                <div>
-                  <p className="font-medium text-white">
-                    {profile.verified ? 'Perfil verificado' : 'Verificação não concluída'}
-                  </p>
-                  <p className="mt-1 text-slate-400">
-                    {profile.verified
-                      ? 'Conta com identidade validada para transmitir mais confiança.'
-                      : 'Ainda sem selo público de verificação.'}
+            <div className="mt-4 grid gap-3">
+              <div className="flex items-center gap-3 rounded-2xl border border-slate-700 bg-slate-800/60 px-3 py-3">
+                <BadgeCheck className={`h-4 w-4 shrink-0 ${profile.verified ? 'text-emerald-300' : 'text-slate-500'}`} />
+                <div className="min-w-0">
+                  <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Verificação</p>
+                  <p className="mt-1 truncate text-sm font-semibold text-white">
+                    {profile.verified ? 'Perfil verificado' : 'Sem verificação pública'}
                   </p>
                 </div>
               </div>
-              <div className="flex items-start gap-3 rounded-2xl border border-slate-700 bg-slate-800/60 p-3">
-                <Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-primary-300" />
-                <div>
-                  <p className="font-medium text-white">
-                    {profile.is_online ? 'Disponível agora' : 'Atendimento sob consulta'}
-                  </p>
-                  <p className="mt-1 text-slate-400">
+              <div className="flex items-center gap-3 rounded-2xl border border-slate-700 bg-slate-800/60 px-3 py-3">
+                <Clock3 className={`h-4 w-4 shrink-0 ${unavailable ? 'text-amber-300' : 'text-primary-300'}`} />
+                <div className="min-w-0">
+                  <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Atendimento</p>
+                  <p className="mt-1 truncate text-sm font-semibold text-white">
                     {unavailable
-                      ? 'A busca pública já sinaliza indisponibilidade até a renovação.'
-                      : 'Mensagens e contatos respeitam as regras de expiração do anúncio.'}
+                      ? 'Temporariamente indisponível'
+                      : profile.is_online
+                        ? 'Atendimento ativo agora'
+                        : 'Resposta sob consulta'}
                   </p>
                 </div>
               </div>
