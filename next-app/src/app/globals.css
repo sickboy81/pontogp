@@ -17,6 +17,27 @@ body {
   @apply bg-slate-900 text-slate-100 antialiased;
 }
 
+@keyframes profile-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.profile-reveal {
+  animation: profile-reveal 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .profile-reveal {
+    animation: none;
+  }
+}
+
 /* ——— Tema claro: base ——— */
 html.light body {
   @apply bg-slate-50 text-slate-900;

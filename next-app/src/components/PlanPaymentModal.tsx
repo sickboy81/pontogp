@@ -285,7 +285,6 @@ export default function PlanPaymentModal({
             <div className="mt-6 space-y-4">
               {qrCode && (
                 <div className="flex justify-center">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={qrCode} alt="QR Code PIX" className="h-48 w-48 rounded-lg border border-slate-600" />
                 </div>
               )}

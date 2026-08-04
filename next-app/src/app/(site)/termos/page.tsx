@@ -3,13 +3,14 @@ import Link from 'next/link'
 export const metadata = {
   title: 'Termos de Uso',
   description: 'Leia os termos de uso do CerejaVIP. Ao usar a plataforma, você concorda com nossos termos e condições.',
+  alternates: { canonical: '/termos' },
 }
 
 export default function TermosPage() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-12">
       <h1 className="text-3xl font-bold text-white">Termos de Uso</h1>
-      <p className="mt-4 text-sm text-slate-500">Última atualização: {new Date().toLocaleDateString('pt-BR')}</p>
+      <p className="mt-4 text-sm text-slate-500">Última atualização: 23/04/2026</p>
 
       <div className="mt-6 space-y-8 text-slate-300 leading-relaxed">
         <section>

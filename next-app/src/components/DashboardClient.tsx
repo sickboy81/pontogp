@@ -21,6 +21,7 @@ import {
   MessageCircle,
   X,
   Clock3,
+  RefreshCw,
 } from 'lucide-react'
 import VerificationRequestForm from '@/components/VerificationRequestForm'
 import type { Profile } from '@/lib/types'
@@ -30,6 +31,8 @@ import { useAuthStore } from '@/store/auth'
 import { MIN_PROFILE_PHOTOS, getMissingProfilePhotos } from '@/lib/profile-publication.mjs'
 import { isProfileBumpEligible } from '@/lib/profile-bump-eligibility.mjs'
 import { CEREJA_STORIES_DURATION_HOURS } from '@/lib/cereja-stories.mjs'
+import { getPublicProfilePath } from '@/lib/profile-url'
+import { resolveProtectedAccess } from '@/lib/protected-access.mjs'
 
 function formatExpiresAt(iso: string | undefined): string | null {
   if (!iso) return null
@@ -123,6 +126,9 @@ function isVideoFile(f: File): boolean {
 export default function DashboardClient() {
   const [profile, setProfile] = useState<Profile | null | undefined>(undefined)
   const [loading, setLoading] = useState(true)
+  const [authHydrated, setAuthHydrated] = useState(false)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [reloadKey, setReloadKey] = useState(0)
   const [storyUploading, setStoryUploading] = useState(false)
   const [storyDraft, setStoryDraft] = useState<{
     file: File
@@ -143,25 +149,42 @@ export default function DashboardClient() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
 
   useEffect(() => {
+    const persistence = useAuthStore.persist
+    if (persistence.hasHydrated()) setAuthHydrated(true)
+    return persistence.onFinishHydration(() => setAuthHydrated(true))
+  }, [])
+
+  useEffect(() => {
     let cancelled = false
-    if (!isAuthenticated) {
+    const access = resolveProtectedAccess({ hydrated: authHydrated, authenticated: isAuthenticated })
+    if (access === 'loading') return
+    if (access === 'login') {
       setProfile(null)
+      setLoadError(null)
       setLoading(false)
       return
     }
+    setLoading(true)
+    setLoadError(null)
     fetch('/api/profiles/me', { credentials: 'include' })
-      .then((res) => (res.ok ? res.json() : null))
+      .then((res) => {
+        if (!res.ok) throw new Error('Falha ao carregar o perfil')
+        return res.json()
+      })
       .then((data) => {
         if (!cancelled) setProfile(data)
       })
       .catch(() => {
-        if (!cancelled) setProfile(null)
+        if (!cancelled) {
+          setProfile(undefined)
+          setLoadError('Não foi possível carregar seu dashboard agora.')
+        }
       })
       .finally(() => {
         if (!cancelled) setLoading(false)
       })
     return () => { cancelled = true }
-  }, [isAuthenticated])
+  }, [authHydrated, isAuthenticated, reloadKey])
 
   useEffect(() => {
     if (!profile) return
@@ -269,6 +292,27 @@ export default function DashboardClient() {
           <div className="h-8 w-48 animate-pulse rounded bg-slate-700" />
           <div className="mt-4 h-4 w-full animate-pulse rounded bg-slate-700" />
           <div className="mt-2 h-4 w-3/4 animate-pulse rounded bg-slate-700" />
+        </div>
+      </div>
+    )
+  }
+
+  if (loadError) {
+    return (
+      <div className="mx-auto max-w-2xl">
+        <h1 className="mb-6 text-2xl font-bold text-white">Dashboard</h1>
+        <div role="alert" className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-8 text-center">
+          <AlertTriangle className="mx-auto mb-4 h-12 w-12 text-amber-300" />
+          <p className="text-lg font-semibold text-white">Seu dashboard não carregou</p>
+          <p className="mt-2 text-sm text-slate-300">{loadError} Verifique sua conexão e tente novamente.</p>
+          <button
+            type="button"
+            onClick={() => setReloadKey((key) => key + 1)}
+            className="mt-6 inline-flex min-h-11 items-center gap-2 rounded-lg bg-primary-600 px-5 py-2.5 font-semibold text-white transition hover:bg-primary-500"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Tentar novamente
+          </button>
         </div>
       </div>
     )
@@ -594,7 +638,7 @@ export default function DashboardClient() {
         </div>
         <div className="flex flex-wrap border-t border-slate-700">
           <Link
-            href={`/perfil/${profile.id}`}
+            href={getPublicProfilePath(profile)}
             className="flex flex-1 min-w-[120px] items-center justify-center gap-2 border-r border-slate-700 py-4 text-slate-300 transition hover:bg-slate-700/30 hover:text-white"
           >
             <Eye className="h-5 w-5" />

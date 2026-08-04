@@ -14,11 +14,6 @@ const websiteJsonLd = {
   name: 'CerejaVIP',
   url: APP_URL,
   inLanguage: 'pt-BR',
-  potentialAction: {
-    '@type': 'SearchAction',
-    target: `${APP_URL}/?search={search_term_string}`,
-    'query-input': 'required name=search_term_string',
-  },
 }
 
 const organizationJsonLd = {
@@ -27,7 +22,6 @@ const organizationJsonLd = {
   name: 'CerejaVIP',
   url: APP_URL,
   logo: `${APP_URL}/logo-cerejavip.png`,
-  sameAs: [],
 }
 
 export const viewport: Viewport = {
@@ -39,7 +33,7 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: { default: 'CerejaVIP - Acompanhantes Brasil', template: '%s | CerejaVIP' },
-  description: 'Encontre acompanhantes verificadas em todo o Brasil. Perfis com fotos reais, filtros por cidade e estado, chat seguro e contato direto via WhatsApp. Acompanhantes femininas, masculinos, trans e massagistas.',
+  description: 'Encontre acompanhantes verificadas em todo o Brasil, com fotos reais, filtros por cidade e contato direto. Perfis femininos, masculinos, trans e massagistas.',
   applicationName: 'CerejaVIP',
   keywords: [
     'acompanhantes',

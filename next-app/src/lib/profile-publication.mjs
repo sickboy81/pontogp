@@ -1,4 +1,9 @@
+export const MIN_PROFILE_BIO_LENGTH = 700
 export const MIN_PROFILE_PHOTOS = 3
+
+function normalizeBioLength(bio) {
+  return String(bio ?? '').trim().length
+}
 
 function normalizePhotoCount(photoCount) {
   const count = Number(photoCount)
@@ -7,6 +12,21 @@ function normalizePhotoCount(photoCount) {
 
 export function canPublishProfile(photoCount) {
   return normalizePhotoCount(photoCount) >= MIN_PROFILE_PHOTOS
+}
+
+export function hasPublishableProfileBio(bio) {
+  return normalizeBioLength(bio) >= MIN_PROFILE_BIO_LENGTH
+}
+
+export function getMissingProfileBioCharacters(bio) {
+  return Math.max(0, MIN_PROFILE_BIO_LENGTH - normalizeBioLength(bio))
+}
+
+export function getProfileDraftValidationError(profile) {
+  if (!String(profile?.name ?? '').trim()) return 'Informe o nome do perfil.'
+  if (!String(profile?.state ?? '').trim()) return 'Selecione o estado.'
+  if (!String(profile?.city ?? '').trim()) return 'Selecione a cidade.'
+  return null
 }
 
 export function getMissingProfilePhotos(photoCount) {
@@ -24,6 +44,14 @@ export function hasPublicProfileContact(profile) {
     [profile?.telegram, profile?.show_telegram],
     [profile?.phone, profile?.show_phone],
   ].some(([value, visible]) => visible === true && String(value ?? '').trim().length > 0)
+}
+
+export function hasUnsavedProfileContactChanges(savedProfile, currentProfile) {
+  return ['whatsapp', 'telegram', 'phone'].some((field) =>
+    String(savedProfile?.[field] ?? '').trim() !== String(currentProfile?.[field] ?? '').trim()
+  ) || ['show_whatsapp', 'show_telegram', 'show_phone'].some((field) =>
+    (savedProfile?.[field] === true) !== (currentProfile?.[field] === true)
+  )
 }
 
 export function canSaveProfileContacts(status, profile) {

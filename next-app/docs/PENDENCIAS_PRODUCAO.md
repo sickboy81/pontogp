@@ -59,15 +59,14 @@ mutados/arquivados automaticamente e, se sim, agende o job com logs.
 
 ## Qualidade
 
-`npm run lint` não apresenta erros, mas ainda possui avisos de hooks React e
-uso de `<img>`. Eles não bloqueiam o build, porém devem ser reduzidos
-gradualmente, priorizando dependências ausentes em hooks de carregamento.
+`npm run lint` deve permanecer sem erros ou avisos antes do deploy.
 
 ## Infraestrutura
 
 - Não há CI versionada em `.github/workflows`; build e smoke dependem do
   processo manual/Coolify.
-- Backup e restauração do volume PocketBase ainda precisam ser garantidos
-  fora do repositório.
+- O backup interno diário do PocketBase está configurado para 03:00, com
+  retenção de 7 cópias. Ainda é necessário manter uma cópia externa e testar
+  a restauração em ambiente separado.
 - DNS, variáveis do Coolify e hooks instalados devem ser inventariados fora
   do Git, sem incluir segredos.

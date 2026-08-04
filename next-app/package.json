@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
+    "start": "node .next/standalone/server.js",
+    "postbuild": "node scripts/prepare-standalone.mjs",
     "test": "node --test src/**/*.test.mjs",
     "lint": "eslint .",
     "schema": "node scripts/export-pocketbase-schema.mjs",
@@ -19,23 +20,28 @@
   "dependencies": {
     "ffmpeg-static": "^5.3.0",
     "lucide-react": "^1.8.0",
-    "next": "^16",
+    "next": "16.3.0-preview.10",
     "pocketbase": "^0.26.6",
-    "react": "^19",
-    "react-dom": "^19",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
     "react-hot-toast": "^2.4.1",
-    "sharp": "^0.34.5",
+    "sharp": "0.35.3",
     "zustand": "^4.4.7"
   },
   "devDependencies": {
     "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
     "autoprefixer": "^10",
-    "eslint": "^9",
-    "eslint-config-next": "^16",
-    "postcss": "^8",
+    "eslint": "9.39.5",
+    "eslint-config-next": "16.3.0-preview.10",
+    "postcss": "8.5.25",
     "tailwindcss": "^3.4.1",
     "typescript": "^5.1"
+  },
+  "overrides": {
+    "next": {
+      "postcss": "8.5.25"
+    }
   }
 }

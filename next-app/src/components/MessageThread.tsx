@@ -29,6 +29,7 @@ export default function MessageThread({
   const [blocked, setBlocked] = useState(false)
   const [blockLoading, setBlockLoading] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const lastMessageId = messages.at(-1)?.id
 
   const loadConversation = useCallback(async () => {
     if (!userId) return
@@ -105,7 +106,7 @@ export default function MessageThread({
     if (messages.length > 0 && messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
     }
-  }, [messages.length, messages[messages.length - 1]?.id])
+  }, [messages.length, lastMessageId])
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault()

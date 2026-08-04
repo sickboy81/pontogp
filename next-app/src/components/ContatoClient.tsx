@@ -46,6 +46,7 @@ export default function ContatoClient() {
   const turnstileRef = useRef<string | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY
+  const securityUnavailable = process.env.NODE_ENV === 'production' && !siteKey
 
   useEffect(() => {
     if (!siteKey || !containerRef.current) return
@@ -88,6 +89,10 @@ export default function ContatoClient() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (securityUnavailable) {
+      toast.error('Formulário temporariamente indisponível')
+      return
+    }
     if (siteKey && !turnstileToken) {
       toast.error('Complete a verificação de segurança')
       return
@@ -194,14 +199,14 @@ export default function ContatoClient() {
               <div ref={containerRef} />
             </div>
           ) : (
-            <p className="text-center text-xs text-slate-500">
-              Verificação de segurança opcional (configure NEXT_PUBLIC_TURNSTILE_SITE_KEY).
+            <p className="text-center text-sm text-amber-300">
+              Formulário temporariamente indisponível por segurança.
             </p>
           )}
 
           <button
             type="submit"
-            disabled={loading || (!!siteKey && !turnstileToken)}
+            disabled={loading || securityUnavailable || (!!siteKey && !turnstileToken)}
             className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary-600 py-3 font-semibold text-white transition hover:bg-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Send className="h-5 w-5" />

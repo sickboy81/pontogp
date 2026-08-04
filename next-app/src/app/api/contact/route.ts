@@ -82,6 +82,12 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         )
       }
+    } else if (process.env.NODE_ENV === 'production') {
+      console.error('[contact] TURNSTILE_SECRET_KEY ausente em produção.')
+      return Response.json(
+        { error: 'Formulário temporariamente indisponível.' },
+        { status: 503 }
+      )
     } else {
       console.warn('[contact] TURNSTILE_SECRET_KEY ausente; validação server-side desativada.')
     }

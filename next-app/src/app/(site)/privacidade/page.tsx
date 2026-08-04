@@ -1,13 +1,14 @@
 export const metadata = {
   title: 'Política de Privacidade',
   description: 'Política de privacidade do CerejaVIP. Saiba como coletamos, usamos e protegemos suas informações.',
+  alternates: { canonical: '/privacidade' },
 }
 
 export default function PrivacidadePage() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-12">
       <h1 className="text-3xl font-bold text-white">Política de Privacidade</h1>
-      <p className="mt-4 text-sm text-slate-500">Última atualização: {new Date().toLocaleDateString('pt-BR')}</p>
+      <p className="mt-4 text-sm text-slate-500">Última atualização: 23/04/2026</p>
 
       <div className="mt-6 space-y-8 text-slate-300 leading-relaxed">
         <section>

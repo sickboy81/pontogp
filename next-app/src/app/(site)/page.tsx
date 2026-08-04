@@ -8,7 +8,7 @@ const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://cerejavip.com'
 
 const DEFAULT_TITLE = 'CerejaVIP - Acompanhantes Verificadas em Todo Brasil'
 const DEFAULT_DESCRIPTION =
-  'Encontre acompanhantes verificadas em São Paulo, Rio de Janeiro, Brasília, BH e todas as capitais. Perfis com fotos reais, filtros por cidade, contato direto via WhatsApp. Acompanhantes femininas, masculinos, trans e massagistas.'
+  'Encontre acompanhantes verificadas em todo o Brasil, com fotos reais, filtros por cidade e contato direto. Perfis femininos, masculinos, trans e massagistas.'
 
 const HOME_OG_IMAGE = `${SITE_URL}/opengraph-image`
 const HOME_TWITTER_IMAGE = `${SITE_URL}/twitter-image`
@@ -21,7 +21,7 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
   const sp = getHomeSearchParamsURL(await searchParams)
   const { canonical, noindex } = resolveHomeCanonical(sp)
   const base: Metadata = {
-    title: DEFAULT_TITLE,
+    title: { absolute: DEFAULT_TITLE },
     description: DEFAULT_DESCRIPTION,
     alternates: { canonical },
   }

@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
-import { Search, Filter, X } from 'lucide-react'
+import { Search, Filter, X, RefreshCw } from 'lucide-react'
 import ProfileCard from '@/components/ProfileCard'
 import type { Profile, FilterOptions } from '@/lib/types'
 import { CATEGORIES } from '@/utils/constants'
@@ -99,6 +99,8 @@ export default function HomeClient() {
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') ?? '')
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [reloadKey, setReloadKey] = useState(0)
   const [hasMore, setHasMore] = useState(true)
   const [page, setPage] = useState(1)
   const [filtersOpen, setFiltersOpen] = useState(false)
@@ -116,14 +118,6 @@ export default function HomeClient() {
 
   const tagScopeFromUrl = parseTagScope(searchParams.get('tag_scope'))
   const effectiveTagScope = tagScopeFromUrl ?? tagMatchScope
-  const tagBlock = {
-    tag: tagFromUrl || undefined,
-    tagField: tagFieldFromUrl || undefined,
-    excludeProfile: excludeFromUrl || undefined,
-    tagScope: effectiveTagScope,
-  }
-  const tagScopeUrlKey = searchParams.get('tag_scope') ?? ''
-
   useEffect(() => {
     const t = searchParams.get('tag')?.trim() ?? ''
     const tf = searchParams.get('tag_field') ?? ''
@@ -196,15 +190,23 @@ export default function HomeClient() {
     const id = requestIdRef.current
     const controller = new AbortController()
     setLoading(true)
+    setLoadError(null)
+    const tagBlock = {
+      tag: tagFromUrl || undefined,
+      tagField: tagFieldFromUrl || undefined,
+      excludeProfile: excludeFromUrl || undefined,
+      tagScope: effectiveTagScope,
+    }
     const qs = buildQuery(filters, 1, debouncedSearch, tagBlock)
     fetch(`/api/profiles?${qs}`, { signal: controller.signal })
       .then(async (res) => {
-        const data = await res.json()
+        const data = await res.json().catch(() => null)
         if (requestIdRef.current !== id) return
         if (!res.ok) {
           setProfiles([])
           setHasMore(false)
           setTagSearchBanner(null)
+          setLoadError('Não foi possível carregar os anúncios agora.')
           return
         }
         if (Array.isArray(data)) {
@@ -233,22 +235,25 @@ export default function HomeClient() {
       })
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === 'AbortError') return
-        if (requestIdRef.current === id) setProfiles([])
+        if (requestIdRef.current === id) {
+          setProfiles([])
+          setHasMore(false)
+          setLoadError('Não foi possível carregar os anúncios agora.')
+        }
       })
       .finally(() => {
         if (requestIdRef.current === id) setLoading(false)
       })
     return () => controller.abort()
-  }, [filters, debouncedSearch, tagFromUrl, tagFieldFromUrl, excludeFromUrl, tagScopeUrlKey])
+  }, [filters, debouncedSearch, tagFromUrl, tagFieldFromUrl, excludeFromUrl, effectiveTagScope, reloadKey])
 
   const loadMore = useCallback(() => {
     const nextPage = page + 1
-    const scopeForPage = parseTagScope(searchParams.get('tag_scope')) ?? tagMatchScope
     const moreTagBlock = {
       tag: tagFromUrl || undefined,
       tagField: tagFieldFromUrl || undefined,
       excludeProfile: excludeFromUrl || undefined,
-      tagScope: scopeForPage,
+      tagScope: effectiveTagScope,
     }
     const qs = buildQuery(filters, nextPage, debouncedSearch, moreTagBlock)
     setLoading(true)
@@ -265,7 +270,7 @@ export default function HomeClient() {
         setPage(nextPage)
       })
       .finally(() => setLoading(false))
-  }, [filters, debouncedSearch, page, tagFromUrl, tagFieldFromUrl, excludeFromUrl, tagMatchScope, tagScopeUrlKey])
+  }, [filters, debouncedSearch, page, tagFromUrl, tagFieldFromUrl, excludeFromUrl, effectiveTagScope])
 
   useEffect(() => {
     const el = sentinelRef.current
@@ -387,6 +392,22 @@ export default function HomeClient() {
               </div>
             </div>
           ))}
+        </div>
+      ) : loadError ? (
+        <div role="alert" className="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-6 py-14 text-center">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-amber-500/10">
+            <RefreshCw className="h-8 w-8 text-amber-300" />
+          </div>
+          <p className="text-lg font-medium text-white">Os anúncios não carregaram</p>
+          <p className="mt-2 text-sm text-slate-300">{loadError} Verifique sua conexão e tente novamente.</p>
+          <button
+            type="button"
+            onClick={() => setReloadKey((key) => key + 1)}
+            className="mt-6 inline-flex min-h-11 items-center gap-2 rounded-xl bg-primary-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-500"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Tentar novamente
+          </button>
         </div>
       ) : profiles.length === 0 ? (
         <div className="rounded-2xl border border-slate-700/50 bg-slate-800/30 py-16 px-6 text-center">

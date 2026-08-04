@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Loader2 } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -23,7 +23,7 @@ export default function AdminAssinaturas() {
   const [loading, setLoading] = useState(true)
   const [status, setStatus] = useState('all')
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true)
     try {
       const res = await fetch(`/api/admin/subscriptions?page=1&perPage=100&status=${status}`, { credentials: 'include' })
@@ -35,11 +35,11 @@ export default function AdminAssinaturas() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [status])
 
   useEffect(() => {
     load()
-  }, [status])
+  }, [load])
 
   const toggleAutoRenew = async (row: SubscriptionRow) => {
     if (row.source === 'profile') return

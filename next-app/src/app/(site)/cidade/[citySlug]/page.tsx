@@ -6,6 +6,7 @@ import { getProfiles } from '@/lib/api/profiles'
 import { findSeoCityBySlug, getCitiesInState, SEO_CITIES } from '@/lib/seo-cities'
 import { findSeoStateByUf } from '@/lib/seo-states'
 import { SEO_INTENTS } from '@/lib/seo-intents'
+import { getPublicProfileUrl } from '@/lib/profile-url'
 import { getLocationFaq, getLocationHeroKicker, getLocationMetaDescription, getLocationMetaTitle, getLocationSeoCopy } from '@/lib/seo-copy'
 
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://cerejavip.com'
@@ -144,7 +145,7 @@ export default async function CityLandingPage({ params }: Props) {
           itemListElement: profiles.slice(0, 8).map((profile, index) => ({
             '@type': 'ListItem',
             position: index + 1,
-            url: `${SITE_URL}/perfil/${profile.id}`,
+            url: getPublicProfileUrl(profile, SITE_URL),
             name: profile.name,
           })),
         }

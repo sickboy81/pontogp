@@ -146,7 +146,7 @@ export default async function StateLandingPage({ params }: Props) {
             Buscas por categoria em {state.label}
           </h2>
           <p className="mt-2 text-sm text-slate-400">
-            Páginas estaduais por intenção ajudam a ranquear termos relacionados ao objetivo do site.
+            Escolha uma categoria para encontrar opções mais alinhadas ao que você procura.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             {SEO_INTENTS.map((intent) => (

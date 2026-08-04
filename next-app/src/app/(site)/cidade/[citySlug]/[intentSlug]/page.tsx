@@ -7,6 +7,7 @@ import { getProfiles } from '@/lib/api/profiles'
 import { findSeoCityBySlug, getCitiesInState, SEO_CITIES } from '@/lib/seo-cities'
 import { findSeoStateByUf } from '@/lib/seo-states'
 import { findSeoIntentBySlug, getIntentFilters, SEO_INTENTS } from '@/lib/seo-intents'
+import { getPublicProfileUrl } from '@/lib/profile-url'
 
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://cerejavip.com'
 
@@ -133,7 +134,7 @@ export default async function CityIntentPage({ params }: Props) {
           itemListElement: profiles.map((profile, index) => ({
             '@type': 'ListItem',
             position: index + 1,
-            url: `${SITE_URL}/perfil/${profile.id}`,
+            url: getPublicProfileUrl(profile, SITE_URL),
             name: profile.name,
           })),
         }

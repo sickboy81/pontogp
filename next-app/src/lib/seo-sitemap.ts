@@ -1,4 +1,5 @@
-import { getProfileSlugs } from '@/lib/api/profiles'
+import { getProfileSitemapRecords } from '@/lib/api/profiles'
+import { getPublicProfileUrl } from '@/lib/profile-url'
 import { SEO_CITIES } from '@/lib/seo-cities'
 import { SEO_GUIDES } from '@/lib/seo-guides'
 import { SEO_INTENTS } from '@/lib/seo-intents'
@@ -7,11 +8,17 @@ import { SEO_STATES } from '@/lib/seo-states'
 
 export type SitemapEntry = {
   url: string
+  lastmod?: string
   priority?: number
   changefreq?: 'daily' | 'weekly' | 'monthly'
 }
 
 const BASE = process.env.NEXT_PUBLIC_APP_URL || 'https://cerejavip.com'
+
+export const SITEMAP_HEADERS = {
+  'Content-Type': 'application/xml; charset=utf-8',
+  'Cache-Control': 'public, max-age=300, s-maxage=3600, stale-while-revalidate=86400',
+}
 
 export function getStaticSitemapEntries(): SitemapEntry[] {
   return [
@@ -21,6 +28,7 @@ export function getStaticSitemapEntries(): SitemapEntry[] {
     { url: `${BASE}/sobre`, changefreq: 'monthly', priority: 0.5 },
     { url: `${BASE}/termos`, changefreq: 'monthly', priority: 0.5 },
     { url: `${BASE}/privacidade`, changefreq: 'monthly', priority: 0.5 },
+    { url: `${BASE}/seguranca`, changefreq: 'monthly', priority: 0.55 },
     { url: `${BASE}/contato`, changefreq: 'monthly', priority: 0.5 },
     { url: `${BASE}/guia`, changefreq: 'monthly', priority: 0.62 },
     { url: `${BASE}/acompanhantes-perto-de-mim`, changefreq: 'weekly', priority: 0.74 },
@@ -79,12 +87,16 @@ export function getGuideSitemapEntries(): SitemapEntry[] {
 }
 
 export async function getProfileSitemapEntries(): Promise<SitemapEntry[]> {
-  const slugs = await getProfileSlugs()
-  return slugs.map((slug) => ({
-    url: `${BASE}/${slug}`,
-    changefreq: 'weekly' as const,
-    priority: 0.7,
-  }))
+  const profiles = await getProfileSitemapRecords()
+  return profiles.map((profile) => {
+    const updated = profile.updated_at ? new Date(profile.updated_at) : null
+    return {
+      url: getPublicProfileUrl(profile, BASE),
+      ...(updated && !Number.isNaN(updated.getTime()) ? { lastmod: updated.toISOString() } : {}),
+      changefreq: 'weekly' as const,
+      priority: 0.7,
+    }
+  })
 }
 
 function escapeXml(value: string): string {
@@ -97,21 +109,20 @@ function escapeXml(value: string): string {
 }
 
 export function renderUrlSet(entries: SitemapEntry[]): string {
-  const now = new Date().toISOString()
   const urls = entries
     .map((entry) => {
+      const lastmod = entry.lastmod ? `<lastmod>${escapeXml(entry.lastmod)}</lastmod>` : ''
       const changefreq = entry.changefreq ? `<changefreq>${entry.changefreq}</changefreq>` : ''
       const priority = entry.priority != null ? `<priority>${entry.priority.toFixed(2)}</priority>` : ''
-      return `<url><loc>${escapeXml(entry.url)}</loc><lastmod>${now}</lastmod>${changefreq}${priority}</url>`
+      return `<url><loc>${escapeXml(entry.url)}</loc>${lastmod}${changefreq}${priority}</url>`
     })
     .join('')
   return `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls}</urlset>`
 }
 
 export function renderSitemapIndex(urls: string[]): string {
-  const now = new Date().toISOString()
   const items = urls
-    .map((url) => `<sitemap><loc>${escapeXml(url)}</loc><lastmod>${now}</lastmod></sitemap>`)
+    .map((url) => `<sitemap><loc>${escapeXml(url)}</loc></sitemap>`)
     .join('')
   return `<?xml version="1.0" encoding="UTF-8"?><sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${items}</sitemapindex>`
 }

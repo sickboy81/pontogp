@@ -1,6 +1,7 @@
-import { notFound } from 'next/navigation'
+import { notFound, permanentRedirect } from 'next/navigation'
 import { getProfile } from '@/lib/api/profiles'
 import { getProfileOgImageUrl } from '@/lib/og'
+import { getProfileMetadataDescription, getPublicProfilePath, getPublicProfileUrl } from '@/lib/profile-url'
 import { SEO_CITIES } from '@/lib/seo-cities'
 import { findSeoStateByUf } from '@/lib/seo-states'
 import ProfileView from '@/components/ProfileView'
@@ -14,12 +15,9 @@ export async function generateMetadata({ params }: Props) {
   const profile = await getProfile(id)
   if (!profile) return { title: 'Perfil não encontrado' }
   const title = `${profile.name} - ${profile.city}, ${profile.state}`
-  const description =
-    profile.bio_title || profile.bio
-      ? `${profile.bio_title || ''} ${profile.bio}`.trim().slice(0, 160) + '...'
-      : `Perfil de ${profile.name} no CerejaVIP.`
+  const description = getProfileMetadataDescription(profile)
   const ogImageUrl = getProfileOgImageUrl(profile)
-  const canonical = `${SITE_URL}/perfil/${id}`
+  const canonical = getPublicProfileUrl(profile, SITE_URL)
   return {
     title,
     description,
@@ -58,7 +56,16 @@ export default async function PerfilByIdPage({ params, searchParams }: Props) {
   const openStories = sp?.stories === '1' || Boolean(initialStoryId)
   const profile = await getProfile(id)
   if (!profile) notFound()
-  const profileUrl = `${SITE_URL}/perfil/${id}`
+  const canonicalPath = getPublicProfilePath(profile)
+  const legacyPath = `/perfil/${encodeURIComponent(id)}`
+  if (canonicalPath !== legacyPath) {
+    const query = new URLSearchParams()
+    if (openStories) query.set('stories', '1')
+    if (initialStoryId) query.set('story', initialStoryId)
+    permanentRedirect(`${canonicalPath}${query.size > 0 ? `?${query}` : ''}`)
+  }
+
+  const profileUrl = getPublicProfileUrl(profile, SITE_URL)
   const cityLanding = SEO_CITIES.find(
     (item) => item.state === profile.state && item.city.trim().toLowerCase() === profile.city.trim().toLowerCase()
   )

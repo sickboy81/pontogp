@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/store/auth'
 import { Eye, EyeOff } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { getRegistrationNextUrl } from '@/lib/registration-flow.mjs'
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -48,8 +49,8 @@ export default function RegisterPage() {
       } catch {
         // ignora falha
       }
-      toast.success('Conta criada! Verifique seu email para ativar.')
-      router.push(`/verificar-email-pendente?email=${encodeURIComponent(email)}`)
+      toast.success('Conta criada! Entre para continuar.')
+      router.push(getRegistrationNextUrl(role))
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Erro ao criar conta'
       toast.error(message)
@@ -67,6 +68,7 @@ export default function RegisterPage() {
         <button
           type="button"
           onClick={() => setRole('advertiser')}
+          aria-pressed={role === 'advertiser'}
           className={`flex-1 rounded-lg py-3 text-sm font-medium transition ${
             role === 'advertiser'
               ? 'bg-primary-500 text-white'
@@ -78,6 +80,7 @@ export default function RegisterPage() {
         <button
           type="button"
           onClick={() => setRole('user')}
+          aria-pressed={role === 'user'}
           className={`flex-1 rounded-lg py-3 text-sm font-medium transition ${
             role === 'user' ? 'bg-primary-500 text-white' : 'text-slate-400 hover:text-white'
           }`}
@@ -86,15 +89,23 @@ export default function RegisterPage() {
         </button>
       </div>
 
+      <div className="mt-3 rounded-lg border border-slate-700 bg-slate-900/40 px-4 py-3 text-sm text-slate-300" aria-live="polite">
+        {role === 'advertiser'
+          ? 'Crie sua conta e depois complete seu anúncio com informações, contato e pelo menos 3 fotos para publicá-lo.'
+          : 'Crie sua conta para favoritar perfis e usar os recursos disponíveis para clientes.'}
+      </div>
+
       <form onSubmit={handleSubmit} className="mt-6 space-y-4">
         <div>
-          <label className="block text-sm font-medium text-slate-300">Nome</label>
+          <label className="block text-sm font-medium text-slate-300">Nome *</label>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
+            autoComplete="name"
             className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-4 py-3 text-white placeholder-slate-500 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-            placeholder="Seu nome"
+            placeholder={role === 'advertiser' ? 'Nome de exibição' : 'Seu nome'}
+            required
           />
         </div>
         <div>
@@ -123,7 +134,8 @@ export default function RegisterPage() {
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+              className="absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-700 hover:text-white"
+              aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
             >
               {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
             </button>
@@ -144,7 +156,8 @@ export default function RegisterPage() {
             <button
               type="button"
               onClick={() => setShowConfirm(!showConfirm)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+              className="absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-700 hover:text-white"
+              aria-label={showConfirm ? 'Ocultar confirmação de senha' : 'Mostrar confirmação de senha'}
             >
               {showConfirm ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
             </button>

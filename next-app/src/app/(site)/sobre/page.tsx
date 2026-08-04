@@ -3,6 +3,7 @@ import Link from 'next/link'
 export const metadata = {
   title: 'Sobre o CerejaVIP - Plataforma de Acompanhantes Brasil',
   description: 'Conheça o CerejaVIP: plataforma de classificados para acompanhantes com perfis verificados, chat seguro, galeria HD e privacidade total. Presente em todas as capitais do Brasil.',
+  alternates: { canonical: '/sobre' },
 }
 
 export default function SobrePage() {

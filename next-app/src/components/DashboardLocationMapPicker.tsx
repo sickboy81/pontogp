@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Loader2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -136,9 +136,9 @@ export default function DashboardLocationMapPicker({
   const zoom = approximate ? 13 : 15
   const hasCoords = lat != null && lng != null
 
-  if (lat != null && lng != null) {
-    mapViewRef.current = { lat, lng, zoom }
-  }
+  useEffect(() => {
+    if (lat != null && lng != null) mapViewRef.current = { lat, lng, zoom }
+  }, [lat, lng, zoom])
 
   useEffect(() => {
     onChangeRef.current = onChange
@@ -273,13 +273,7 @@ export default function DashboardLocationMapPicker({
     }
   }, [])
 
-  useEffect(() => {
-    if (hasCoords || !city || !state) return
-    void geocodeAddress()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [city, state])
-
-  const geocodeAddress = async () => {
+  const geocodeAddress = useCallback(async () => {
     if (!city || !state) {
       toast.error('Selecione estado e cidade antes de buscar no mapa')
       return
@@ -314,7 +308,12 @@ export default function DashboardLocationMapPicker({
     } finally {
       setIsSearching(false)
     }
-  }
+  }, [city, onChange, searchLabel, state])
+
+  useEffect(() => {
+    if (hasCoords || !city || !state) return
+    void geocodeAddress()
+  }, [city, geocodeAddress, hasCoords, state])
 
   return (
     <div className="rounded-xl border border-slate-700 bg-slate-900/30 p-4">

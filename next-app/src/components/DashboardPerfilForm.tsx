@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, ImagePlus, Loader2, Mic, Plus, Save, Trash2, Video, Settings, BarChart3, Link2, Copy, TrendingUp, Clock, Target, Lightbulb, GripVertical } from 'lucide-react'
+import { ArrowLeft, ImagePlus, Loader2, Mic, Plus, Save, Trash2, Video, Settings, BarChart3, Link2, Copy, TrendingUp, Clock, Target, Lightbulb, GripVertical, AlertTriangle, RefreshCw } from 'lucide-react'
 import type { Profile, Schedule } from '@/lib/types'
 import {
   CATEGORIES, GENDERS, STATES, ETHNICITIES, HAIR_COLORS, BODY_TYPES, BREAST_TYPES, PUBIS_TYPES,
@@ -24,13 +24,19 @@ import {
   socialProfileHref,
 } from '@/lib/social-links'
 import {
+  MIN_PROFILE_BIO_LENGTH,
   MIN_PROFILE_PHOTOS,
   canPublishProfile,
   canRemoveProfilePhoto,
   canSaveProfileContacts,
+  getMissingProfileBioCharacters,
   getMissingProfilePhotos,
+  getProfileDraftValidationError,
+  hasPublishableProfileBio,
   hasPublicProfileContact,
+  hasUnsavedProfileContactChanges,
 } from '@/lib/profile-publication.mjs'
+import { resolveProtectedAccess } from '@/lib/protected-access.mjs'
 
 type FormData = {
   name: string
@@ -306,6 +312,9 @@ export default function DashboardPerfilForm() {
   const [draggedLinkIndex, setDraggedLinkIndex] = useState<number | null>(null)
   const [form, setForm] = useState<FormData>(emptyForm)
   const [loading, setLoading] = useState(true)
+  const [authHydrated, setAuthHydrated] = useState(false)
+  const [profileLoadError, setProfileLoadError] = useState<string | null>(null)
+  const [profileReloadKey, setProfileReloadKey] = useState(0)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [photoUploading, setPhotoUploading] = useState(false)
@@ -320,27 +329,43 @@ export default function DashboardPerfilForm() {
   const [statsLoading, setStatsLoading] = useState(false)
 
   useEffect(() => {
+    const persistence = useAuthStore.persist
+    if (persistence.hasHydrated()) setAuthHydrated(true)
+    return persistence.onFinishHydration(() => setAuthHydrated(true))
+  }, [])
+
+  useEffect(() => {
     let cancelled = false
-    if (!isAuthenticated) {
+    const access = resolveProtectedAccess({ hydrated: authHydrated, authenticated: isAuthenticated })
+    if (access === 'loading') return
+    if (access === 'login') {
       router.replace(`/login?callbackUrl=${encodeURIComponent('/dashboard/perfil')}`)
       setLoading(false)
       return
     }
+    setLoading(true)
+    setProfileLoadError(null)
     fetch('/api/profiles/me', { credentials: 'include' })
-      .then((res) => (res.ok ? res.json() : null))
+      .then((res) => {
+        if (!res.ok) throw new Error('Falha ao carregar o perfil')
+        return res.json()
+      })
       .then((data) => {
         if (cancelled) return
         setProfile(data)
         setForm(profileToForm(data))
       })
       .catch(() => {
-        if (!cancelled) setProfile(null)
+        if (!cancelled) {
+          setProfile(undefined)
+          setProfileLoadError('Não foi possível carregar os dados do seu perfil agora.')
+        }
       })
       .finally(() => {
         if (!cancelled) setLoading(false)
       })
     return () => { cancelled = true }
-  }, [router, isAuthenticated])
+  }, [router, authHydrated, isAuthenticated, profileReloadKey])
 
   useEffect(() => {
     if (profile) {
@@ -378,8 +403,33 @@ export default function DashboardPerfilForm() {
   const mapLng = parseCoordinate(form.location_lng, -180, 180)
   const photoCount = profile?.photos?.length || 0
   const missingPhotoCount = getMissingProfilePhotos(photoCount)
+  const bioLength = form.bio.trim().length
+  const persistedBio = profile?.bio ?? ''
+  const missingPersistedBioCharacters = getMissingProfileBioCharacters(persistedBio)
+  const hasPersistedPublishableBio = hasPublishableProfileBio(persistedBio)
+  const hasUnsavedBioChanges = Boolean(profile) && form.bio.trim() !== persistedBio.trim()
   const hasPublicContact = hasPublicProfileContact(form)
-  const canPublish = canPublishProfile(photoCount) && hasPublicContact
+  const hasPersistedPublicContact = hasPublicProfileContact(profile ?? {})
+  const hasUnsavedContactChanges = profile
+    ? hasUnsavedProfileContactChanges(profile, form)
+    : false
+  const canPublish =
+    canPublishProfile(photoCount) &&
+    hasPersistedPublishableBio &&
+    hasPersistedPublicContact &&
+    !hasUnsavedBioChanges &&
+    !hasUnsavedContactChanges
+  const publicationPendingMessages = [
+    missingPhotoCount > 0
+      ? `${missingPhotoCount} ${missingPhotoCount === 1 ? 'foto' : 'fotos'}`
+      : null,
+    missingPersistedBioCharacters > 0
+      ? `${missingPersistedBioCharacters} ${missingPersistedBioCharacters === 1 ? 'caractere na bio salva' : 'caracteres na bio salva'}`
+      : null,
+    hasUnsavedBioChanges ? 'salvar as alterações da bio' : null,
+    !hasPersistedPublicContact ? 'um contato público salvo' : null,
+    hasUnsavedContactChanges ? 'salvar as alterações de contato' : null,
+  ].filter((message): message is string => Boolean(message))
   const canRemovePhoto = profile
     ? canRemoveProfilePhoto(profile.status, photoCount)
     : false
@@ -599,9 +649,16 @@ export default function DashboardPerfilForm() {
     setError(null)
     setSaving(true)
     try {
+      const draftValidationError = getProfileDraftValidationError(form)
+      if (draftValidationError) {
+        setError(draftValidationError)
+        setSaving(false)
+        return
+      }
+
       const contactsAreValid = profile
         ? canSaveProfileContacts(profile.status, form)
-        : hasPublicContact
+        : true
       if (!contactsAreValid) {
         setError('Preencha e torne público pelo menos um contato.')
         setSaving(false)
@@ -750,6 +807,30 @@ export default function DashboardPerfilForm() {
     )
   }
 
+  if (profileLoadError) {
+    return (
+      <div className="mx-auto max-w-2xl">
+        <Link href="/dashboard" className="mb-6 inline-flex items-center gap-2 text-slate-400 transition hover:text-white">
+          <ArrowLeft className="h-4 w-4" />
+          Voltar ao dashboard
+        </Link>
+        <div role="alert" className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-8 text-center">
+          <AlertTriangle className="mx-auto mb-4 h-12 w-12 text-amber-300" />
+          <p className="text-lg font-semibold text-white">O editor não carregou</p>
+          <p className="mt-2 text-sm text-slate-300">{profileLoadError} Verifique sua conexão e tente novamente.</p>
+          <button
+            type="button"
+            onClick={() => setProfileReloadKey((key) => key + 1)}
+            className="mt-6 inline-flex min-h-11 items-center gap-2 rounded-lg bg-primary-600 px-5 py-2.5 font-semibold text-white transition hover:bg-primary-500"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Tentar novamente
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="mx-auto max-w-2xl">
       <Link
@@ -852,8 +933,9 @@ export default function DashboardPerfilForm() {
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-300">Estado</label>
+            <label className="mb-1 block text-sm font-medium text-slate-300">Estado *</label>
             <select
+              required
               value={form.state}
               onChange={(e) => setForm((f) => ({ ...f, state: e.target.value, city: '' }))}
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
@@ -865,8 +947,9 @@ export default function DashboardPerfilForm() {
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-300">Cidade</label>
+            <label className="mb-1 block text-sm font-medium text-slate-300">Cidade *</label>
             <select
+              required
               value={form.city}
               onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))}
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
@@ -1294,14 +1377,23 @@ export default function DashboardPerfilForm() {
           />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-300">Bio *</label>
+          <label className="mb-1 block text-sm font-medium text-slate-300">Bio</label>
           <textarea
-            required
             rows={4}
             value={form.bio}
             onChange={(e) => setForm((f) => ({ ...f, bio: e.target.value }))}
             className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
           />
+          <p
+            className={`mt-1 text-xs ${bioLength >= MIN_PROFILE_BIO_LENGTH ? 'text-slate-500' : 'text-amber-400'}`}
+            aria-live="polite"
+          >
+            {bioLength}/{MIN_PROFILE_BIO_LENGTH} caracteres.
+            {bioLength < MIN_PROFILE_BIO_LENGTH
+              ? ` Faltam ${MIN_PROFILE_BIO_LENGTH - bioLength} para publicar; o rascunho pode ser salvo agora.`
+              : ' Bio pronta para publicação.'}
+            {hasUnsavedBioChanges ? ' Salve as alterações antes de publicar.' : ''}
+          </p>
         </div>
         <div>
           <label className="mb-1 block text-sm font-medium text-slate-300">Descrição curta</label>
@@ -1334,7 +1426,7 @@ export default function DashboardPerfilForm() {
             className={`mb-3 text-xs ${hasPublicContact ? 'text-slate-500' : 'text-amber-400'}`}
             aria-live="polite"
           >
-            Preencha e torne público pelo menos um contato.
+            Telefone, WhatsApp ou Telegram público é obrigatório para publicar. O rascunho pode ser salvo antes.
           </p>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
@@ -1587,13 +1679,11 @@ export default function DashboardPerfilForm() {
                   {photoCount}/{MIN_PROFILE_PHOTOS} fotos obrigatórias
                 </p>
                 <p className="mt-1 text-xs text-slate-400">
-                  {missingPhotoCount > 0
-                    ? `Adicione mais ${missingPhotoCount} ${missingPhotoCount === 1 ? 'foto' : 'fotos'} para liberar a publicação.`
-                    : profile.status === 'active'
-                      ? 'Perfil publicado. Mantenha pelo menos 3 fotos.'
-                      : hasPublicContact
-                        ? 'Quantidade mínima atingida. O perfil já pode ser publicado.'
-                        : 'Fotos concluídas. Preencha e torne público pelo menos um contato.'}
+                  {profile.status === 'active'
+                    ? 'Perfil publicado. Mantenha pelo menos 3 fotos, bio completa e um contato público.'
+                    : publicationPendingMessages.length > 0
+                      ? `Pendências para publicar: ${publicationPendingMessages.join(', ')}.`
+                      : 'Fotos, bio e contato concluídos. O perfil já pode ser publicado.'}
                 </p>
               </div>
               {profile.status === 'inactive' && (
@@ -1617,7 +1707,6 @@ export default function DashboardPerfilForm() {
                     key={url}
                     className="group relative aspect-[3/4] overflow-hidden rounded-lg border border-slate-600 bg-slate-700"
                   >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={url}
                       alt=""
@@ -2322,7 +2411,7 @@ export default function DashboardPerfilForm() {
             className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-6 py-2.5 font-semibold text-white transition hover:bg-primary-500 disabled:opacity-50"
           >
             <Save className="h-4 w-4" />
-            {saving ? 'Salvando...' : 'Salvar'}
+            {saving ? 'Salvando...' : profile ? 'Salvar alterações' : 'Salvar rascunho'}
           </button>
           <Link
             href="/dashboard"

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, CheckCircle, Loader2, Trash2, XCircle } from 'lucide-react'
 
@@ -25,11 +25,7 @@ export default function AdminDenuncias() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    loadReports()
-  }, [filter])
-
-  const loadReports = async () => {
+  const loadReports = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
@@ -45,7 +41,11 @@ export default function AdminDenuncias() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [filter])
+
+  useEffect(() => {
+    void loadReports()
+  }, [loadReports])
 
   const handleUpdate = async (id: string, status: string) => {
     setUpdating(id)

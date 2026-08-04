@@ -1,7 +1,7 @@
-import { getLocationSitemapEntries, renderUrlSet } from '@/lib/seo-sitemap'
+import { getLocationSitemapEntries, renderUrlSet, SITEMAP_HEADERS } from '@/lib/seo-sitemap'
 
 export function GET() {
   return new Response(renderUrlSet(getLocationSitemapEntries()), {
-    headers: { 'Content-Type': 'application/xml; charset=utf-8' },
+    headers: SITEMAP_HEADERS,
   })
 }

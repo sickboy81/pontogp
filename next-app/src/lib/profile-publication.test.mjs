@@ -1,5 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import * as profilePublication from './profile-publication.mjs'
 import {
   MIN_PROFILE_PHOTOS,
   canPublishProfile,
@@ -9,6 +10,67 @@ import {
   hasPublicProfileContact,
   isPublicProfileStatus,
 } from './profile-publication.mjs'
+
+test('allows saving a complete draft before contact and bio are ready for publication', () => {
+  assert.equal(
+    profilePublication.getProfileDraftValidationError?.({
+      name: 'Perfil de teste',
+      state: 'SP',
+      city: 'São Paulo',
+      bio: '',
+      whatsapp: '',
+      show_whatsapp: false,
+    }),
+    null
+  )
+})
+
+test('reports the first missing field required to create a profile draft', () => {
+  assert.equal(
+    profilePublication.getProfileDraftValidationError?.({ name: '', state: '', city: '' }),
+    'Informe o nome do perfil.'
+  )
+  assert.equal(
+    profilePublication.getProfileDraftValidationError?.({ name: 'Perfil', state: '', city: '' }),
+    'Selecione o estado.'
+  )
+  assert.equal(
+    profilePublication.getProfileDraftValidationError?.({ name: 'Perfil', state: 'SP', city: '' }),
+    'Selecione a cidade.'
+  )
+})
+
+test('requires 700 characters in the saved bio before publication', () => {
+  assert.equal(profilePublication.hasPublishableProfileBio?.('a'.repeat(699)), false)
+  assert.equal(profilePublication.hasPublishableProfileBio?.('a'.repeat(700)), true)
+  assert.equal(profilePublication.getMissingProfileBioCharacters?.('a'.repeat(650)), 50)
+})
+
+test('detects contact changes that must be saved before publication', () => {
+  const saved = {
+    whatsapp: '11999999999',
+    telegram: '',
+    phone: '',
+    show_whatsapp: true,
+    show_telegram: false,
+    show_phone: false,
+  }
+  assert.equal(profilePublication.hasUnsavedProfileContactChanges?.(saved, saved), false)
+  assert.equal(
+    profilePublication.hasUnsavedProfileContactChanges?.(saved, {
+      ...saved,
+      whatsapp: '11888888888',
+    }),
+    true
+  )
+  assert.equal(
+    profilePublication.hasUnsavedProfileContactChanges?.(saved, {
+      ...saved,
+      show_whatsapp: false,
+    }),
+    true
+  )
+})
 
 test('requires at least three photos to publish a profile', () => {
   assert.equal(MIN_PROFILE_PHOTOS, 3)

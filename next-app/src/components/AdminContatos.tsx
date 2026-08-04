@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Loader2, Trash2 } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -20,7 +20,7 @@ export default function AdminContatos() {
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'read' | 'unread'>('all')
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true)
     try {
       const readParam = filter === 'all' ? '' : filter === 'read' ? 'true' : 'false'
@@ -34,11 +34,11 @@ export default function AdminContatos() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [filter])
 
   useEffect(() => {
     load()
-  }, [filter])
+  }, [load])
 
   const markRead = async (id: string, value: boolean) => {
     const res = await fetch(`/api/admin/contacts/${id}`, {

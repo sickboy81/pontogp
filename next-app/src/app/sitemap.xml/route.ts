@@ -1,4 +1,4 @@
-import { renderSitemapIndex } from '@/lib/seo-sitemap'
+import { renderSitemapIndex, SITEMAP_HEADERS } from '@/lib/seo-sitemap'
 
 const BASE = process.env.NEXT_PUBLIC_APP_URL || 'https://cerejavip.com'
 
@@ -11,6 +11,6 @@ export function GET() {
       `${BASE}/sitemap-guias.xml`,
       `${BASE}/sitemap-perfis.xml`,
     ]),
-    { headers: { 'Content-Type': 'application/xml; charset=utf-8' } }
+    { headers: SITEMAP_HEADERS }
   )
 }

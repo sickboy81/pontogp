@@ -7,7 +7,7 @@ import {
   type ProfileJsonTagField,
 } from '@/lib/api/profiles'
 import { getAuthCookieFromHeader, getUserIdFromToken } from '@/lib/auth-cookie'
-import { hasPublicProfileContact } from '@/lib/profile-publication.mjs'
+import { getProfileDraftValidationError } from '@/lib/profile-publication.mjs'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 const PUBLIC_CACHE_CONTROL = 'public, max-age=10, s-maxage=20, stale-while-revalidate=60'
@@ -143,19 +143,15 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = (await request.json()) as Record<string, unknown>
-    if (!hasPublicProfileContact(body)) {
-      return Response.json(
-        { error: 'Preencha e torne público pelo menos um contato.' },
-        { status: 400 }
-      )
-    }
+    const validationError = getProfileDraftValidationError(body)
+    if (validationError) return Response.json({ error: validationError }, { status: 400 })
 
     const data: Record<string, unknown> = {
       user: userId,
-      name: body.name ?? '',
+      name: String(body.name ?? '').trim(),
       age: Number(body.age) || 18,
-      city: (body.city as string) ?? '',
-      state: (body.state as string) ?? '',
+      city: String(body.city ?? '').trim(),
+      state: String(body.state ?? '').trim(),
       bio: (body.bio as string) ?? '',
       category: body.category ?? 'acompanhante',
       gender: body.gender ?? 'mulher',

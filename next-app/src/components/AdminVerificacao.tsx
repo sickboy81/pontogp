@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, CheckCircle, Loader2, XCircle } from 'lucide-react'
 
@@ -31,11 +31,7 @@ export default function AdminVerificacao() {
   const [filter, setFilter] = useState<'pending' | 'all'>('pending')
   const [updating, setUpdating] = useState<string | null>(null)
 
-  useEffect(() => {
-    load()
-  }, [filter])
-
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true)
     try {
       const res = await fetch(`/api/admin/verification?status=${filter}`, {
@@ -48,7 +44,11 @@ export default function AdminVerificacao() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [filter])
+
+  useEffect(() => {
+    void load()
+  }, [load])
 
   const handleUpdate = async (id: string, status: 'approved' | 'rejected', reason?: string) => {
     setUpdating(id)
@@ -168,7 +168,6 @@ export default function AdminVerificacao() {
                     rel="noopener noreferrer"
                     className="overflow-hidden rounded-lg border border-slate-600 bg-slate-700"
                   >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={fileUrl('verification_requests', r.id, r.document_front)}
                       alt="Documento frente"
@@ -184,7 +183,6 @@ export default function AdminVerificacao() {
                     rel="noopener noreferrer"
                     className="overflow-hidden rounded-lg border border-slate-600 bg-slate-700"
                   >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={fileUrl('verification_requests', r.id, r.document_back)}
                       alt="Documento verso"
@@ -200,7 +198,6 @@ export default function AdminVerificacao() {
                     rel="noopener noreferrer"
                     className="overflow-hidden rounded-lg border border-slate-600 bg-slate-700"
                   >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={fileUrl('verification_requests', r.id, r.selfie)}
                       alt="Selfie"

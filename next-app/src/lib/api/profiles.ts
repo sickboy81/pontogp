@@ -387,18 +387,39 @@ export async function getProfileBySlug(slug: string): Promise<Profile | null> {
   }
 }
 
-/** Lista slugs de perfis (para sitemap). */
-export async function getProfileSlugs(): Promise<string[]> {
+export type ProfileSitemapRecord = Pick<Profile, 'id' | 'slug' | 'display_mode'> & {
+  updated_at?: string
+}
+
+/** Lista as URLs canônicas e datas reais dos perfis públicos para o sitemap. */
+export async function getProfileSitemapRecords(): Promise<ProfileSitemapRecord[]> {
   try {
     const policy = await getProfileVisibilityPolicy()
     const lifecycleFilter = buildLifecycleFilter(policy)
-    const res = await fetch(
-      `${PB_URL}/api/collections/profiles/records?perPage=500&fields=slug&filter=${encodeURIComponent(lifecycleFilter)}`,
-      { next: { revalidate: 300 } }
-    )
-    if (!res.ok) return []
-    const data = await res.json()
-    return (data.items || []).map((r: { slug?: string }) => r.slug).filter(Boolean)
+    const records: Array<{ id: string; slug: string; display_mode?: 'default' | 'link_bio'; updated?: string }> = []
+    let page = 1
+    let totalPages = 1
+
+    do {
+      const res = await fetch(
+        `${PB_URL}/api/collections/profiles/records?page=${page}&perPage=500&fields=id,slug,display_mode,updated&filter=${encodeURIComponent(lifecycleFilter)}`,
+        { next: { revalidate: 300 } }
+      )
+      if (!res.ok) return []
+      const data = await res.json()
+      records.push(...(data.items || []))
+      totalPages = Math.max(1, Number(data.totalPages) || 1)
+      page += 1
+    } while (page <= totalPages)
+
+    return records
+      .filter((record: { id?: string; slug?: string }) => Boolean(record.id && record.slug))
+      .map((record: { id: string; slug: string; display_mode?: 'default' | 'link_bio'; updated?: string }) => ({
+        id: record.id,
+        slug: record.slug,
+        display_mode: record.display_mode,
+        updated_at: record.updated,
+      }))
   } catch {
     return []
   }

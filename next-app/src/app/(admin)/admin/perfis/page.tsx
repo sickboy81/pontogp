@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Loader2, MoreVertical } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -30,18 +30,18 @@ export default function AdminPerfisPage() {
   const [updatingId, setUpdatingId] = useState<string | null>(null)
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null)
 
-  const fetchData = () => {
+  const fetchData = useCallback(() => {
     setLoading(true)
     fetch(`/api/admin/profiles?page=${page}&perPage=20`, { credentials: 'include' })
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => setData(d || { items: [], totalItems: 0, page: 1, perPage: 20 }))
       .catch(() => setData({ items: [], totalItems: 0, page: 1, perPage: 20 }))
       .finally(() => setLoading(false))
-  }
+  }, [page])
 
   useEffect(() => {
     fetchData()
-  }, [page])
+  }, [fetchData])
 
   const setProfileStatus = async (profileId: string, status: string) => {
     setMenuOpenId(null)

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { getAuthCookieFromHeader } from '@/lib/auth-cookie'
+import { checkRateLimit } from '@/lib/rate-limit'
 import { resolveHomeRedirectPath } from '@/lib/seo-home'
 
 const PROTECTED_PREFIXES = ['/dashboard', '/mensagens', '/diretrizes-fotos-videos', '/admin', '/favoritos']
@@ -11,8 +12,40 @@ function isProtected(pathname: string): boolean {
 
 function isStaticPath(pathname: string) {
   if (pathname.startsWith('/_next')) return true
+  if (pathname === '/opengraph-image' || pathname === '/twitter-image') return true
+  if (pathname.startsWith('/sitemap') && pathname.endsWith('.xml')) return true
   const last = pathname.split('/').pop() ?? ''
   return /\.[a-zA-Z0-9]{2,6}$/.test(last)
+}
+
+function getClientIp(request: NextRequest): string {
+  const cloudflareIp = request.headers.get('cf-connecting-ip')
+  if (cloudflareIp) return cloudflareIp.trim()
+  const realIp = request.headers.get('x-real-ip')
+  if (realIp) return realIp.trim()
+  const forwarded = request.headers.get('x-forwarded-for')
+  return forwarded?.split(',')[0].trim() || 'unknown'
+}
+
+function applyApiRateLimit(request: NextRequest, pathname: string): NextResponse | null {
+  if (!pathname.startsWith('/api/') || pathname === '/api/payments/pix/webhook') return null
+
+  const method = request.method.toUpperCase()
+  const sensitive =
+    pathname.startsWith('/api/auth/') ||
+    pathname.startsWith('/api/contact') ||
+    pathname.startsWith('/api/payments/pix')
+  const limit = method === 'GET' ? 600 : sensitive ? 30 : 180
+  const ip = getClientIp(request)
+
+  if (checkRateLimit(`api:${method}:${sensitive ? 'sensitive' : 'general'}:${ip}`, limit, 60_000)) {
+    return null
+  }
+
+  return NextResponse.json(
+    { error: 'Muitas solicitações. Aguarde um minuto e tente novamente.' },
+    { status: 429, headers: { 'Retry-After': '60', 'Cache-Control': 'no-store' } }
+  )
 }
 
 /** Adiciona Cache-Control no-store ao HTML para evitar conflito com SPA Vite antiga em cache. */
@@ -27,6 +60,9 @@ export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
   const host = request.headers.get('host') || ''
   const forwardedProto = request.headers.get('x-forwarded-proto') || ''
+
+  const rateLimited = applyApiRateLimit(request, pathname)
+  if (rateLimited) return rateLimited
 
   if (host === 'www.cerejavip.com' || (host === 'cerejavip.com' && forwardedProto === 'http')) {
     const canonicalUrl = request.nextUrl.clone()

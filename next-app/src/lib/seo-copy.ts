@@ -88,16 +88,11 @@ export function getLocationMetaDescription(
   locationLabel: string,
   kind: LocationKind
 ): string {
-  const style = UF_STYLE[uf] ?? {
-    vibe: 'com atendimento de alto padrão, discrição e presença marcante',
-    context: 'de agendas sociais a momentos reservados com praticidade',
-  }
-
   if (kind === 'city') {
-    return `Acompanhantes em ${locationLabel}/${uf} ${style.vibe}. Perfis verificados, filtros por categoria e disponibilidade, com contato direto e busca rápida na CerejaVIP.`
+    return `Acompanhantes em ${locationLabel}/${uf} com perfis verificados, filtros por categoria e disponibilidade. Compare opções e fale direto pela CerejaVIP.`
   }
 
-  return `Acompanhantes em ${locationLabel} (${uf}) ${style.vibe}. Explore por cidades, perfis ativos e filtros avançados para encontrar resultados mais relevantes na CerejaVIP.`
+  return `Acompanhantes em ${locationLabel} (${uf}). Explore cidades, perfis ativos e filtros por categoria para encontrar opções na CerejaVIP.`
 }
 
 export function getLocationMetaTitle(

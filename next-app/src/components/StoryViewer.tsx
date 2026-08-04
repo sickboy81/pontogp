@@ -131,8 +131,16 @@ export default function StoryViewer({
     }
   }, [story?.type, story?.file, isPaused, showComments, reportOpen, videoMuted, currentIndex])
 
+  const storyType = story?.type
+  const storyId = story?.id
+  const userDisplayName =
+    (user?.name && user.name.trim()) ||
+    [user?.first_name, user?.last_name].filter(Boolean).join(' ').trim() ||
+    user?.email ||
+    'Você'
+
   useEffect(() => {
-    if (!story || story.type === 'video' || isPaused || showComments || reportOpen) return
+    if (!storyType || storyType === 'video' || isPaused || showComments || reportOpen) return
     const start = Date.now()
     const t = setInterval(() => {
       const elapsed = Date.now() - start
@@ -143,7 +151,7 @@ export default function StoryViewer({
       }
     }, 50)
     return () => clearInterval(t)
-  }, [currentIndex, story?.type, story?.id, goNext, isPaused, showComments, reportOpen])
+  }, [currentIndex, storyType, storyId, goNext, isPaused, showComments, reportOpen])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -230,13 +238,13 @@ export default function StoryViewer({
   }, [story])
 
   const handleLike = useCallback(() => {
-    if (!story?.id || likeLoading) return
+    if (!storyId || likeLoading) return
     if (!isAuthenticated) {
       toast.error('Faça login para curtir')
       return
     }
     setLikeLoading(true)
-    fetch(`/api/stories/${story.id}/like`, {
+    fetch(`/api/stories/${storyId}/like`, {
       method: 'POST',
       credentials: 'include',
     })
@@ -259,7 +267,7 @@ export default function StoryViewer({
         }
       })
       .finally(() => setLikeLoading(false))
-  }, [story?.id, likeLoading, isAuthenticated])
+  }, [storyId, likeLoading, isAuthenticated])
 
   const triggerDoubleTapLike = useCallback(() => {
     setHeartBurst(true)
@@ -268,17 +276,17 @@ export default function StoryViewer({
       toast.error('Faça login para curtir')
       return
     }
-    if (!story?.id || likeLoading) return
+    if (!storyId || likeLoading) return
     if (!likes.liked) handleLike()
-  }, [isAuthenticated, story?.id, likes.liked, likeLoading, handleLike])
+  }, [isAuthenticated, storyId, likes.liked, likeLoading, handleLike])
 
   const handleCommentSubmit = useCallback(
     (e: React.FormEvent) => {
       e.preventDefault()
       const content = commentInput.trim()
-      if (!content || !story?.id || commentSending) return
+      if (!content || !storyId || commentSending) return
       setCommentSending(true)
-      fetch(`/api/stories/${story.id}/comments`, {
+      fetch(`/api/stories/${storyId}/comments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -296,18 +304,13 @@ export default function StoryViewer({
             return
           }
           if (d.id && d.content) {
-            const displayName =
-              (user?.name && user.name.trim()) ||
-              [user?.first_name, user?.last_name].filter(Boolean).join(' ').trim() ||
-              user?.email ||
-              'Você'
             setComments((prev) => [
               ...prev,
               {
                 id: d.id!,
                 content: d.content!,
                 created: d.created || new Date().toISOString(),
-                userName: displayName,
+                userName: userDisplayName,
               },
             ])
             setCommentInput('')
@@ -317,7 +320,7 @@ export default function StoryViewer({
         })
         .finally(() => setCommentSending(false))
     },
-    [story?.id, commentInput, commentSending, user?.name, user?.first_name, user?.last_name, user?.email]
+    [storyId, commentInput, commentSending, userDisplayName]
   )
 
   useEffect(() => {

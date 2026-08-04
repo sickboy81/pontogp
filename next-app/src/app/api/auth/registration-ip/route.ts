@@ -6,10 +6,12 @@ const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cer
 export const dynamic = 'force-dynamic'
 
 function getClientIp(request: NextRequest): string {
+  const cloudflare = request.headers.get('cf-connecting-ip')
+  if (cloudflare) return cloudflare.trim()
+  const real = request.headers.get('x-real-ip')
+  if (real) return real.trim()
   const forwarded = request.headers.get('x-forwarded-for')
   if (forwarded) return forwarded.split(',')[0].trim()
-  const real = request.headers.get('x-real-ip')
-  if (real) return real
   return 'unknown'
 }
 
@@ -25,13 +27,14 @@ export async function POST(request: NextRequest) {
     if (!token) return Response.json({ ok: true }) // silencioso se admin não configurado
 
     const listRes = await fetch(
-      `${PB_URL}/api/collections/users/records?filter=${encodeURIComponent(`email="${email}"`)}&perPage=1&fields=id`,
+      `${PB_URL}/api/collections/users/records?filter=${encodeURIComponent(`email="${email}"`)}&perPage=1&fields=id,registration_ip`,
       { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' }
     )
     if (!listRes.ok) return Response.json({ ok: true })
-    const listData = (await listRes.json()) as { items?: { id: string }[] }
+    const listData = (await listRes.json()) as { items?: { id: string; registration_ip?: string }[] }
     const user = listData.items?.[0]
     if (!user?.id) return Response.json({ ok: true })
+    if (user.registration_ip?.trim()) return Response.json({ ok: true })
 
     await fetch(`${PB_URL}/api/collections/users/records/${user.id}`, {
       method: 'PATCH',
