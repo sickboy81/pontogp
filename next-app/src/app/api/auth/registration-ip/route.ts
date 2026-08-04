@@ -1,28 +1,27 @@
 import { NextRequest } from 'next/server'
+import { enforceIpRateLimit, RATE_LIMIT_POLICIES } from '@/lib/api-rate-limit.mjs'
+import { getClientIp } from '@/lib/rate-limit.mjs'
 import { getAdminToken } from '@/lib/pocketbase-admin'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
 export const dynamic = 'force-dynamic'
 
-function getClientIp(request: NextRequest): string {
-  const cloudflare = request.headers.get('cf-connecting-ip')
-  if (cloudflare) return cloudflare.trim()
-  const real = request.headers.get('x-real-ip')
-  if (real) return real.trim()
-  const forwarded = request.headers.get('x-forwarded-for')
-  if (forwarded) return forwarded.split(',')[0].trim()
-  return 'unknown'
-}
-
 /** POST: registra IP do cadastro. Body: { email }. Chamado pelo cliente após criar conta. Opcional: adicione o campo "registration_ip" na coleção users no PB. */
 export async function POST(request: NextRequest) {
   try {
+    const limited = enforceIpRateLimit(
+      request,
+      'registration-ip',
+      RATE_LIMIT_POLICIES.registration
+    )
+    if (limited) return limited
+
     const body = (await request.json()) as { email?: string }
     const email = String(body.email ?? '').trim().toLowerCase()
     if (!email) return Response.json({ ok: false }, { status: 400 })
 
-    const ip = getClientIp(request)
+    const ip = getClientIp(request.headers)
     const token = await getAdminToken()
     if (!token) return Response.json({ ok: true }) // silencioso se admin não configurado
 

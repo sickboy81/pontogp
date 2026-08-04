@@ -6,6 +6,7 @@ import {
   maybeVideoToCompactMp4,
 } from '@/lib/server/media-upload'
 import { getCerejaStoryExpiresAt } from '@/lib/cereja-stories.mjs'
+import { enforceUserRateLimit, RATE_LIMIT_POLICIES } from '@/lib/api-rate-limit.mjs'
 
 export const maxDuration = 300
 
@@ -50,6 +51,8 @@ export async function POST(request: NextRequest) {
   if (!token) return Response.json({ error: 'Não autorizado' }, { status: 401 })
   const userId = getUserIdFromToken(token)
   if (!userId) return Response.json({ error: 'Token inválido' }, { status: 401 })
+  const limited = enforceUserRateLimit(request, 'story-upload', userId, RATE_LIMIT_POLICIES.upload)
+  if (limited) return limited
 
   try {
     const formData = await request.formData()

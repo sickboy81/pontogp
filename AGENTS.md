@@ -225,6 +225,22 @@ credenciais PixGo/Turnstile e regras configuradas no painel do PocketBase.
 - Para mudanças em auth, deploy, pagamentos, SEO ou bump, execute build e
   smoke.
 
+## Rate limit das APIs
+
+- O proxy aplica um limite geral amplo em `/api/*`, exceto tiles de mapa.
+- Contato, cadastro, PIX, webhook, mensagens, denúncias, publicação, bump e
+  uploads possuem políticas específicas em `next-app/src/lib/api-rate-limit.mjs`.
+- Respostas bloqueadas usam status `429`, `Retry-After` e cabeçalhos
+  `RateLimit-*`.
+- A identificação prioriza `cf-connecting-ip` e usa `x-forwarded-for` e
+  `x-real-ip` como fallback. A origem deve continuar protegida pela Cloudflare
+  e por regras de firewall para impedir falsificação desses cabeçalhos.
+- O armazenamento atual fica em memória, é perdido em restart e não é
+  compartilhado entre réplicas. Migre para Redis antes de escalar o Next.js
+  horizontalmente.
+- Rate limit na aplicação reduz spam e abuso de recursos, mas não substitui
+  proteção de DDoS no proxy e firewall.
+
 ## Documentos complementares
 
 - `README.md`: visão geral e instalação

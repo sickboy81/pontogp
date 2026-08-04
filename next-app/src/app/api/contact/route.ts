@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { getAdminToken } from '@/lib/pocketbase-admin'
-import { checkRateLimit } from '@/lib/rate-limit'
+import { enforceIpRateLimit, RATE_LIMIT_POLICIES } from '@/lib/api-rate-limit.mjs'
+import { getClientIp } from '@/lib/rate-limit.mjs'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 const TURNSTILE_SECRET_KEY = process.env.TURNSTILE_SECRET_KEY || ''
@@ -8,17 +9,12 @@ const TURNSTILE_SECRET_KEY = process.env.TURNSTILE_SECRET_KEY || ''
 export const dynamic = 'force-dynamic'
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-function getClientIp(request: NextRequest): string {
-  const forwarded = request.headers.get('x-forwarded-for')
-  if (forwarded) return forwarded.split(',')[0].trim()
-  const real = request.headers.get('x-real-ip')
-  if (real) return real
-  return 'Desconhecido'
-}
-
 /** POST: cria mensagem de contato. Body: { name, email, subject, message } */
 export async function POST(request: NextRequest) {
   try {
+    const limited = enforceIpRateLimit(request, 'contact', RATE_LIMIT_POLICIES.contact)
+    if (limited) return limited
+
     const contentType = request.headers.get('content-type') || ''
     if (!contentType.includes('application/json')) {
       return Response.json({ error: 'Formato inválido.' }, { status: 415 })
@@ -38,14 +34,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const ip = getClientIp(request)
-    const rateKey = `contact:${ip}`
-    if (!checkRateLimit(rateKey, 5, 10 * 60 * 1000)) {
-      return Response.json(
-        { error: 'Muitas tentativas. Aguarde alguns minutos e tente novamente.' },
-        { status: 429 }
-      )
-    }
+    const ip = getClientIp(request.headers)
 
     if (!EMAIL_REGEX.test(email) || name.length > 120 || subject.length > 180 || message.length > 4000) {
       return Response.json(
@@ -66,7 +55,7 @@ export async function POST(request: NextRequest) {
         secret: TURNSTILE_SECRET_KEY,
         response: turnstileToken,
       })
-      if (ip && ip !== 'Desconhecido') {
+      if (ip !== 'unknown') {
         verifyBody.set('remoteip', ip)
       }
 

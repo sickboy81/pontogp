@@ -38,6 +38,21 @@ Documento para evitar regressões por uso do legado Vite.
   - iniciar o servidor;
   - `npm run smoke:critical`
 
+## Rate limit
+
+As APIs usam um limitador de janela fixa em memória. O proxy aplica uma
+política geral por IP, e operações sensíveis usam políticas adicionais por
+usuário e IP. Os valores ficam centralizados em
+`src/lib/api-rate-limit.mjs`.
+
+Um bloqueio retorna `429` com `Retry-After`, `RateLimit-Limit`,
+`RateLimit-Remaining` e `RateLimit-Reset`. Monitore picos de `429` para
+distinguir abuso de limites insuficientes para uso legítimo.
+
+O estado é local ao processo e reinicia com o container. Não execute múltiplas
+réplicas esperando um limite global; antes disso, substitua o armazenamento por
+Redis ou serviço equivalente.
+
 ## Publicação de perfis
 
 - O POST `/api/profiles` cria novos perfis com `status = "inactive"`.

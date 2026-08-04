@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { getAuthCookieFromHeader } from '@/lib/auth-cookie'
-import { checkRateLimit } from '@/lib/rate-limit'
+import { getAuthCookieFromHeader, getUserIdFromToken } from '@/lib/auth-cookie'
+import {
+  enforceIpRateLimit,
+  enforceUserRateLimit,
+  RATE_LIMIT_POLICIES,
+} from '@/lib/api-rate-limit.mjs'
 import { resolveHomeRedirectPath } from '@/lib/seo-home'
 
 const PROTECTED_PREFIXES = ['/dashboard', '/mensagens', '/diretrizes-fotos-videos', '/admin', '/favoritos']
@@ -18,36 +22,6 @@ function isStaticPath(pathname: string) {
   return /\.[a-zA-Z0-9]{2,6}$/.test(last)
 }
 
-function getClientIp(request: NextRequest): string {
-  const cloudflareIp = request.headers.get('cf-connecting-ip')
-  if (cloudflareIp) return cloudflareIp.trim()
-  const realIp = request.headers.get('x-real-ip')
-  if (realIp) return realIp.trim()
-  const forwarded = request.headers.get('x-forwarded-for')
-  return forwarded?.split(',')[0].trim() || 'unknown'
-}
-
-function applyApiRateLimit(request: NextRequest, pathname: string): NextResponse | null {
-  if (!pathname.startsWith('/api/') || pathname === '/api/payments/pix/webhook') return null
-
-  const method = request.method.toUpperCase()
-  const sensitive =
-    pathname.startsWith('/api/auth/') ||
-    pathname.startsWith('/api/contact') ||
-    pathname.startsWith('/api/payments/pix')
-  const limit = method === 'GET' ? 600 : sensitive ? 30 : 180
-  const ip = getClientIp(request)
-
-  if (checkRateLimit(`api:${method}:${sensitive ? 'sensitive' : 'general'}:${ip}`, limit, 60_000)) {
-    return null
-  }
-
-  return NextResponse.json(
-    { error: 'Muitas solicitações. Aguarde um minuto e tente novamente.' },
-    { status: 429, headers: { 'Retry-After': '60', 'Cache-Control': 'no-store' } }
-  )
-}
-
 /** Adiciona Cache-Control no-store ao HTML para evitar conflito com SPA Vite antiga em cache. */
 function withNoCache(res: NextResponse, pathname: string): NextResponse {
   if (!isStaticPath(pathname)) {
@@ -61,15 +35,28 @@ export function proxy(request: NextRequest) {
   const host = request.headers.get('host') || ''
   const forwardedProto = request.headers.get('x-forwarded-proto') || ''
 
-  const rateLimited = applyApiRateLimit(request, pathname)
-  if (rateLimited) return rateLimited
-
   if (host === 'www.cerejavip.com' || (host === 'cerejavip.com' && forwardedProto === 'http')) {
     const canonicalUrl = request.nextUrl.clone()
     canonicalUrl.protocol = 'https:'
     canonicalUrl.host = 'cerejavip.com'
     canonicalUrl.port = ''
     return NextResponse.redirect(canonicalUrl, 308)
+  }
+
+  if (pathname.startsWith('/api/') && !pathname.startsWith('/api/map-tiles/')) {
+    const isAdminApi = pathname.startsWith('/api/admin/')
+    const token = isAdminApi
+      ? getAuthCookieFromHeader(request.headers.get('cookie'))
+      : null
+    const userId = token ? getUserIdFromToken(token) : null
+    const limited = userId
+      ? enforceUserRateLimit(request, 'api-admin', userId, RATE_LIMIT_POLICIES.admin)
+      : enforceIpRateLimit(
+          request,
+          isAdminApi ? 'api-admin' : 'api-general',
+          isAdminApi ? RATE_LIMIT_POLICIES.admin : RATE_LIMIT_POLICIES.general
+        )
+    if (limited) return limited
   }
 
   if (pathname === '/' && request.nextUrl.search) {

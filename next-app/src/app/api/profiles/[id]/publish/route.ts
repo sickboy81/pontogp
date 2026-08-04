@@ -7,6 +7,7 @@ import {
   MIN_PROFILE_BIO_LENGTH,
   MIN_PROFILE_PHOTOS,
 } from '@/lib/profile-publication.mjs'
+import { enforceUserRateLimit, RATE_LIMIT_POLICIES } from '@/lib/api-rate-limit.mjs'
 import { getAdminToken } from '@/lib/pocketbase-admin'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
@@ -26,6 +27,13 @@ export async function POST(
 
   const userId = getUserIdFromToken(token)
   if (!userId) return Response.json({ error: 'Token inválido' }, { status: 401 })
+  const limited = enforceUserRateLimit(
+    request,
+    'profile-publish',
+    userId,
+    RATE_LIMIT_POLICIES.write
+  )
+  if (limited) return limited
 
   const { id: profileId } = await params
   if (!profileId) return Response.json({ error: 'ID do perfil obrigatório' }, { status: 400 })
