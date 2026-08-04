@@ -26,7 +26,9 @@ Documento para evitar regressões por uso do legado Vite.
    - start com `node server.js`;
    - não copiar `/app` inteiro do builder para o runtime.
 4. Cron scripts oficiais:
-   - bump/cleanup conforme `next-app/docs/BUMPS_E_AUTO_BUMP.md`
+   - bump conforme `next-app/docs/BUMPS_E_AUTO_BUMP.md`;
+   - o cleanup de expiração não está agendado e só deve ser ativado
+     explicitamente no Coolify após a validação segura abaixo.
 
 ## Regras de mudança
 
@@ -83,6 +85,29 @@ npm run schema:check
 
 O primeiro comando impede criação ativa e alteração direta de `status` pelo
 JWT do usuário. Não o execute antes de o novo código estar publicado.
+
+## Cleanup tardio de perfis expirados
+
+`npm run cleanup-profiles` arquiva somente perfis com `status = "active"` e
+`search_expires_at` anterior ou igual ao cutoff calculado a partir de
+`settings.profile_visibility_policy.archive_after_days` (90 dias por padrão).
+O job não muda status quando `contact_expires_at` vence e não arquiva no
+momento em que `search_expires_at` vence. Dados e uploads são preservados; a
+única alteração é `status = "archived"`.
+
+Antes de qualquer ativação:
+
+1. Faça backup do banco e dos uploads do volume PocketBase e valide a
+   restauração em ambiente separado.
+2. Configure uma instância PocketBase não produtiva com cópia representativa
+   dos dados e credenciais administrativas próprias.
+3. Execute `CLEANUP_DRY_RUN=true npm run cleanup-profiles`.
+4. Verifique por amostragem os IDs listados, as datas `search_expires_at`, o
+   cutoff informado no log e a ausência de perfis dentro da janela.
+5. Execute sem dry-run primeiro nesse ambiente e confira que dados/uploads
+   continuam presentes e apenas o status dos candidatos mudou.
+6. Somente então crie explicitamente o job no Coolify, com logs e
+   monitoramento. O Dockerfile não agenda esse cleanup.
 
 ## Dependências externas críticas
 

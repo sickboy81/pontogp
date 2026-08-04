@@ -5,11 +5,32 @@ import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { getPb } from '@/lib/pb'
 import toast from 'react-hot-toast'
+import { parseRegistrationRole } from '@/lib/registration-role.mjs'
+
+const ROLE_NEXT_STEP = {
+  advertiser: {
+    title: 'Depois da confirmação, você poderá montar e publicar seu perfil.',
+    linkHref: '/dashboard/perfil',
+    linkLabel: 'Ir para criar perfil depois da confirmação',
+  },
+  user: {
+    title: 'Depois da confirmação, você poderá explorar perfis, favoritos e mensagens.',
+    linkHref: '/login',
+    linkLabel: 'Entrar após confirmar o email',
+  },
+  default: {
+    title: 'Depois da confirmação, faça login para continuar no CerejaVIP.',
+    linkHref: '/login',
+    linkLabel: 'Ir para login',
+  },
+} as const
 
 function VerificarEmailPendenteContent() {
   const searchParams = useSearchParams()
   const email = searchParams.get('email') || ''
+  const role = parseRegistrationRole(searchParams.get('tipo'))
   const [loading, setLoading] = useState(false)
+  const nextStep = role ? ROLE_NEXT_STEP[role] : ROLE_NEXT_STEP.default
 
   const handleResend = async () => {
     if (!email) {
@@ -38,6 +59,9 @@ function VerificarEmailPendenteContent() {
       <p className="mt-4 text-sm text-slate-400">
         Não recebeu? Verifique a pasta de spam ou clique abaixo para reenviar.
       </p>
+      <p className="mt-4 rounded-lg border border-slate-700 bg-slate-900/50 px-4 py-3 text-sm text-slate-300">
+        {nextStep.title}
+      </p>
       <button
         type="button"
         onClick={handleResend}
@@ -47,8 +71,8 @@ function VerificarEmailPendenteContent() {
         {loading ? 'Enviando...' : 'Reenviar email'}
       </button>
       <p className="mt-6 text-center">
-        <Link href="/login" className="text-primary-400 hover:underline">
-          Ir para login
+        <Link href={nextStep.linkHref} className="text-primary-400 hover:underline">
+          {nextStep.linkLabel}
         </Link>
       </p>
     </div>

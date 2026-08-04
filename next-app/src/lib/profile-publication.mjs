@@ -10,16 +10,16 @@ function normalizePhotoCount(photoCount) {
   return Number.isFinite(count) && count > 0 ? Math.floor(count) : 0
 }
 
-export function canPublishProfile(photoCount) {
-  return normalizePhotoCount(photoCount) >= MIN_PROFILE_PHOTOS
-}
-
 export function hasPublishableProfileBio(bio) {
   return normalizeBioLength(bio) >= MIN_PROFILE_BIO_LENGTH
 }
 
 export function getMissingProfileBioCharacters(bio) {
   return Math.max(0, MIN_PROFILE_BIO_LENGTH - normalizeBioLength(bio))
+}
+
+export function canPublishProfile(photoCount) {
+  return normalizePhotoCount(photoCount) >= MIN_PROFILE_PHOTOS
 }
 
 export function getProfileDraftValidationError(profile) {

@@ -21,6 +21,8 @@ const contracts = {
   ],
   payments: ['user', 'plan', 'amount', 'status', 'method', 'external_id', 'description'],
   profile_daily_bumps: ['profile', 'date', 'bumps_used'],
+  story_likes: ['story', 'user'],
+  story_comments: ['story', 'user', 'content'],
 }
 
 const failures = []
@@ -53,6 +55,33 @@ if (profiles?.createRule !== expectedProfileCreateRule) {
 }
 if (profiles?.updateRule !== expectedProfileUpdateRule) {
   failures.push('regra de atualização de profiles permite alteração direta de status')
+}
+
+const storyLikes = collections.get('story_likes')
+if (!storyLikes?.createRule?.includes('@request.auth.id')) {
+  failures.push('story_likes.createRule deve exigir autenticação do usuário')
+}
+if (!storyLikes?.deleteRule?.includes('@request.auth.id')) {
+  failures.push('story_likes.deleteRule deve limitar exclusão ao próprio usuário')
+}
+
+const storyComments = collections.get('story_comments')
+if (!storyComments?.createRule?.includes('@request.auth.id')) {
+  failures.push('story_comments.createRule deve exigir autenticação do usuário')
+}
+if (
+  storyComments?.updateRule &&
+  !storyComments.updateRule.includes('@request.auth.id') &&
+  !storyComments.updateRule.includes('@request.auth.role = "admin"')
+) {
+  failures.push('story_comments.updateRule deve limitar edição ao dono ou admin')
+}
+if (
+  storyComments?.deleteRule &&
+  !storyComments.deleteRule.includes('@request.auth.id') &&
+  !storyComments.deleteRule.includes('@request.auth.role = "admin"')
+) {
+  failures.push('story_comments.deleteRule deve limitar exclusão ao dono ou admin')
 }
 
 if (failures.length) {

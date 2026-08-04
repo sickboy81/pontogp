@@ -34,14 +34,19 @@ Este documento descreve as coleções usadas pelo next-app e as regras recomenda
 ### `story_comments`
 
 - **Uso:** GET lista comentários (API usa **admin token** para listar); POST cria comentário (API usa **token do usuário**).
+- **Campos obrigatórios pelo contrato atual:** `story`, `user` e `content`.
+- **Contrato de interação:** a API só aceita comentário em story existente, `active = true` e com `expires_at` futuro.
 - **Regras sugeridas:**
   - **List:** pode ser restrita (a API usa admin token para listar).
   - **Create:** usuário autenticado, com `user = @request.auth.id`.
+  - **Update/Delete:** somente dono do comentário (`user = @request.auth.id`) ou admin.
   - View/Update/Delete conforme necessidade (ex.: só admin ou dono do comentário).
 
 ### `story_likes`
 
 - **Uso:** contagem de curtidas (API usa **admin token** para obter o total); verificação “curtiu” e toggle (create/delete) com **token do usuário**.
+- **Campos obrigatórios pelo contrato atual:** `story` e `user`.
+- **Contrato de interação:** a API só aceita curtida em story existente, `active = true` e com `expires_at` futuro.
 - **Regras sugeridas:**
   - **List:** pode ser somente admin (a API usa getAdminToken() para a contagem).
   - **Create:** usuário autenticado, com `user = @request.auth.id` e `story` válido.

@@ -9,6 +9,7 @@ import { useAuthStore, isAdminRole } from '@/store/auth'
 import NotificationBell from '@/components/NotificationBell'
 import ThemeToggle from '@/components/ThemeToggle'
 import { CATEGORIES, GENDERS, STATES, getCitiesByState } from '@/utils/constants'
+import { useAutoHideHeader } from '@/hooks/useAutoHideHeader'
 
 type CategoryValue = 'acompanhante' | 'massagista' | 'online'
 type GenderValue = 'mulher' | 'homem' | 'trans' | 'casal'
@@ -41,6 +42,10 @@ export default function SiteHeader() {
   }
   const { isAuthenticated, user, logout } = useAuthStore()
   const isAdmin = !!user && isAdminRole(user.role)
+  const headerVisible = useAutoHideHeader(
+    mobileOpen || menuOpen || locationOpen,
+    pathname,
+  )
 
   const isHome = pathname === '/'
   const currentCategory = (isHome ? searchParams.get('category') : null) || 'acompanhante'
@@ -179,7 +184,11 @@ export default function SiteHeader() {
   )
 
   return (
-    <header className="site-header sticky top-0 z-50 border-b border-slate-700/50 bg-slate-900/95 backdrop-blur">
+    <header
+      className={`site-header sticky top-0 z-50 border-b border-slate-700/50 bg-slate-900/95 backdrop-blur transition-transform duration-300 motion-reduce:transition-none ${
+        headerVisible ? 'translate-y-0' : '-translate-y-full'
+      }`}
+    >
       <div className="mx-auto max-w-6xl px-4 py-2 md:py-3">
         {/* Linha 1: logo (maior) + ícones à direita */}
         <div className="flex min-h-14 items-center justify-between md:min-h-16">
@@ -341,7 +350,7 @@ export default function SiteHeader() {
                   )}
                 </div>
                 <Link href="/login" className={iconBtnClass} aria-label="Favoritos (entrar)"> <Heart className="h-5 w-5" /> </Link>
-                <Link href="/register" className="ml-1 rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-500">Anunciar Grátis</Link>
+                <Link href="/register?tipo=advertiser" className="ml-1 rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-500">Anunciar Grátis</Link>
               </>
             )}
           </div>
@@ -390,17 +399,6 @@ export default function SiteHeader() {
         <div className="mt-6 pb-3 md:mt-4 md:pb-1">
           {categoryGenderNav}
         </div>
-        {!isAuthenticated && (
-          <div className="pb-3 md:hidden">
-            <Link
-              href="/register"
-              className="flex w-full items-center justify-center rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-500"
-              onClick={closeAll}
-            >
-              Anunciar Grátis
-            </Link>
-          </div>
-        )}
       </div>
 
       {isMobile && mobileOpen && (
@@ -447,6 +445,7 @@ export default function SiteHeader() {
               </>
             ) : (
               <>
+                <Link href="/register?tipo=advertiser" className="rounded-lg bg-primary-600 px-4 py-2 text-center font-semibold text-white hover:bg-primary-500" onClick={closeAll}>Anunciar Grátis</Link>
                 <Link href="/login" className="text-slate-300 hover:text-white" onClick={closeAll}>Entrar</Link>
                 <Link href="/register" className="text-slate-300 hover:text-white" onClick={closeAll}>Cadastrar</Link>
               </>

@@ -1,5 +1,11 @@
 import { NextRequest } from 'next/server'
 import { getAuthCookieFromHeader, getUserIdFromToken } from '@/lib/auth-cookie'
+import {
+  buildInternalMessagesDisabledPayload,
+  DEFAULT_PUBLIC_INTERNAL_MESSAGES_SETTINGS,
+  getPublicInternalMessagesSettings,
+  INTERNAL_MESSAGES_SETTINGS_KEY,
+} from '@/lib/internal-messages-settings.mjs'
 import { getAdminToken } from '@/lib/pocketbase-admin'
 import { mapMessage } from '@/lib/api/messages'
 import { enforceUserRateLimit, RATE_LIMIT_POLICIES } from '@/lib/api-rate-limit.mjs'
@@ -11,6 +17,21 @@ export const dynamic = 'force-dynamic'
 
 function getToken(request: NextRequest): string | null {
   return getAuthCookieFromHeader(request.headers.get('cookie'))
+}
+
+async function loadInternalMessagesSettings() {
+  try {
+    const res = await fetch(
+      `${PB_URL}/api/collections/settings/records?filter=${encodeURIComponent(`key = "${INTERNAL_MESSAGES_SETTINGS_KEY}"`)}&sort=${encodeURIComponent('created,id')}&perPage=50&fields=id,created,value`,
+      { cache: 'no-store' }
+    )
+    if (!res.ok) return DEFAULT_PUBLIC_INTERNAL_MESSAGES_SETTINGS
+
+    const data = await res.json()
+    return getPublicInternalMessagesSettings(data.items)
+  } catch {
+    return DEFAULT_PUBLIC_INTERNAL_MESSAGES_SETTINGS
+  }
 }
 
 /** GET: lista todas as mensagens do usuário (para montar lista de conversas). */
@@ -51,6 +72,11 @@ export async function POST(request: NextRequest) {
   if (limited) return limited
 
   try {
+    const messagesSettings = await loadInternalMessagesSettings()
+    if (!messagesSettings.enabled) {
+      return Response.json(buildInternalMessagesDisabledPayload(messagesSettings), { status: 503 })
+    }
+
     const body = await request.json()
     const recipientId = body?.recipient_id ?? body?.recipient
     const content = (body?.content ?? '').trim()

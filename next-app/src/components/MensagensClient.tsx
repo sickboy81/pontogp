@@ -7,6 +7,7 @@ import { useAuthStore } from '@/store/auth'
 import type { Message } from '@/lib/types'
 import MessageThread from '@/components/MessageThread'
 import { formatRelativeTime } from '@/utils/format'
+import { DEFAULT_INTERNAL_MESSAGES_NOTICE } from '@/lib/internal-messages-settings.mjs'
 
 interface ConversationRow {
   otherUserId: string
@@ -14,6 +15,11 @@ interface ConversationRow {
   otherUserAvatar?: string
   lastMessage: Message
   unread: boolean
+}
+
+interface PublicInternalMessagesSettings {
+  enabled: boolean
+  notice: string
 }
 
 export default function MensagensClient() {
@@ -29,6 +35,10 @@ export default function MensagensClient() {
     otherUserName?: string
     otherUserAvatar?: string
   } | null>(null)
+  const [messagesSettings, setMessagesSettings] = useState<PublicInternalMessagesSettings>({
+    enabled: true,
+    notice: '',
+  })
 
   const loadMessages = useCallback(async () => {
     if (!userId) return
@@ -49,6 +59,33 @@ export default function MensagensClient() {
     const interval = setInterval(loadMessages, 10000)
     return () => clearInterval(interval)
   }, [loadMessages])
+
+  useEffect(() => {
+    let active = true
+
+    fetch('/api/internal-messages-settings', { cache: 'no-store' })
+      .then(async (res) => {
+        if (!res.ok) throw new Error('Erro ao carregar configuração')
+        const data = (await res.json()) as Partial<PublicInternalMessagesSettings>
+        if (!active) return
+        const enabled = data.enabled !== false
+        const notice =
+          typeof data.notice === 'string' && data.notice.trim()
+            ? data.notice.trim()
+            : enabled
+              ? ''
+              : DEFAULT_INTERNAL_MESSAGES_NOTICE
+        setMessagesSettings({ enabled, notice })
+      })
+      .catch(() => {
+        if (!active) return
+        setMessagesSettings({ enabled: true, notice: '' })
+      })
+
+    return () => {
+      active = false
+    }
+  }, [])
 
   useEffect(() => {
     if (withUserId && userId && withUserId !== userId) {
@@ -107,6 +144,8 @@ export default function MensagensClient() {
           otherUserId={selectedOther.otherUserId}
           otherUserName={selectedOther.otherUserName}
           otherUserAvatar={selectedOther.otherUserAvatar}
+          messagesEnabled={messagesSettings.enabled}
+          messagesDisabledNotice={messagesSettings.notice}
           onBack={() => setSelectedOther(null)}
         />
       </div>
@@ -116,6 +155,11 @@ export default function MensagensClient() {
   return (
     <div className="mx-auto max-w-2xl">
       <h1 className="mb-6 text-2xl font-bold text-white">Mensagens</h1>
+      {!messagesSettings.enabled && (
+        <div className="mb-4 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+          {messagesSettings.notice || DEFAULT_INTERNAL_MESSAGES_NOTICE}
+        </div>
+      )}
       <div className="rounded-xl border border-slate-700 bg-slate-800/50 overflow-hidden">
         <div className="border-b border-slate-700 p-4">
           <div className="relative">

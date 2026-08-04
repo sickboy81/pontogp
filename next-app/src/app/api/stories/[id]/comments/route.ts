@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { getAuthCookieFromHeader, getUserIdFromToken } from '@/lib/auth-cookie'
 import { getAdminToken } from '@/lib/pocketbase-admin'
+import { canInteractWithStory, normalizeStoryComment } from '@/lib/story-interactions.mjs'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
@@ -19,19 +20,32 @@ export async function GET(
   if (!storyId) return Response.json({ error: 'ID obrigatório' }, { status: 400 })
 
   try {
-    const userToken = getToken(request)
     const adminToken = await getAdminToken()
-    const headers: HeadersInit | undefined = adminToken
-      ? { Authorization: `Bearer ${adminToken}` }
-      : userToken
-        ? { Authorization: `Bearer ${userToken}` }
-        : undefined
-    const filter = `(story="${storyId}" || story~"${storyId}" || story ?= "${storyId}")`
-    const res = await fetch(
-      `${PB_URL}/api/collections/story_comments/records?filter=${encodeURIComponent(filter)}&perPage=50&sort=created&expand=user`,
-      { headers, cache: 'no-store' }
+    if (!adminToken) {
+      return Response.json({ error: 'Não foi possível validar a story' }, { status: 503 })
+    }
+    const storyRes = await fetch(
+      `${PB_URL}/api/collections/stories/records/${storyId}?fields=id,active,expires_at`,
+      { headers: { Authorization: `Bearer ${adminToken}` }, cache: 'no-store' },
     )
-    if (!res.ok) return Response.json({ items: [] })
+    if (storyRes.status === 404) {
+      return Response.json({ error: 'Story não encontrada' }, { status: 404 })
+    }
+    if (!storyRes.ok) {
+      return Response.json({ error: 'Não foi possível validar a story' }, { status: 502 })
+    }
+    const story = (await storyRes.json()) as { active?: boolean; expires_at?: string }
+    if (!canInteractWithStory(story)) {
+      return Response.json({ error: 'Esta story não aceita mais interações' }, { status: 410 })
+    }
+
+    const res = await fetch(
+      `${PB_URL}/api/collections/story_comments/records?filter=${encodeURIComponent(`story="${storyId}"`)}&perPage=50&sort=created&expand=user`,
+      { headers: { Authorization: `Bearer ${adminToken}` }, cache: 'no-store' }
+    )
+    if (!res.ok) {
+      return Response.json({ error: 'Não foi possível carregar comentários' }, { status: res.status })
+    }
     const data = (await res.json()) as { items?: Array<{ id: string; content: string; created: string; expand?: { user?: { name?: string } } }> }
     const items = (data.items || []).map((r) => ({
       id: r.id,
@@ -41,7 +55,7 @@ export async function GET(
     }))
     return Response.json({ items })
   } catch {
-    return Response.json({ items: [] })
+    return Response.json({ error: 'Erro ao carregar comentários' }, { status: 500 })
   }
 }
 
@@ -64,9 +78,30 @@ export async function POST(
   } catch {
     return Response.json({ error: 'Body inválido' }, { status: 400 })
   }
-  const content = typeof parsed.content === 'string' ? parsed.content.trim() : ''
-  if (!content) return Response.json({ error: 'Conteúdo obrigatório' }, { status: 400 })
-  if (content.length > 500) return Response.json({ error: 'Máximo 500 caracteres' }, { status: 400 })
+  const normalized = normalizeStoryComment(parsed.content)
+  if (!normalized.ok) {
+    return Response.json({ error: normalized.error }, { status: 400 })
+  }
+  const content = normalized.content
+
+  const adminToken = await getAdminToken()
+  if (!adminToken) {
+    return Response.json({ error: 'Não foi possível validar a story' }, { status: 503 })
+  }
+  const storyRes = await fetch(
+    `${PB_URL}/api/collections/stories/records/${storyId}?fields=id,active,expires_at`,
+    { headers: { Authorization: `Bearer ${adminToken}` }, cache: 'no-store' },
+  )
+  if (storyRes.status === 404) {
+    return Response.json({ error: 'Story não encontrada' }, { status: 404 })
+  }
+  if (!storyRes.ok) {
+    return Response.json({ error: 'Não foi possível validar a story' }, { status: 502 })
+  }
+  const story = (await storyRes.json()) as { active?: boolean; expires_at?: string }
+  if (!canInteractWithStory(story)) {
+    return Response.json({ error: 'Esta story não aceita mais interações' }, { status: 410 })
+  }
 
   const pbBody = JSON.stringify({ story: storyId, user: userId, content })
   const pbBodyMultiRel = JSON.stringify({ story: [storyId], user: [userId], content })
