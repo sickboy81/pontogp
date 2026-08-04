@@ -2,6 +2,11 @@ import { NextRequest } from 'next/server'
 import { getAdminToken } from '@/lib/pocketbase-admin'
 import { enforceIpRateLimit, RATE_LIMIT_POLICIES } from '@/lib/api-rate-limit.mjs'
 import { getClientIp } from '@/lib/rate-limit.mjs'
+import {
+  buildContactEmail,
+  getResendEmailConfig,
+  sendResendEmail,
+} from '@/lib/resend-email.mjs'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 const TURNSTILE_SECRET_KEY = process.env.TURNSTILE_SECRET_KEY || ''
@@ -131,6 +136,20 @@ export async function POST(request: NextRequest) {
       } catch {
         // ignore
       }
+    }
+
+    const emailConfig = getResendEmailConfig()
+    if (emailConfig) {
+      try {
+        await sendResendEmail(
+          buildContactEmail({ name, email, subject, message }, emailConfig),
+          emailConfig.apiKey
+        )
+      } catch (error) {
+        console.error('[contact] Falha ao notificar contato pela Resend:', error)
+      }
+    } else {
+      console.warn('[contact] Resend nao configurada; contato salvo apenas no painel.')
     }
 
     return Response.json({ ok: true })

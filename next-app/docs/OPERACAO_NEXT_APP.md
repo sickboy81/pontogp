@@ -109,6 +109,23 @@ Antes de qualquer ativação:
 6. Somente então crie explicitamente o job no Coolify, com logs e
    monitoramento. O Dockerfile não agenda esse cleanup.
 
+## Email transacional com Resend
+
+O PocketBase continua gerando os tokens de verificacao de email e recuperacao
+de senha. A entrega desses emails usa o SMTP da Resend. No Coolify, configure
+`RESEND_API_KEY`, `RESEND_FROM_EMAIL` e `CONTACT_EMAIL_TO`; mantenha tambem as
+credenciais administrativas do PocketBase. Depois execute, a partir de
+`next-app/`:
+
+```bash
+npm run email:configure-resend
+```
+
+Para validar a entrega, defina temporariamente `RESEND_TEST_EMAIL` antes do
+comando. O dominio `cerejavip.com` precisa estar verificado na Resend. O
+formulario de contato permanece salvo na colecao `contacts` e tambem envia uma
+notificacao para `CONTACT_EMAIL_TO` pela API da Resend.
+
 ## Dependências externas críticas
 
 - Site: `https://cerejavip.com`

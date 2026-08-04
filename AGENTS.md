@@ -125,6 +125,7 @@ Variáveis usadas pela aplicação:
 - produção/SEO: `NEXT_PUBLIC_APP_URL`;
 - pagamentos: `PIXGO_API_KEY` e `PIXGO_WEBHOOK_SECRET`;
 - Turnstile: `NEXT_PUBLIC_TURNSTILE_SITE_KEY` e `TURNSTILE_SECRET_KEY`;
+- emails: `RESEND_API_KEY`, `RESEND_FROM_EMAIL` e `CONTACT_EMAIL_TO`;
 - opcionais: `POCKETBASE_COUPONS_COLLECTION` e `FFMPEG_PATH`.
 
 Consulte `next-app/.env.example` antes de configurar outro ambiente.
