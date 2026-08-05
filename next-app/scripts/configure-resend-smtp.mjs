@@ -40,7 +40,12 @@ try {
   await pb.collection('_superusers').authWithPassword(adminEmail, adminPassword)
   await pb.settings.update(buildPocketBaseResendSettings({ apiKey, appUrl }))
   const users = await pb.collections.getOne('users')
-  await pb.collections.update(users.id, buildPocketBaseEmailTemplates(appUrl))
+  const templates = buildPocketBaseEmailTemplates(appUrl)
+  await pb.collections.update(users.id, {
+    ...templates,
+    otp: { ...users.otp, ...templates.otp },
+    authAlert: { ...users.authAlert, ...templates.authAlert },
+  })
   console.log('SMTP da Resend configurado no PocketBase.')
 
   if (testEmail) {

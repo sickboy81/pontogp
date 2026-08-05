@@ -106,5 +106,17 @@ export function buildPocketBaseEmailTemplates(appUrl = 'https://cerejavip.com') 
       `${normalizedUrl}/verificar-email?token={TOKEN}`,
       'Se voce nao solicitou essa alteracao, ignore este email.'
     ),
+    otp: {
+      emailTemplate: {
+        subject: 'Seu codigo de acesso do CerejaVIP',
+        body: `<!doctype html><html lang="pt-BR"><body style="margin:0;background-color:#0b1224;color:#dbe4f3;font-family:Arial,Helvetica,sans-serif"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#0b1224;padding:32px 12px"><tr><td align="center"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;background-color:#111b31;border:1px solid #283957;border-radius:20px;overflow:hidden"><tr><td style="background-color:#e31e24;padding:26px 32px;color:#fff;font-size:24px;font-weight:800">Cereja<span style="color:#ffd3d3">VIP</span></td></tr><tr><td style="padding:36px 32px"><h1 style="margin:0 0 14px;color:#fff;font-size:28px">Seu codigo de acesso</h1><p style="color:#b7c4d8;font-size:16px;line-height:1.7">Use o codigo abaixo para continuar com seguranca:</p><div style="margin:28px 0;padding:22px;background-color:#1b2943;border:1px solid #e31e24;border-radius:12px;color:#fff;text-align:center;font-size:32px;font-weight:800;letter-spacing:8px">{OTP}</div><p style="color:#8fa1bb;font-size:13px;line-height:1.6">Se voce nao solicitou este codigo, ignore este email.</p></td></tr><tr><td style="border-top:1px solid #283957;padding:22px 32px;color:#71839d;font-size:12px">CerejaVIP - conexoes com mais confianca.</td></tr></table></td></tr></table></body></html>`,
+      },
+    },
+    authAlert: {
+      emailTemplate: {
+        subject: 'Novo acesso detectado na sua conta CerejaVIP',
+        body: `<!doctype html><html lang="pt-BR"><body style="margin:0;background-color:#0b1224;color:#dbe4f3;font-family:Arial,Helvetica,sans-serif"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#0b1224;padding:32px 12px"><tr><td align="center"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;background-color:#111b31;border:1px solid #283957;border-radius:20px;overflow:hidden"><tr><td style="background-color:#e31e24;padding:26px 32px;color:#fff;font-size:24px;font-weight:800">Cereja<span style="color:#ffd3d3">VIP</span></td></tr><tr><td style="padding:36px 32px"><div style="display:inline-block;background-color:#3a2e1d;color:#ffd38a;border-radius:999px;padding:7px 12px;font-size:11px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase">Alerta de seguranca</div><h1 style="margin:20px 0 14px;color:#fff;font-size:28px">Novo login detectado</h1><p style="color:#dbe4f3;font-size:16px;line-height:1.7">Identificamos um novo acesso na sua conta CerejaVIP.</p><div style="margin:24px 0;padding:18px;background-color:#1b2943;border-radius:12px;color:#b7c4d8;font-size:14px;line-height:1.8"><strong style="color:#fff">Data e hora:</strong> {ACTION_TIME}<br><strong style="color:#fff">Endereco IP:</strong> {ACTION_IP}</div><p style="color:#8fa1bb;font-size:13px;line-height:1.6">Se esse acesso nao foi seu, altere sua senha imediatamente e entre em contato conosco.</p></td></tr><tr><td style="border-top:1px solid #283957;padding:22px 32px;color:#71839d;font-size:12px">CerejaVIP - conexoes com mais confianca.</td></tr></table></td></tr></table></body></html>`,
+      },
+    },
   }
 }
