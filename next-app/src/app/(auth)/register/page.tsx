@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuthStore } from '@/store/auth'
-import { ArrowLeft, Eye, EyeOff, Heart, Sparkles } from 'lucide-react'
+import { Eye, EyeOff } from 'lucide-react'
 import toast from 'react-hot-toast'
 import RegistrationRoleChooser from '@/components/RegistrationRoleChooser'
 import { parseRegistrationRole } from '@/lib/registration-role.mjs'
@@ -17,21 +17,15 @@ const ROLE_COPY: Record<
   {
     label: string
     title: string
-    description: string
-    nextStep: string
   }
 > = {
   advertiser: {
     label: 'Anunciante',
     title: 'Crie sua conta de anunciante',
-    description: 'Depois do cadastro você poderá criar, completar e publicar seu perfil no CerejaVIP.',
-    nextStep: 'Após entrar, você segue para montar e publicar seu perfil.',
   },
   user: {
     label: 'Cliente',
     title: 'Crie sua conta de cliente',
-    description: 'Depois do cadastro você poderá favoritar perfis, enviar mensagens internas e acompanhar anúncios.',
-    nextStep: 'Após entrar, você já poderá explorar favoritos e conversas.',
   },
 }
 
@@ -56,11 +50,6 @@ function RegisterPageContent() {
   const selectRole = (nextRole: RegistrationRole) => {
     setRole(nextRole)
     router.replace(`/register?tipo=${nextRole}`, { scroll: false })
-  }
-
-  const resetRole = () => {
-    setRole(null)
-    router.replace('/register', { scroll: false })
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -127,36 +116,13 @@ function RegisterPageContent() {
         </>
       ) : (
       <>
-      <div className="mt-6 rounded-2xl border border-slate-700 bg-slate-900/60 p-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary-300">
-              Tipo selecionado
-            </p>
-            <h2 className="mt-2 flex items-center gap-2 text-xl font-semibold text-white">
-              {role === 'advertiser' ? (
-                <Sparkles className="h-5 w-5 text-primary-400" />
-              ) : (
-                <Heart className="h-5 w-5 text-sky-300" />
-              )}
-              {ROLE_COPY[role].label}
-            </h2>
-            <p className="mt-2 text-sm leading-relaxed text-slate-300">
-              {ROLE_COPY[role].description}
-            </p>
-            <p className="mt-2 text-xs text-slate-500">
-              {ROLE_COPY[role].nextStep}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={resetRole}
-            className="inline-flex items-center gap-2 rounded-lg border border-slate-600 px-3 py-2 text-sm text-slate-300 transition hover:bg-slate-800 hover:text-white"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Trocar tipo de conta
-          </button>
-        </div>
+      <div className="mt-6 grid grid-cols-2 rounded-xl border border-slate-600 bg-slate-900/50 p-1">
+        <button type="button" onClick={() => selectRole('advertiser')} className={`rounded-lg px-3 py-3 text-sm font-semibold transition ${role === 'advertiser' ? 'bg-primary-500 text-white' : 'text-slate-400 hover:text-white'}`}>
+          Sou Acompanhante
+        </button>
+        <button type="button" onClick={() => selectRole('user')} className={`rounded-lg px-3 py-3 text-sm font-semibold transition ${role === 'user' ? 'bg-sky-600 text-white' : 'text-slate-400 hover:text-white'}`}>
+          Sou Cliente
+        </button>
       </div>
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-4">

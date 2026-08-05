@@ -2,6 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Keep browser autofill consistent with the dark form fields. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+  -webkit-text-fill-color: #f8fafc;
+  -webkit-box-shadow: 0 0 0 1000px #1e293b inset;
+  box-shadow: 0 0 0 1000px #1e293b inset;
+  caret-color: #f8fafc;
+  transition: background-color 9999s ease-in-out 0s;
+}
+
 :root {
   --background: #0f172a;
   --foreground: #f1f5f9;

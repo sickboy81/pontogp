@@ -138,7 +138,7 @@ export default function StoryViewer({
       .catch((error: unknown) => {
         setLikesError(error instanceof Error ? error.message : 'Não foi possível carregar curtidas')
       })
-  }, [story?.id])
+  }, [story])
 
   const loadComments = useCallback(() => {
     if (!story?.id) return
@@ -155,7 +155,7 @@ export default function StoryViewer({
       .catch((error: unknown) => {
         setCommentsError(error instanceof Error ? error.message : 'Não foi possível carregar comentários')
       })
-  }, [story?.id])
+  }, [story])
 
   useEffect(() => {
     const v = videoRef.current
@@ -293,7 +293,7 @@ export default function StoryViewer({
         }
       })
       .finally(() => setLikeLoading(false))
-  }, [story?.id, likeLoading, isAuthenticated])
+  }, [story, likeLoading, isAuthenticated])
 
   const triggerDoubleTapLike = useCallback(() => {
     setHeartBurst(true)
@@ -352,7 +352,7 @@ export default function StoryViewer({
         })
         .finally(() => setCommentSending(false))
     },
-    [story?.id, commentInput, commentSending, user?.name, user?.first_name, user?.last_name, user?.email]
+    [story, commentInput, commentSending, user]
   )
 
   useEffect(() => {
