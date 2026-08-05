@@ -3,6 +3,7 @@ import { Toaster } from 'react-hot-toast'
 import AuthCookieSync from '@/components/AuthCookieSync'
 import LegacySwCleanup from '@/components/LegacySwCleanup'
 import MaintenanceGate from '@/components/MaintenanceGate'
+import PrivacyConsentModal from '@/components/PrivacyConsentModal'
 import ThemeProvider from '@/components/ThemeProvider'
 import './globals.css'
 
@@ -116,6 +117,7 @@ export default function RootLayout({
           <LegacySwCleanup />
           <AuthCookieSync />
           <MaintenanceGate>{children}</MaintenanceGate>
+          <PrivacyConsentModal />
             <Toaster
             position="top-right"
             toastOptions={{

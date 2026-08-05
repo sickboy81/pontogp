@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { CONSENT_STORAGE_KEY } from '@/components/PrivacyConsentModal'
 
 const STORAGE_KEY = 'cerejavip_age_verified'
 
@@ -12,7 +13,9 @@ export default function AgeVerificationGate({ children }: { children: React.Reac
   useEffect(() => {
     try {
       const stored = sessionStorage.getItem(STORAGE_KEY)
-      setVerified(stored === '1')
+      const globalConsent = localStorage.getItem(CONSENT_STORAGE_KEY)
+      const consent = globalConsent ? JSON.parse(globalConsent) as { adult?: boolean } : null
+      setVerified(stored === '1' || consent?.adult === true)
     } catch {
       setVerified(false)
     }
