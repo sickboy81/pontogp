@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useAuthStore, isAdminRole } from '@/store/auth'
+import { getLoginErrorMessage, useAuthStore, isAdminRole } from '@/store/auth'
 import { Eye, EyeOff } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -45,8 +45,7 @@ function LoginForm() {
       const isAdmin = isAdminRole(role)
       router.replace(isAdmin ? '/admin' : callbackUrl)
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Erro ao fazer login'
-      toast.error(message)
+      toast.error(getLoginErrorMessage(err))
     } finally {
       setLoading(false)
     }
