@@ -133,6 +133,23 @@ test('requires a filled and public contact channel', () => {
     }),
     false
   )
+  assert.equal(
+    hasPublicProfileContact({
+      whatsapp: '(21) 99999-9999',
+      phone: '(21) 3333-4444',
+    }),
+    true
+  )
+})
+
+test('does not treat missing visibility fields as unsaved private contacts', () => {
+  assert.equal(
+    profilePublication.hasUnsavedProfileContactChanges?.(
+      { whatsapp: '21999999999', phone: '2133333333' },
+      { whatsapp: '21999999999', phone: '2133333333', show_whatsapp: true, show_phone: true }
+    ),
+    false
+  )
 })
 
 test('accepts any one of whatsapp, telegram or phone as public contact', () => {

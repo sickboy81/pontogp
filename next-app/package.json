@@ -13,6 +13,7 @@
     "schema:import": "node scripts/import-pocketbase-schema.mjs",
     "schema:check": "node scripts/check-schema-contracts.mjs",
     "schema:apply-profile-publication": "node scripts/apply-profile-publication-rules.mjs",
+    "schema:ensure-profile-contact-visibility": "node scripts/ensure-profile-contact-visibility.mjs",
     "email:configure-resend": "node scripts/configure-resend-smtp.mjs",
     "auto-bump": "node scripts/auto_bump.mjs",
     "cleanup-profiles": "node scripts/cleanup_profiles.mjs",

@@ -43,14 +43,14 @@ export function hasPublicProfileContact(profile) {
     [profile?.whatsapp, profile?.show_whatsapp],
     [profile?.telegram, profile?.show_telegram],
     [profile?.phone, profile?.show_phone],
-  ].some(([value, visible]) => visible === true && String(value ?? '').trim().length > 0)
+  ].some(([value, visible]) => visible !== false && String(value ?? '').trim().length > 0)
 }
 
 export function hasUnsavedProfileContactChanges(savedProfile, currentProfile) {
   return ['whatsapp', 'telegram', 'phone'].some((field) =>
     String(savedProfile?.[field] ?? '').trim() !== String(currentProfile?.[field] ?? '').trim()
   ) || ['show_whatsapp', 'show_telegram', 'show_phone'].some((field) =>
-    (savedProfile?.[field] === true) !== (currentProfile?.[field] === true)
+    (savedProfile?.[field] !== false) !== (currentProfile?.[field] !== false)
   )
 }
 
