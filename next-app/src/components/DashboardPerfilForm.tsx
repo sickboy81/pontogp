@@ -476,13 +476,9 @@ export default function DashboardPerfilForm() {
             `Foto ${index + 1}: ${(data as { error?: string }).error || 'não foi possível enviar'}`
           )
         }
+        const uploadedProfile = (await res.json().catch(() => null)) as Profile | null
+        if (uploadedProfile?.id) setProfile(uploadedProfile)
         setPhotoUploadProgress({ current: index + 1, total: files.length })
-      }
-
-      const meRes = await fetch('/api/profiles/me', { credentials: 'include' })
-      if (meRes.ok) {
-        const data = await meRes.json()
-        setProfile(data)
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao enviar foto')

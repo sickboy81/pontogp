@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { getAuthCookieFromHeader, getUserIdFromToken } from '@/lib/auth-cookie'
 import { enforceUserRateLimit, RATE_LIMIT_POLICIES } from '@/lib/api-rate-limit.mjs'
 import { imageFileToWebp, isRasterImageMime, resolveImageMime } from '@/lib/server/media-upload'
+import { mapProfile } from '@/lib/api/profiles'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
@@ -122,6 +123,17 @@ export async function POST(
     }
 
     const updated = (await patchRes.json()) as Record<string, unknown>
+    const expandedRes = await fetch(
+      `${PB_URL}/api/collections/profiles/records/${profileId}?expand=photos,videos,audio,plan`,
+      { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' }
+    )
+    if (expandedRes.ok) {
+      const expanded = (await expandedRes.json()) as Record<string, unknown> & {
+        expand?: Record<string, unknown>
+      }
+      const mapped = mapProfile(expanded)
+      if (mapped) return Response.json(mapped)
+    }
     return Response.json(updated)
   } catch (e) {
     return Response.json({ error: 'Erro ao enviar foto' }, { status: 500 })
