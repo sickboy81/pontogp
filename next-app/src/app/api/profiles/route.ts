@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import {
   getProfiles,
+  getProfileByUserId,
   isProfileJsonTagField,
   mapProfile,
   sanitizeProfileTagValue,
@@ -142,6 +143,9 @@ export async function POST(request: NextRequest) {
   if (!userId) return Response.json({ error: 'Token inválido' }, { status: 401 })
 
   try {
+    const existing = await getProfileByUserId(userId, token)
+    if (existing) return Response.json(existing)
+
     const body = (await request.json()) as Record<string, unknown>
     const validationError = getProfileDraftValidationError(body)
     if (validationError) return Response.json({ error: validationError }, { status: 400 })

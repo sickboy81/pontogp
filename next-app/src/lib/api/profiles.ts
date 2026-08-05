@@ -1,6 +1,7 @@
 import type { Profile, Schedule } from '@/lib/types'
 import { parseProfileVisibilityPolicy, type ProfileVisibilityPolicy } from '@/lib/parse-expiration-settings'
 import { isPublicProfileStatus } from '@/lib/profile-publication.mjs'
+import { selectOwnerProfileRecord } from '@/lib/profile-owner-record.mjs'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
@@ -322,12 +323,12 @@ export async function getProfileByUserId(
   try {
     const filter = `user = "${userId}"`
     const res = await fetch(
-      `${PB_URL}/api/collections/profiles/records?filter=${encodeURIComponent(filter)}&perPage=1&expand=photos,videos,audio,plan`,
+      `${PB_URL}/api/collections/profiles/records?filter=${encodeURIComponent(filter)}&sort=-updated&perPage=50&expand=photos,videos,audio,plan`,
       { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' }
     )
     if (!res.ok) throw new Error(`PocketBase profile lookup failed: ${res.status}`)
     const data = await res.json()
-    const item = data.items?.[0]
+    const item = selectOwnerProfileRecord(data.items || [])
     return item ? mapProfile(item) : null
   } catch (error) {
     throw error
