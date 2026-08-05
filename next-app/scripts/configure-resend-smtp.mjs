@@ -4,7 +4,10 @@ import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import PocketBase from 'pocketbase'
-import { buildPocketBaseResendSettings } from '../src/lib/resend-email.mjs'
+import {
+  buildPocketBaseEmailTemplates,
+  buildPocketBaseResendSettings,
+} from '../src/lib/resend-email.mjs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -36,6 +39,8 @@ const pb = new PocketBase(pbUrl)
 try {
   await pb.collection('_superusers').authWithPassword(adminEmail, adminPassword)
   await pb.settings.update(buildPocketBaseResendSettings({ apiKey, appUrl }))
+  const users = await pb.collections.getOne('users')
+  await pb.collections.update(users.id, buildPocketBaseEmailTemplates(appUrl))
   console.log('SMTP da Resend configurado no PocketBase.')
 
   if (testEmail) {

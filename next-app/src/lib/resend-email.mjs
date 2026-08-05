@@ -73,3 +73,37 @@ export function buildPocketBaseResendSettings({ apiKey, appUrl }) {
     },
   }
 }
+
+function authTemplate(subject, intro, button, actionUrl, warning = '') {
+  return {
+    subject,
+    actionUrl,
+    body: `<p>Ola,</p><p>${intro}</p><p><a href="{ACTION_URL}">${button}</a></p>${warning ? `<p><em>${warning}</em></p>` : ''}<p>Obrigado,<br>CerejaVIP</p>`,
+  }
+}
+
+export function buildPocketBaseEmailTemplates(appUrl = 'https://cerejavip.com') {
+  const normalizedUrl = String(appUrl).replace(/\/$/, '')
+  return {
+    verificationTemplate: authTemplate(
+      'Confirme seu email no CerejaVIP',
+      'Clique no botao abaixo para confirmar seu email e ativar sua conta.',
+      'Confirmar email',
+      `${normalizedUrl}/verificar-email?token={TOKEN}`
+    ),
+    resetPasswordTemplate: authTemplate(
+      'Redefina sua senha do CerejaVIP',
+      'Clique no botao abaixo para criar uma nova senha.',
+      'Redefinir senha',
+      `${normalizedUrl}/redefinir-senha?token={TOKEN}`,
+      'Se voce nao solicitou isso, ignore este email.'
+    ),
+    confirmEmailChangeTemplate: authTemplate(
+      'Confirme seu novo email no CerejaVIP',
+      'Clique no botao abaixo para confirmar a alteracao do seu email.',
+      'Confirmar novo email',
+      `${normalizedUrl}/verificar-email?token={TOKEN}`,
+      'Se voce nao solicitou essa alteracao, ignore este email.'
+    ),
+  }
+}

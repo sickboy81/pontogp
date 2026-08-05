@@ -18,3 +18,4 @@ export declare function buildPocketBaseResendSettings(input: {
   apiKey: string
   appUrl?: string
 }): Record<string, unknown>
+export declare function buildPocketBaseEmailTemplates(appUrl?: string): Record<string, unknown>
