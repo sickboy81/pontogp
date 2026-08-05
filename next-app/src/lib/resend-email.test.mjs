@@ -76,4 +76,7 @@ test('builds PocketBase auth templates with CerejaVIP confirmation routes', () =
   assert.equal(templates.confirmEmailChangeTemplate.actionUrl, 'https://cerejavip.com/verificar-email?token={TOKEN}')
   assert.match(templates.verificationTemplate.body, /\{ACTION_URL\}/)
   assert.match(templates.resetPasswordTemplate.body, /\{ACTION_URL\}/)
+  assert.match(templates.verificationTemplate.body, /max-width:600px/)
+  assert.match(templates.verificationTemplate.body, /background-color:#e31e24/)
+  assert.match(templates.verificationTemplate.body, /CerejaVIP/)
 })
