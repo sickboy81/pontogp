@@ -139,3 +139,47 @@ export async function POST(
     return Response.json({ error: 'Erro ao enviar foto' }, { status: 500 })
   }
 }
+
+/** PATCH: reordena as fotos; a primeira da lista é a foto principal. */
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const token = getToken(request)
+  if (!token) return Response.json({ error: 'Não autorizado' }, { status: 401 })
+  const { id: profileId } = await params
+  if (!profileId) return Response.json({ error: 'ID do perfil obrigatório' }, { status: 400 })
+
+  const ownership = await verifyProfileOwnership(profileId, token)
+  if (!ownership.ok) return Response.json({ error: 'Perfil não encontrado ou sem permissão' }, { status: 404 })
+
+  try {
+    const body = (await request.json()) as { photos?: unknown }
+    const photos = Array.isArray(body.photos) ? body.photos.filter((photo): photo is string => typeof photo === 'string') : []
+    const currentPhotos = ownership.photos || []
+    const samePhotos = photos.length === currentPhotos.length &&
+      new Set(photos).size === currentPhotos.length &&
+      photos.every((photo) => currentPhotos.includes(photo))
+    if (!samePhotos) return Response.json({ error: 'A ordem das fotos recebida é inválida.' }, { status: 400 })
+
+    const patchRes = await fetch(`${PB_URL}/api/collections/profiles/records/${profileId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ photos }),
+    })
+    if (!patchRes.ok) return Response.json({ error: 'Não foi possível salvar a ordem das fotos.' }, { status: patchRes.status })
+
+    const expandedRes = await fetch(
+      `${PB_URL}/api/collections/profiles/records/${profileId}?expand=photos,videos,audio,plan`,
+      { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' }
+    )
+    if (expandedRes.ok) {
+      const expanded = (await expandedRes.json()) as Record<string, unknown> & { expand?: Record<string, unknown> }
+      const mapped = mapProfile(expanded)
+      if (mapped) return Response.json(mapped)
+    }
+    return Response.json(await patchRes.json())
+  } catch {
+    return Response.json({ error: 'Não foi possível salvar a ordem das fotos.' }, { status: 500 })
+  }
+}

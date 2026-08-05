@@ -320,6 +320,7 @@ export default function DashboardPerfilForm() {
   const [photoUploading, setPhotoUploading] = useState(false)
   const [photoUploadProgress, setPhotoUploadProgress] = useState({ current: 0, total: 0 })
   const [photoDeleting, setPhotoDeleting] = useState<string | null>(null)
+  const [draggedPhoto, setDraggedPhoto] = useState<string | null>(null)
   const [publishing, setPublishing] = useState(false)
   const [videoUploading, setVideoUploading] = useState(false)
   const [videoDeleting, setVideoDeleting] = useState<string | null>(null)
@@ -512,6 +513,35 @@ export default function DashboardPerfilForm() {
       setError(err instanceof Error ? err.message : 'Erro ao remover foto')
     } finally {
       setPhotoDeleting(null)
+    }
+  }
+
+  const handlePhotoReorder = async (sourceUrl: string, targetUrl: string) => {
+    if (!profile || sourceUrl === targetUrl) return
+    const previousPhotos = profile.photos || []
+    const nextPhotos = [...previousPhotos]
+    const sourceIndex = nextPhotos.indexOf(sourceUrl)
+    const targetIndex = nextPhotos.indexOf(targetUrl)
+    if (sourceIndex < 0 || targetIndex < 0) return
+    nextPhotos.splice(sourceIndex, 1)
+    nextPhotos.splice(targetIndex, 0, sourceUrl)
+    setProfile((current) => current ? { ...current, photos: nextPhotos } : current)
+    setError(null)
+    try {
+      const res = await fetch(`/api/profiles/${profile.id}/photos`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ photos: nextPhotos.map(extractMediaId) }),
+      })
+      const data = await res.json().catch(() => null)
+      if (!res.ok || !data?.id) throw new Error(data?.error || 'Não foi possível salvar a ordem das fotos.')
+      setProfile(data as Profile)
+    } catch (err) {
+      setProfile((current) => current ? { ...current, photos: previousPhotos } : current)
+      setError(err instanceof Error ? err.message : 'Não foi possível salvar a ordem das fotos.')
+    } finally {
+      setDraggedPhoto(null)
     }
   }
 
@@ -793,8 +823,12 @@ export default function DashboardPerfilForm() {
         toast.success('Perfil salvo como rascunho. Adicione pelo menos 3 fotos para publicar.')
         return
       }
-      router.push('/dashboard')
-      router.refresh()
+      const refreshed = await fetch('/api/profiles/me', { credentials: 'include', cache: 'no-store' })
+      const updated = refreshed.ok ? await refreshed.json().catch(() => null) : null
+      if (!updated?.id) throw new Error('O perfil foi salvo, mas não foi possível recarregá-lo. Atualize a página antes de sair.')
+      setProfile(updated)
+      setForm(profileToForm(updated))
+      toast.success('Alterações salvas com sucesso.')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao salvar')
     } finally {
@@ -1706,16 +1740,35 @@ export default function DashboardPerfilForm() {
               {(profile.photos || []).map((url) => {
                 const pid = extractMediaId(url)
                 const isDeleting = photoDeleting === pid
+                const isPrimary = profile.photos?.[0] === url
                 return (
                   <div
                     key={url}
-                    className="group relative aspect-[3/4] overflow-hidden rounded-lg border border-slate-600 bg-slate-700"
+                    draggable={!photoUploading && !photoDeleting}
+                    onDragStart={() => setDraggedPhoto(url)}
+                    onDragOver={(event) => event.preventDefault()}
+                    onDrop={() => draggedPhoto && handlePhotoReorder(draggedPhoto, url)}
+                    onDragEnd={() => setDraggedPhoto(null)}
+                    className={`group relative aspect-[3/4] overflow-hidden rounded-lg border bg-slate-700 ${draggedPhoto === url ? 'border-primary-400 opacity-60' : 'border-slate-600'}`}
                   >
                     <img
                       src={url}
                       alt=""
                       className="h-full w-full object-cover"
                     />
+                    {isPrimary ? (
+                      <span className="absolute bottom-2 left-2 rounded-md bg-primary-600/90 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
+                        Principal
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handlePhotoReorder(url, profile.photos?.[0] || url)}
+                        className="absolute bottom-2 left-2 rounded-md bg-black/70 px-2 py-1 text-[10px] font-semibold text-white transition hover:bg-primary-600"
+                      >
+                        Usar como principal
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => handlePhotoDelete(url)}
@@ -1755,7 +1808,7 @@ export default function DashboardPerfilForm() {
               </label>
             </div>
             <p className="mt-2 text-xs text-slate-500">
-              Selecione uma ou várias fotos. JPG, PNG ou WebP. Máximo 5 MB por foto.
+              Arraste as fotos para ordenar; a primeira será a principal. Selecione uma ou várias fotos. JPG, PNG ou WebP. Máximo 5 MB por foto.
             </p>
             {profile.status === 'active' && !canRemovePhoto && (
               <p className="mt-2 text-xs text-amber-300">

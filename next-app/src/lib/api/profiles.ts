@@ -325,12 +325,12 @@ export async function getProfileByUserId(
       `${PB_URL}/api/collections/profiles/records?filter=${encodeURIComponent(filter)}&perPage=1&expand=photos,videos,audio,plan`,
       { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' }
     )
-    if (!res.ok) return null
+    if (!res.ok) throw new Error(`PocketBase profile lookup failed: ${res.status}`)
     const data = await res.json()
     const item = data.items?.[0]
     return item ? mapProfile(item) : null
-  } catch {
-    return null
+  } catch (error) {
+    throw error
   }
 }
 

@@ -30,7 +30,12 @@ export async function GET(request: NextRequest) {
   if (!userId) return Response.json(null, { headers: NO_STORE })
 
   const adminToken = await getAdminToken()
-  const profile = await getProfileByUserId(userId, adminToken || token)
+  let profile
+  try {
+    profile = await getProfileByUserId(userId, adminToken || token)
+  } catch {
+    return Response.json({ error: 'Não foi possível consultar seu perfil agora.' }, { status: 503, headers: NO_STORE })
+  }
   if (!profile) return Response.json(null)
 
   const today = todayBR()
