@@ -318,6 +318,7 @@ export default function DashboardPerfilForm() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [photoUploading, setPhotoUploading] = useState(false)
+  const [photoUploadProgress, setPhotoUploadProgress] = useState({ current: 0, total: 0 })
   const [photoDeleting, setPhotoDeleting] = useState<string | null>(null)
   const [publishing, setPublishing] = useState(false)
   const [videoUploading, setVideoUploading] = useState(false)
@@ -455,32 +456,39 @@ export default function DashboardPerfilForm() {
   }
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file || !profile) return
+    const files = Array.from(e.target.files || [])
+    if (files.length === 0 || !profile) return
     setPhotoUploading(true)
+    setPhotoUploadProgress({ current: 0, total: files.length })
     setError(null)
     try {
-      const fd = new FormData()
-      fd.append('file', file)
-      const res = await fetch(`/api/profiles/${profile.id}/photos`, {
-        method: 'POST',
-        credentials: 'include',
-        body: fd,
-      })
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        throw new Error((data as { error?: string }).error || 'Erro ao enviar foto')
+      for (const [index, file] of files.entries()) {
+        const fd = new FormData()
+        fd.append('file', file)
+        const res = await fetch(`/api/profiles/${profile.id}/photos`, {
+          method: 'POST',
+          credentials: 'include',
+          body: fd,
+        })
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}))
+          throw new Error(
+            `Foto ${index + 1}: ${(data as { error?: string }).error || 'não foi possível enviar'}`
+          )
+        }
+        setPhotoUploadProgress({ current: index + 1, total: files.length })
       }
+
       const meRes = await fetch('/api/profiles/me', { credentials: 'include' })
       if (meRes.ok) {
         const data = await meRes.json()
         setProfile(data)
       }
-      router.refresh()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao enviar foto')
     } finally {
       setPhotoUploading(false)
+      setPhotoUploadProgress({ current: 0, total: 0 })
       e.target.value = ''
     }
   }
@@ -1733,6 +1741,7 @@ export default function DashboardPerfilForm() {
                 <input
                   type="file"
                   accept="image/jpeg,image/jpg,image/png,image/webp"
+                  multiple
                   className="hidden"
                   onChange={handlePhotoUpload}
                   disabled={photoUploading}
@@ -1743,12 +1752,14 @@ export default function DashboardPerfilForm() {
                   <ImagePlus className="h-8 w-8 text-slate-400" />
                 )}
                 <span className="mt-2 text-xs text-slate-500">
-                  {photoUploading ? 'Enviando...' : 'Adicionar'}
+                  {photoUploading
+                    ? `Enviando ${photoUploadProgress.current}/${photoUploadProgress.total}`
+                    : 'Adicionar fotos'}
                 </span>
               </label>
             </div>
             <p className="mt-2 text-xs text-slate-500">
-              JPG, PNG ou WebP. Máximo 5 MB por foto.
+              Selecione uma ou várias fotos. JPG, PNG ou WebP. Máximo 5 MB por foto.
             </p>
             {profile.status === 'active' && !canRemovePhoto && (
               <p className="mt-2 text-xs text-amber-300">
