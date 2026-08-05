@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { X } from 'lucide-react'
+import { MessageCircle, Phone, Send, X } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
 import type { Profile } from '@/lib/types'
 import { formatPrice } from '@/utils/format'
@@ -366,7 +366,13 @@ export default function ProfileView({
                 WhatsApp
               </a>
             ) : (
-              <span className="flex min-h-12 items-center justify-center rounded-xl bg-slate-800 px-2 py-2 text-center text-xs text-slate-500">—</span>
+              <span
+                aria-label="WhatsApp indisponível"
+                title="WhatsApp indisponível"
+                className="flex min-h-12 items-center justify-center rounded-xl bg-slate-800/70 px-2 py-2 text-slate-500"
+              >
+                <MessageCircle aria-hidden="true" className="h-5 w-5 opacity-60" />
+              </span>
             )}
             {visibleTelegram ? (
               <a
@@ -379,7 +385,13 @@ export default function ProfileView({
                 Telegram
               </a>
             ) : (
-              <span className="flex min-h-12 items-center justify-center rounded-xl bg-slate-800 px-2 py-2 text-center text-xs text-slate-500">—</span>
+              <span
+                aria-label="Telegram indisponível"
+                title="Telegram indisponível"
+                className="flex min-h-12 items-center justify-center rounded-xl bg-slate-800/70 px-2 py-2 text-slate-500"
+              >
+                <Send aria-hidden="true" className="h-5 w-5 opacity-60" />
+              </span>
             )}
             {visiblePhone ? (
               <a
@@ -390,7 +402,13 @@ export default function ProfileView({
                 Ligar
               </a>
             ) : (
-              <span className="flex min-h-12 items-center justify-center rounded-xl bg-slate-800 px-2 py-2 text-center text-xs text-slate-500">—</span>
+              <span
+                aria-label="Telefone indisponível"
+                title="Telefone indisponível"
+                className="flex min-h-12 items-center justify-center rounded-xl bg-slate-800/70 px-2 py-2 text-slate-500"
+              >
+                <Phone aria-hidden="true" className="h-5 w-5 opacity-60" />
+              </span>
             )}
           </div>
         </div>

@@ -26,7 +26,9 @@ export function normalizeStoryComment(raw) {
  * @param {Date} [now]
  */
 export function canInteractWithStory(story, now = new Date()) {
-  if (!story || story.active !== true) return false
+  // Older production schemas do not have an `active` field. In that schema,
+  // expiration is the source of truth; only an explicit false disables it.
+  if (!story || story.active === false) return false
   if (typeof story.expires_at !== 'string' || !story.expires_at.trim()) return false
 
   const expiresAt = new Date(story.expires_at)
