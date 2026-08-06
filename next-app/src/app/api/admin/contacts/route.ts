@@ -30,7 +30,13 @@ export async function GET(request: NextRequest) {
       headers: { Authorization: `Bearer ${token}` },
       cache: 'no-store',
     })
-    if (!res.ok) return Response.json({ items: [], totalItems: 0, page, perPage })
+    if (!res.ok) {
+      const error = (await res.json().catch(() => ({}))) as { message?: string }
+      return Response.json(
+        { error: error.message || 'Não foi possível carregar os contatos.' },
+        { status: res.status }
+      )
+    }
     const data = await res.json()
     return Response.json({
       items: data.items || [],
@@ -39,6 +45,6 @@ export async function GET(request: NextRequest) {
       perPage,
     })
   } catch {
-    return Response.json({ items: [], totalItems: 0, page, perPage })
+    return Response.json({ error: 'Não foi possível consultar os contatos agora.' }, { status: 502 })
   }
 }

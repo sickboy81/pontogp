@@ -18,19 +18,22 @@ interface ContactRow {
 export default function AdminContatos() {
   const [items, setItems] = useState<ContactRow[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const [filter, setFilter] = useState<'all' | 'read' | 'unread'>('all')
 
   const load = useCallback(async () => {
     setLoading(true)
+    setError('')
     try {
       const readParam = filter === 'all' ? '' : filter === 'read' ? 'true' : 'false'
       const qs = readParam ? `?page=1&perPage=100&read=${readParam}` : '?page=1&perPage=100'
       const res = await fetch(`/api/admin/contacts${qs}`, { credentials: 'include' })
       const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error('Erro')
+      if (!res.ok) throw new Error((data as { error?: string }).error || 'Não foi possível carregar as mensagens.')
       setItems(((data as { items?: ContactRow[] }).items || []) as ContactRow[])
-    } catch {
+    } catch (cause) {
       setItems([])
+      setError(cause instanceof Error ? cause.message : 'Não foi possível carregar as mensagens.')
     } finally {
       setLoading(false)
     }
@@ -99,6 +102,13 @@ export default function AdminContatos() {
       {loading ? (
         <div className="flex justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-primary-500" />
+        </div>
+      ) : error ? (
+        <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-6 text-sm text-red-200">
+          {error}
+          <button type="button" onClick={() => void load()} className="ml-3 underline hover:text-white">
+            Tentar novamente
+          </button>
         </div>
       ) : (
         <div className="overflow-hidden rounded-xl border border-slate-700">
