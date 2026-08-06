@@ -32,7 +32,6 @@ import { useAuthStore } from '@/store/auth'
 import { MIN_PROFILE_PHOTOS, getMissingProfilePhotos } from '@/lib/profile-publication.mjs'
 import { isProfileBumpEligible } from '@/lib/profile-bump-eligibility.mjs'
 import { CEREJA_STORIES_DURATION_HOURS } from '@/lib/cereja-stories.mjs'
-import { getPublicProfilePath } from '@/lib/profile-url'
 import { resolveProtectedAccess } from '@/lib/protected-access.mjs'
 import { isProfileEffectivelyOnline } from '@/lib/profile-presence.mjs'
 
@@ -696,7 +695,7 @@ export default function DashboardClient() {
         </div>
         <div className="flex flex-wrap border-t border-slate-700">
           <Link
-            href={getPublicProfilePath(profile)}
+            href={`/perfil/${encodeURIComponent(profile.id)}`}
             className="flex flex-1 min-w-[120px] items-center justify-center gap-2 border-r border-slate-700 py-4 text-slate-300 transition hover:bg-slate-700/30 hover:text-white"
           >
             <Eye className="h-5 w-5" />

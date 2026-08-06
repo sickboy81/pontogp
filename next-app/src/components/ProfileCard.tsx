@@ -7,7 +7,6 @@ import type { Profile } from '@/lib/types'
 import { formatPrice } from '@/utils/format'
 import { useAuthStore } from '@/store/auth'
 import { useFavoritesStore } from '@/store/favorites'
-import { getPublicProfilePath } from '@/lib/profile-url'
 
 interface ProfileCardProps {
   profile: Profile
@@ -46,7 +45,7 @@ export default function ProfileCard({ profile, index = 0, planColor, priority = 
   return (
     <div className="group relative">
       <Link
-        href={getPublicProfilePath(profile)}
+        href={`/perfil/${encodeURIComponent(profile.id)}`}
         className="block overflow-hidden rounded-xl border border-slate-700 bg-slate-800/50 transition hover:border-primary-500 hover:shadow-lg hover:shadow-primary-500/10"
       >
         <div className="relative aspect-[3/4] overflow-hidden bg-slate-800">
