@@ -1,7 +1,7 @@
 import { notFound, permanentRedirect } from 'next/navigation'
 import { getProfile } from '@/lib/api/profiles'
 import { getProfileOgImageUrl } from '@/lib/og'
-import { getProfileMetadataDescription, getPublicProfilePath, getPublicProfileUrl } from '@/lib/profile-url'
+import { getProfileMetadataDescription, getPublicProfilePath } from '@/lib/profile-url'
 import { SEO_CITIES } from '@/lib/seo-cities'
 import { findSeoStateByUf } from '@/lib/seo-states'
 import ProfileView from '@/components/ProfileView'
@@ -17,7 +17,7 @@ export async function generateMetadata({ params }: Props) {
   const title = `${profile.name} - ${profile.city}, ${profile.state}`
   const description = getProfileMetadataDescription(profile)
   const ogImageUrl = getProfileOgImageUrl(profile)
-  const canonical = getPublicProfileUrl(profile, SITE_URL)
+  const canonical = `${SITE_URL}/perfil/${encodeURIComponent(id)}`
   return {
     title,
     description,
@@ -56,8 +56,10 @@ export default async function PerfilByIdPage({ params, searchParams }: Props) {
   const openStories = sp?.stories === '1' || Boolean(initialStoryId)
   const profile = await getProfile(id)
   if (!profile) notFound()
-  const canonicalPath = getPublicProfilePath(profile)
   const legacyPath = `/perfil/${encodeURIComponent(id)}`
+  // The ID route is always the full profile. Link Bio is only entered through
+  // the direct @slug route, never through search or profile cards.
+  const canonicalPath = profile.display_mode === 'link_bio' ? legacyPath : getPublicProfilePath(profile)
   if (canonicalPath !== legacyPath) {
     const query = new URLSearchParams()
     if (openStories) query.set('stories', '1')
@@ -65,7 +67,7 @@ export default async function PerfilByIdPage({ params, searchParams }: Props) {
     permanentRedirect(`${canonicalPath}${query.size > 0 ? `?${query}` : ''}`)
   }
 
-  const profileUrl = getPublicProfileUrl(profile, SITE_URL)
+  const profileUrl = `${SITE_URL}${legacyPath}`
   const cityLanding = SEO_CITIES.find(
     (item) => item.state === profile.state && item.city.trim().toLowerCase() === profile.city.trim().toLowerCase()
   )

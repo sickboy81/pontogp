@@ -25,11 +25,19 @@ export async function GET(request: NextRequest) {
 
   try {
     const token = await getEffectiveToken(auth.token)
-    const url = `${PB_URL}/api/collections/contacts/records?page=${page}&perPage=${perPage}&sort=-created${filter ? `&filter=${encodeURIComponent(filter)}` : ''}`
-    const res = await fetch(url, {
+    const query = `page=${page}&perPage=${perPage}${filter ? `&filter=${encodeURIComponent(filter)}` : ''}`
+    let res = await fetch(`${PB_URL}/api/collections/contacts/records?${query}&sort=-created`, {
       headers: { Authorization: `Bearer ${token}` },
       cache: 'no-store',
     })
+    // Older contacts schemas may reject sorting by the system timestamp.
+    // The records are still useful without ordering, so retry the same query.
+    if (res.status === 400) {
+      res = await fetch(`${PB_URL}/api/collections/contacts/records?${query}`, {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: 'no-store',
+      })
+    }
     if (!res.ok) {
       const error = (await res.json().catch(() => ({}))) as { message?: string }
       return Response.json(

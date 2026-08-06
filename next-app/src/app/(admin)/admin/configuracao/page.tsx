@@ -14,6 +14,10 @@ export default function AdminConfiguracaoPage() {
   const [announcementEnabled, setAnnouncementEnabled] = useState(false)
   const [announcementMessage, setAnnouncementMessage] = useState('')
   const [announcementTarget, setAnnouncementTarget] = useState<'all' | 'guests' | 'logged_in' | 'advertiser'>('all')
+  const [announcementBackground, setAnnouncementBackground] = useState('#422006')
+  const [announcementTextColor, setAnnouncementTextColor] = useState('#fef3c7')
+  const [announcementDisplayMode, setAnnouncementDisplayMode] = useState<'static' | 'marquee'>('static')
+  const [announcementSpeed, setAnnouncementSpeed] = useState(60)
   const [savingAnnouncement, setSavingAnnouncement] = useState(false)
   const [messagesEnabled, setMessagesEnabled] = useState(true)
   const [messagesNotice, setMessagesNotice] = useState('')
@@ -53,6 +57,10 @@ export default function AdminConfiguracaoPage() {
           setAnnouncementEnabled(ann.enabled ?? false)
           setAnnouncementMessage(ann.message ?? '')
           setAnnouncementTarget(ann.target === 'guests' || ann.target === 'logged_in' || ann.target === 'advertiser' ? ann.target : 'all')
+          setAnnouncementBackground(/^#[0-9a-fA-F]{6}$/.test(ann.background_color) ? ann.background_color : '#422006')
+          setAnnouncementTextColor(/^#[0-9a-fA-F]{6}$/.test(ann.text_color) ? ann.text_color : '#fef3c7')
+          setAnnouncementDisplayMode(ann.display_mode === 'marquee' ? 'marquee' : 'static')
+          setAnnouncementSpeed(typeof ann.speed === 'number' ? ann.speed : 60)
         }
         if (messages) {
           setMessagesEnabled(messages.enabled !== false)
@@ -187,7 +195,15 @@ export default function AdminConfiguracaoPage() {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ enabled: announcementEnabled, message: announcementMessage, target: announcementTarget }),
+        body: JSON.stringify({
+          enabled: announcementEnabled,
+          message: announcementMessage,
+          target: announcementTarget,
+          background_color: announcementBackground,
+          text_color: announcementTextColor,
+          display_mode: announcementDisplayMode,
+          speed: announcementSpeed,
+        }),
       })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
@@ -330,6 +346,41 @@ export default function AdminConfiguracaoPage() {
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white placeholder-slate-500 focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
                 placeholder="Ex: Novidade: confira os novos planos!"
               />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="block text-sm font-medium text-slate-300">
+                Cor de fundo
+                <span className="mt-2 flex items-center gap-2">
+                  <input type="color" value={announcementBackground} onChange={(e) => setAnnouncementBackground(e.target.value)} className="h-10 w-14 cursor-pointer rounded border border-slate-600 bg-slate-800 p-1" />
+                  <span className="font-mono text-xs text-slate-400">{announcementBackground}</span>
+                </span>
+              </label>
+              <label className="block text-sm font-medium text-slate-300">
+                Cor do texto
+                <span className="mt-2 flex items-center gap-2">
+                  <input type="color" value={announcementTextColor} onChange={(e) => setAnnouncementTextColor(e.target.value)} className="h-10 w-14 cursor-pointer rounded border border-slate-600 bg-slate-800 p-1" />
+                  <span className="font-mono text-xs text-slate-400">{announcementTextColor}</span>
+                </span>
+              </label>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-300">Movimento</label>
+                <select value={announcementDisplayMode} onChange={(e) => setAnnouncementDisplayMode(e.target.value as 'static' | 'marquee')} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white focus:border-amber-500 focus:outline-none">
+                  <option value="static">Texto parado</option>
+                  <option value="marquee">Texto correndo</option>
+                </select>
+              </div>
+              <label className="block text-sm font-medium text-slate-300">
+                Velocidade do letreiro
+                <span className="mt-2 flex items-center gap-3">
+                  <input type="range" min="20" max="200" step="10" value={announcementSpeed} onChange={(e) => setAnnouncementSpeed(Number(e.target.value))} disabled={announcementDisplayMode !== 'marquee'} className="w-full accent-amber-500 disabled:opacity-40" />
+                  <span className="w-12 text-right text-xs text-slate-400">{announcementSpeed}%</span>
+                </span>
+              </label>
+            </div>
+            <div className="overflow-hidden rounded-lg border px-4 py-2.5 text-center text-sm" style={{ backgroundColor: announcementBackground, color: announcementTextColor, borderColor: `${announcementTextColor}55` }}>
+              <span className="font-medium">Prévia: </span>{announcementMessage || 'Sua mensagem aparecerá aqui.'}
             </div>
             <button
               type="submit"

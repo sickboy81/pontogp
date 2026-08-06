@@ -1,48 +1,40 @@
 import { NextRequest } from 'next/server'
-import { getAdminToken } from '@/lib/pocketbase-admin'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
 export const dynamic = 'force-dynamic'
-const ANNOUNCEMENT_CACHE_TTL_MS = 60 * 1000
-const CACHE_CONTROL = 'public, max-age=30, s-maxage=30, stale-while-revalidate=120'
-let cachedAnnouncement: { enabled: boolean; message: string; target: 'all' | 'guests' | 'logged_in' | 'advertiser' } | null = null
-let cachedAnnouncementAt = 0
+const CACHE_CONTROL = 'no-store'
+const DEFAULT_BACKGROUND_COLOR = '#422006'
+const DEFAULT_TEXT_COLOR = '#fef3c7'
 
-/** GET: aviso do topo (announcement). Público. Retorna { enabled, message } de settings key "announcement". */
+function readAnnouncement(value: unknown) {
+  const item = value && typeof value === 'object' ? value as Record<string, unknown> : {}
+  const target = item.target === 'guests' || item.target === 'logged_in' || item.target === 'advertiser' ? item.target : 'all'
+  const displayMode = item.display_mode === 'marquee' ? 'marquee' : 'static'
+  const speed = typeof item.speed === 'number' && Number.isFinite(item.speed) ? Math.min(200, Math.max(20, Math.round(item.speed))) : 60
+  const isColor = (color: unknown) => typeof color === 'string' && /^#[0-9a-fA-F]{6}$/.test(color)
+  return {
+    enabled: !!item.enabled,
+    message: typeof item.message === 'string' ? item.message : '',
+    target,
+    background_color: isColor(item.background_color) ? item.background_color : DEFAULT_BACKGROUND_COLOR,
+    text_color: isColor(item.text_color) ? item.text_color : DEFAULT_TEXT_COLOR,
+    display_mode: displayMode,
+    speed,
+  } as const
+}
+
+/** GET: aviso do topo (announcement). Público. */
 export async function GET(_request: NextRequest) {
-  const now = Date.now()
-  if (cachedAnnouncement && now - cachedAnnouncementAt < ANNOUNCEMENT_CACHE_TTL_MS) {
-    return Response.json(cachedAnnouncement, {
-      headers: { 'Cache-Control': CACHE_CONTROL },
-    })
-  }
-
-  const token = await getAdminToken()
-  if (!token) {
-    return Response.json(
-      { enabled: false, message: '', target: 'all' },
-      { headers: { 'Cache-Control': CACHE_CONTROL } }
-    )
-  }
-
   try {
     const res = await fetch(
       `${PB_URL}/api/collections/settings/records?filter=${encodeURIComponent('key = "announcement"')}&perPage=1&fields=id,value`,
-      { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store', next: { revalidate: 60 } }
+      { cache: 'no-store' }
     )
     if (!res.ok) return Response.json({ enabled: false, message: '', target: 'all' })
     const data = await res.json()
     const item = data.items?.[0]
-    const value = item?.value as { enabled?: boolean; message?: string; target?: string } | undefined
-    const target = value?.target === 'guests' || value?.target === 'logged_in' || value?.target === 'advertiser' ? value.target : 'all'
-    const payload = {
-      enabled: !!value?.enabled,
-      message: typeof value?.message === 'string' ? value.message : '',
-      target,
-    } as const
-    cachedAnnouncement = payload
-    cachedAnnouncementAt = now
+    const payload = readAnnouncement(item?.value)
     return Response.json(payload, {
       headers: { 'Cache-Control': CACHE_CONTROL },
     })

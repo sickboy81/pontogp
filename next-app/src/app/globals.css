@@ -30,6 +30,29 @@ body {
   @apply bg-slate-900 text-slate-100 antialiased;
 }
 
+@keyframes announcement-marquee {
+  from { transform: translateX(100%); }
+  to { transform: translateX(-100%); }
+}
+
+.announcement-marquee {
+  display: inline-block;
+  min-width: 100%;
+  white-space: nowrap;
+  animation: announcement-marquee linear infinite;
+}
+
+.announcement-marquee:hover {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .announcement-marquee {
+    animation: none;
+    white-space: normal;
+  }
+}
+
 @keyframes profile-reveal {
   from {
     opacity: 0;

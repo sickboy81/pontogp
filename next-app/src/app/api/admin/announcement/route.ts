@@ -4,6 +4,25 @@ import { requireAdmin } from '@/lib/api/admin-auth'
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
 export const dynamic = 'force-dynamic'
+const DEFAULT_BACKGROUND_COLOR = '#422006'
+const DEFAULT_TEXT_COLOR = '#fef3c7'
+
+function normalizeAnnouncement(value: unknown) {
+  const item = value && typeof value === 'object' ? value as Record<string, unknown> : {}
+  const target = item.target === 'guests' || item.target === 'logged_in' || item.target === 'advertiser' ? item.target : 'all'
+  const displayMode = item.display_mode === 'marquee' ? 'marquee' : 'static'
+  const speed = typeof item.speed === 'number' && Number.isFinite(item.speed) ? Math.min(200, Math.max(20, Math.round(item.speed))) : 60
+  const isColor = (color: unknown) => typeof color === 'string' && /^#[0-9a-fA-F]{6}$/.test(color)
+  return {
+    enabled: !!item.enabled,
+    message: typeof item.message === 'string' ? item.message : '',
+    target,
+    background_color: isColor(item.background_color) ? item.background_color : DEFAULT_BACKGROUND_COLOR,
+    text_color: isColor(item.text_color) ? item.text_color : DEFAULT_TEXT_COLOR,
+    display_mode: displayMode,
+    speed,
+  } as const
+}
 
 /** GET: lê aviso do topo (admin). */
 export async function GET(request: NextRequest) {
@@ -18,13 +37,7 @@ export async function GET(request: NextRequest) {
     if (!res.ok) return Response.json({ enabled: false, message: '' })
     const data = await res.json()
     const item = data.items?.[0]
-    const value = item?.value as { enabled?: boolean; message?: string; target?: string } | undefined
-    const target = value?.target === 'guests' || value?.target === 'logged_in' || value?.target === 'advertiser' ? value.target : 'all'
-    return Response.json({
-      enabled: !!value?.enabled,
-      message: typeof value?.message === 'string' ? value.message : '',
-      target,
-    })
+    return Response.json(normalizeAnnouncement(item?.value))
   } catch {
     return Response.json({ enabled: false, message: '', target: 'all' })
   }
@@ -35,10 +48,24 @@ export async function PATCH(request: NextRequest) {
   const auth = await requireAdmin(request)
   if (!auth) return Response.json({ error: 'Não autorizado' }, { status: 401 })
 
-  const body = (await request.json()) as { enabled?: boolean; message?: string; target?: string }
+  const body = (await request.json()) as {
+    enabled?: boolean
+    message?: string
+    target?: string
+    background_color?: string
+    text_color?: string
+    display_mode?: string
+    speed?: number
+  }
   const enabled = !!body.enabled
   const message = typeof body.message === 'string' ? body.message : ''
   const target = body.target === 'guests' || body.target === 'logged_in' || body.target === 'advertiser' ? body.target : 'all'
+  const isColor = (color: unknown) => typeof color === 'string' && /^#[0-9a-fA-F]{6}$/.test(color)
+  const background_color = isColor(body.background_color) ? body.background_color : DEFAULT_BACKGROUND_COLOR
+  const text_color = isColor(body.text_color) ? body.text_color : DEFAULT_TEXT_COLOR
+  const display_mode = body.display_mode === 'marquee' ? 'marquee' : 'static'
+  const speed = typeof body.speed === 'number' && Number.isFinite(body.speed) ? Math.min(200, Math.max(20, Math.round(body.speed))) : 60
+  const value = { enabled, message, target, background_color, text_color, display_mode, speed }
 
   try {
     const listRes = await fetch(
@@ -58,7 +85,7 @@ export async function PATCH(request: NextRequest) {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${auth.token}`,
           },
-          body: JSON.stringify({ value: { enabled, message, target } }),
+          body: JSON.stringify({ value }),
         }
       )
       if (!res.ok) throw new Error('Erro ao atualizar')
@@ -69,11 +96,11 @@ export async function PATCH(request: NextRequest) {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${auth.token}`,
         },
-        body: JSON.stringify({ key: 'announcement', value: { enabled, message, target } }),
+        body: JSON.stringify({ key: 'announcement', value }),
       })
       if (!res.ok) throw new Error('Erro ao criar configuração')
     }
-    return Response.json({ ok: true, enabled, message, target })
+    return Response.json({ ok: true, ...value })
   } catch (e) {
     return Response.json(
       { error: e instanceof Error ? e.message : 'Erro ao salvar' },
