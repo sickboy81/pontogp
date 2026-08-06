@@ -22,6 +22,7 @@ import {
   X,
   Clock3,
   RefreshCw,
+  Link2,
 } from 'lucide-react'
 import VerificationRequestForm from '@/components/VerificationRequestForm'
 import type { Profile } from '@/lib/types'
@@ -707,6 +708,13 @@ export default function DashboardClient() {
           >
             <Edit className="h-5 w-5" />
             Editar perfil
+          </Link>
+          <Link
+            href="/dashboard/perfil?tab=bio"
+            className="flex min-w-[120px] flex-1 items-center justify-center gap-2 border-r border-slate-700 py-4 text-primary-300 transition hover:bg-primary-500/10 hover:text-primary-200"
+          >
+            <Link2 className="h-5 w-5" />
+            Link na bio
           </Link>
           <Link
             href="/planos"
