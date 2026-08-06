@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server'
 import { getAuthCookieFromHeader, getUserIdFromToken } from '@/lib/auth-cookie'
 import { getProfileByUserId } from '@/lib/api/profiles'
 import { getAdminToken } from '@/lib/pocketbase-admin'
-import { COUPONS_COLLECTION } from '@/lib/coupons-collection'
+import { COUPON_REDEMPTIONS_COLLECTION, COUPONS_COLLECTION } from '@/lib/coupons-collection'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
@@ -65,6 +65,44 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: 'Cupom já utilizado ao máximo' }, { status: 400 })
     }
 
+    // A unique reservation key makes the redemption decision atomic in PocketBase.
+    // The legacy used_count remains for display/backward compatibility only.
+    const existingRes = await fetch(
+      `${PB_URL}/api/collections/${COUPON_REDEMPTIONS_COLLECTION}/records?filter=${encodeURIComponent(`coupon_id="${coupon.id}" && user_id="${userId}" && status!="released"`)}&perPage=1`,
+      { headers: authHeader, cache: 'no-store' }
+    )
+    if (existingRes.ok) {
+      const existingData = (await existingRes.json()) as { items?: unknown[] }
+      if ((existingData.items?.length || 0) > 0) {
+        return Response.json({ error: 'Este cupom já foi utilizado nesta conta.' }, { status: 400 })
+      }
+    }
+
+    let reservationId: string | null = null
+    const reservationLimit = maxUses == null ? 1 : Math.max(0, maxUses)
+    for (let slot = 0; slot < reservationLimit; slot += 1) {
+      const reservationKey = maxUses == null ? `${coupon.id}:${userId}` : `${coupon.id}:${slot}`
+      const reservationRes = await fetch(`${PB_URL}/api/collections/${COUPON_REDEMPTIONS_COLLECTION}/records`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeader },
+        body: JSON.stringify({
+          reservation_key: reservationKey,
+          coupon_id: coupon.id,
+          user_id: userId,
+          status: 'reserved',
+        }),
+      })
+      if (reservationRes.ok) {
+        const reservation = (await reservationRes.json()) as { id?: string }
+        reservationId = reservation.id || null
+        break
+      }
+      if (reservationRes.status !== 400) break
+    }
+    if (!reservationId) {
+      return Response.json({ error: maxUses != null ? 'Cupom já utilizado ao máximo' : 'Cupom indisponível' }, { status: 400 })
+    }
+
     const durationDays = Number(coupon.duration_days) || 30
     const now = new Date()
     const searchExpires = new Date(now)
@@ -74,7 +112,7 @@ export async function POST(request: NextRequest) {
     const searchExpiresAt = searchExpires.toISOString().replace('T', ' ').slice(0, 19)
     const contactExpiresAt = contactExpires.toISOString().replace('T', ' ').slice(0, 19)
 
-    await fetch(`${PB_URL}/api/collections/profiles/records/${profile.id}`, {
+    const profileRes = await fetch(`${PB_URL}/api/collections/profiles/records/${profile.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', ...authHeader },
       body: JSON.stringify({
@@ -84,12 +122,29 @@ export async function POST(request: NextRequest) {
         auto_bump: true,
       }),
     })
+    if (!profileRes.ok) {
+      await fetch(`${PB_URL}/api/collections/${COUPON_REDEMPTIONS_COLLECTION}/records/${reservationId}`, {
+        method: 'DELETE',
+        headers: authHeader,
+      }).catch(() => {})
+      return Response.json({ error: 'Não foi possível atualizar seu perfil com o cupom.' }, { status: 502 })
+    }
 
+    const reservationUpdateRes = await fetch(`${PB_URL}/api/collections/${COUPON_REDEMPTIONS_COLLECTION}/records/${reservationId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...authHeader },
+      body: JSON.stringify({ status: 'applied' }),
+    })
+    if (!reservationUpdateRes.ok) {
+      return Response.json({ error: 'Perfil atualizado, mas não foi possível registrar o uso do cupom. Contate o suporte.' }, { status: 502 })
+    }
+
+    // Keep the old counter synchronized for the admin UI, without using it as the lock.
     await fetch(`${PB_URL}/api/collections/${COUPONS_COLLECTION}/records/${coupon.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', ...authHeader },
-      body: JSON.stringify({ used_count: usedCount + 1 }),
-    })
+      body: JSON.stringify({ used_count: Math.max(usedCount + 1, 1) }),
+    }).catch(() => {})
 
     return Response.json({
       success: true,

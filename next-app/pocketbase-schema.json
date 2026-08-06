@@ -1800,6 +1800,41 @@
           "type": "number"
         },
         {
+          "help": "",
+          "hidden": false,
+          "id": "jsoncerejalang",
+          "maxSize": 0,
+          "name": "languages",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "json"
+        },
+        {
+          "help": "",
+          "hidden": false,
+          "id": "txtcerejaeye",
+          "max": 50,
+          "min": 0,
+          "name": "eye_color",
+          "pattern": "",
+          "presentable": false,
+          "primaryKey": false,
+          "required": false,
+          "system": false,
+          "type": "text"
+        },
+        {
+          "help": "",
+          "hidden": false,
+          "id": "boolcerejatrav",
+          "name": "accepts_travel",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "bool"
+        },
+        {
           "autogeneratePattern": "",
           "help": "",
           "hidden": false,
@@ -4307,6 +4342,85 @@
           "presentable": false,
           "system": true,
           "type": "autodate"
+        }
+      ]
+    },
+    {
+      "id": "pbc_coupreserve",
+      "name": "coupon_redemptions",
+      "type": "base",
+      "listRule": "@request.auth.role = 'admin'",
+      "viewRule": "@request.auth.role = 'admin'",
+      "createRule": "@request.auth.role = 'admin'",
+      "updateRule": "@request.auth.role = 'admin'",
+      "deleteRule": "@request.auth.role = 'admin'",
+      "schema": [
+        {
+          "autogeneratePattern": "[a-z0-9]{15}",
+          "hidden": false,
+          "id": "textcouponreserveid",
+          "max": 15,
+          "min": 15,
+          "name": "id",
+          "pattern": "^[a-z0-9]+$",
+          "presentable": false,
+          "primaryKey": true,
+          "required": true,
+          "system": true,
+          "type": "text"
+        },
+        {
+          "hidden": false,
+          "id": "textcouponreservekey",
+          "max": 120,
+          "min": 1,
+          "name": "reservation_key",
+          "pattern": "",
+          "presentable": false,
+          "primaryKey": false,
+          "required": true,
+          "system": false,
+          "type": "text",
+          "unique": true
+        },
+        {
+          "hidden": false,
+          "id": "textcouponreservecoupon",
+          "max": 15,
+          "min": 1,
+          "name": "coupon_id",
+          "pattern": "",
+          "presentable": false,
+          "primaryKey": false,
+          "required": true,
+          "system": false,
+          "type": "text"
+        },
+        {
+          "hidden": false,
+          "id": "textcouponreserveuser",
+          "max": 15,
+          "min": 1,
+          "name": "user_id",
+          "pattern": "",
+          "presentable": false,
+          "primaryKey": false,
+          "required": true,
+          "system": false,
+          "type": "text"
+        },
+        {
+          "hidden": false,
+          "id": "textcouponreservestatus",
+          "max": 20,
+          "min": 1,
+          "name": "status",
+          "pattern": "^(reserved|applied|released)$",
+          "presentable": false,
+          "primaryKey": false,
+          "required": true,
+          "system": false,
+          "type": "text"
         }
       ]
     }

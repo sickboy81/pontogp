@@ -329,11 +329,15 @@ export default function ProfileSummary({
         </div>
       )}
 
-      {(profile.height_exact || profile.pubis_type || profile.piercings || profile.tattoos || profile.smoker) && (
+      {(profile.height || profile.height_exact || profile.eye_color || profile.foot_size || profile.languages?.length || profile.accepts_travel || profile.pubis_type || profile.piercings || profile.tattoos || profile.smoker) && (
         <div className="rounded-[1.75rem] border border-slate-700/70 bg-slate-900/60 p-5">
           <h3 className="mb-3 text-sm font-bold uppercase tracking-[0.22em] text-slate-500">Características</h3>
           <div className="flex flex-wrap gap-2">
-            {profile.height_exact && <span className="rounded-lg bg-slate-700/50 px-3 py-1.5 text-sm text-slate-200">Altura: {profile.height_exact}</span>}
+            {(profile.height || profile.height_exact) && <span className="rounded-lg bg-slate-700/50 px-3 py-1.5 text-sm text-slate-200">Altura: {profile.height ? `${profile.height} cm` : profile.height_exact}</span>}
+            {profile.eye_color && <span className="rounded-lg bg-slate-700/50 px-3 py-1.5 text-sm text-slate-200">Olhos: {profile.eye_color}</span>}
+            {profile.foot_size && <span className="rounded-lg bg-slate-700/50 px-3 py-1.5 text-sm text-slate-200">Pés: {profile.foot_size}</span>}
+            {profile.languages?.length ? <span className="rounded-lg bg-slate-700/50 px-3 py-1.5 text-sm text-slate-200">Idiomas: {profile.languages.join(', ')}</span> : null}
+            {profile.accepts_travel && <span className="rounded-lg bg-slate-700/50 px-3 py-1.5 text-sm text-slate-200">Aceita viajar</span>}
             {profile.pubis_type && <span className="rounded-lg bg-slate-700/50 px-3 py-1.5 text-sm text-slate-200">Pubis: {profile.pubis_type}</span>}
             {profile.piercings && <span className="rounded-lg bg-slate-700/50 px-3 py-1.5 text-sm text-slate-200">Piercing</span>}
             {profile.tattoos && <span className="rounded-lg bg-slate-700/50 px-3 py-1.5 text-sm text-slate-200">Tatuagem</span>}

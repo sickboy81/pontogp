@@ -3,8 +3,9 @@
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { MessageCircle, Phone, Send, X } from 'lucide-react'
+import { Eye, Heart, ImageIcon, MessageCircle, Phone, Send, X } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
+import { useFavoritesStore } from '@/store/favorites'
 import type { Profile } from '@/lib/types'
 import { formatPrice } from '@/utils/format'
 import Lightbox from '@/components/Lightbox'
@@ -39,6 +40,9 @@ export default function ProfileView({
   initialStoryId,
 }: ProfileViewProps) {
   const user = useAuthStore((s) => s.user)
+  const isFavorite = useFavoritesStore((s) => s.isFavorite(profile.id))
+  const toggleFavorite = useFavoritesStore((s) => s.toggleFavorite)
+  const fetchFavorites = useFavoritesStore((s) => s.fetchFavorites)
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [stories, setStories] = useState<StoryItem[]>([])
   const [storyViewerOpen, setStoryViewerOpen] = useState(false)
@@ -59,6 +63,20 @@ export default function ProfileView({
     notice: '',
   })
   const photos = profile.photos?.length ? profile.photos : (profile.thumbnail ? [profile.thumbnail] : [])
+
+  useEffect(() => {
+    if (user) void fetchFavorites()
+  }, [user, fetchFavorites])
+
+  const handleToggleFavorite = async () => {
+    if (!user) {
+      toast.error('Entre na sua conta para salvar favoritos.')
+      return
+    }
+    const ok = await toggleFavorite(profile.id)
+    if (ok) toast.success(isFavorite ? 'Perfil removido dos favoritos.' : 'Perfil salvo nos favoritos.')
+    else toast.error('Não foi possível atualizar os favoritos.')
+  }
 
   const tagChipClass =
     'inline-block rounded-lg border border-transparent bg-slate-700/50 px-3 py-1.5 text-sm text-slate-200 transition hover:border-primary-500/40 hover:bg-slate-600/80 hover:text-white'
@@ -248,6 +266,8 @@ export default function ProfileView({
               messagesLoaded={messagesSettings.loaded}
               messagesEnabled={messagesSettings.enabled}
               messagesNotice={messagesNotice}
+              isFavorite={isFavorite}
+              onToggleFavorite={handleToggleFavorite}
               visibleWhatsapp={visibleWhatsapp}
               visibleTelegram={visibleTelegram}
               visiblePhone={visiblePhone}
@@ -255,6 +275,26 @@ export default function ProfileView({
               onShare={handleShare}
               onTrackClick={trackClick}
             />
+            <div className="rounded-[1.75rem] border border-slate-700/70 bg-slate-900/65 p-5">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Estatísticas públicas</p>
+              <div className="mt-4 grid grid-cols-3 gap-2">
+                <div className="rounded-2xl border border-slate-700 bg-slate-800/60 p-3 text-center">
+                  <Eye className="mx-auto h-4 w-4 text-primary-300" />
+                  <p className="mt-1 text-lg font-bold text-white">{(profile.views || 0).toLocaleString('pt-BR')}</p>
+                  <p className="text-[10px] uppercase tracking-wide text-slate-500">Visualizações</p>
+                </div>
+                <div className="rounded-2xl border border-slate-700 bg-slate-800/60 p-3 text-center">
+                  <Heart className="mx-auto h-4 w-4 text-red-300" />
+                  <p className="mt-1 text-lg font-bold text-white">{(profile.favorites_count || 0).toLocaleString('pt-BR')}</p>
+                  <p className="text-[10px] uppercase tracking-wide text-slate-500">Favoritos</p>
+                </div>
+                <div className="rounded-2xl border border-slate-700 bg-slate-800/60 p-3 text-center">
+                  <ImageIcon className="mx-auto h-4 w-4 text-amber-300" />
+                  <p className="mt-1 text-lg font-bold text-white">{photos.length}</p>
+                  <p className="text-[10px] uppercase tracking-wide text-slate-500">Fotos</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
         <ProfileSections

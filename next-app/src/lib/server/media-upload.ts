@@ -36,6 +36,34 @@ export async function imageFileToWebp(file: File): Promise<File> {
   return new File([Uint8Array.from(out)], `${base}.webp`, { type: 'image/webp' })
 }
 
+/** Converte a foto pública para WebP e aplica a marca d'água do site. */
+export async function imageFileToWatermarkedWebp(file: File): Promise<File> {
+  const buf = Buffer.from(await file.arrayBuffer())
+  const base = safeBaseName(file.name, 'image')
+  const image = sharp(buf, { limitInputPixels: 268_402_689 }).rotate().resize(2560, 2560, {
+    fit: 'inside',
+    withoutEnlargement: true,
+  })
+  const metadata = await image.metadata()
+  const width = metadata.width || 1200
+  const logoPath = path.join(process.cwd(), 'public', 'logo-header.png')
+  const logoWidth = Math.max(180, Math.round(width * 0.34))
+  const logo = await sharp(logoPath)
+    .resize({ width: logoWidth, withoutEnlargement: true })
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true })
+  for (let index = 3; index < logo.data.length; index += 4) logo.data[index] = Math.round(logo.data[index] * 0.48)
+  const logoPng = await sharp(logo.data, {
+    raw: { width: logo.info.width, height: logo.info.height, channels: 4 },
+  }).png().toBuffer()
+  const out = await image
+    .composite([{ input: logoPng, gravity: 'center', blend: 'over' }])
+    .webp({ quality: 82, effort: 4 })
+    .toBuffer()
+  return new File([Uint8Array.from(out)], `${base}.webp`, { type: 'image/webp' })
+}
+
 /** Reencoda vídeo para MP4 H.264 ~720p, AAC leve (quando há áudio). */
 export async function videoFileToCompactMp4(file: File): Promise<File> {
   const ffmpeg = getFfmpegPath()

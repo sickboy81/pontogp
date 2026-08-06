@@ -61,7 +61,12 @@ export interface Profile {
   body_type?: string
   height?: number
   weight?: string
+  /** Campo legado mantido para perfis antigos; não é mais editado no formulário. */
   height_exact?: string
+  eye_color?: string
+  foot_size?: string
+  languages?: string[]
+  accepts_travel?: boolean
   breast_type?: string
   pubis_type?: string
   service_locations?: string[]

@@ -46,8 +46,13 @@ export async function GET(request: NextRequest) {
       )
     }
     const data = await res.json()
+    const items = (Array.isArray(data.items) ? data.items : []).map((item: Record<string, unknown>) => ({
+      ...item,
+      created: item.created || item.created_at || item.date_created || null,
+      ip_address: item.ip_address || item.ip || item.client_ip || null,
+    }))
     return Response.json({
-      items: data.items || [],
+      items,
       totalItems: data.totalItems ?? 0,
       page,
       perPage,

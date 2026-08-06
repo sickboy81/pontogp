@@ -32,8 +32,10 @@ async function verifyProfileOwnership(
 
 function extractPhotoId(urlOrId: string): string {
   if (!urlOrId) return ''
-  const m = urlOrId.match(/([a-z0-9]{15})$/i)
-  return m ? m[1] : urlOrId
+  const value = decodeURIComponent(urlOrId)
+  const urlMatch = value.match(/\/([a-z0-9]{15})\/[^/]+(?:\?.*)?$/i)
+  if (urlMatch) return urlMatch[1]
+  return /^[a-z0-9]{15}$/i.test(value) ? value : ''
 }
 
 /** DELETE: remove foto do perfil. */

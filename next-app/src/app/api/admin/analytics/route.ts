@@ -24,6 +24,18 @@ async function fetchCount(
   }
 }
 
+async function fetchRows<T>(token: string, collection: string, filter = '', fields = 'created,profile'): Promise<T[]> {
+  try {
+    const url = `${PB_URL}/api/collections/${collection}/records?perPage=5000&fields=${encodeURIComponent(fields)}${filter ? `&filter=${encodeURIComponent(filter)}` : ''}`
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
+    if (!res.ok) return []
+    const data = await res.json()
+    return Array.isArray(data.items) ? data.items as T[] : []
+  } catch {
+    return []
+  }
+}
+
 function dateFilter(daysAgo: number): string {
   const d = new Date()
   d.setDate(d.getDate() - daysAgo)
@@ -51,6 +63,13 @@ export async function GET(request: NextRequest) {
       clicksTelegram,
       clicksPhone,
       clicksMessage,
+      activeProfiles,
+      totalUsers,
+      activeStories,
+      unreadContacts,
+      pendingReports,
+      viewRows,
+      clickRows,
     ] = await Promise.all([
       fetchCount(auth.token, 'profile_views'),
       fetchCount(auth.token, 'profile_clicks'),
@@ -62,12 +81,44 @@ export async function GET(request: NextRequest) {
       fetchCount(auth.token, 'profile_clicks', 'contact_type = "telegram"'),
       fetchCount(auth.token, 'profile_clicks', 'contact_type = "phone"'),
       fetchCount(auth.token, 'profile_clicks', 'contact_type = "message"'),
+      fetchCount(auth.token, 'profiles', 'status = "active"'),
+      fetchCount(auth.token, 'users'),
+      fetchCount(auth.token, 'stories', 'expires_at > "' + new Date().toISOString() + '"'),
+      fetchCount(auth.token, 'contacts', 'read = false'),
+      fetchCount(auth.token, 'reports', 'status = "pending"'),
+      fetchRows<{ created?: string; profile?: string }>(auth.token, 'profile_views', filter30, 'created,profile'),
+      fetchRows<{ created?: string; contact_type?: string }>(auth.token, 'profile_clicks', filter30, 'created,contact_type'),
     ])
 
+    const dayKeys = Array.from({ length: 30 }, (_, index) => {
+      const date = new Date()
+      date.setHours(0, 0, 0, 0)
+      date.setDate(date.getDate() - (29 - index))
+      return date.toISOString().slice(0, 10)
+    })
+    const daily = dayKeys.map((date) => ({ date, views: 0, clicks: 0 }))
+    const dailyMap = new Map(daily.map((row) => [row.date, row]))
+    for (const row of viewRows) {
+      const date = row.created?.slice(0, 10)
+      const target = date ? dailyMap.get(date) : undefined
+      if (target) target.views += 1
+    }
+    for (const row of clickRows) {
+      const date = row.created?.slice(0, 10)
+      const target = date ? dailyMap.get(date) : undefined
+      if (target) target.clicks += 1
+    }
+
+    const viewsByProfile = new Map<string, number>()
+    for (const row of viewRows) {
+      if (row.profile) viewsByProfile.set(row.profile, (viewsByProfile.get(row.profile) || 0) + 1)
+    }
     let topProfilesByViews: { id: string; name: string; views: number; slug?: string }[] = []
     try {
+      const topIds = [...viewsByProfile.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10)
+      const profileFilter = topIds.map(([id]) => `id="${id}"`).join(' || ')
       const res = await fetch(
-        `${PB_URL}/api/collections/profiles/records?sort=-views&perPage=10&fields=id,name,views,slug`,
+        `${PB_URL}/api/collections/profiles/records?perPage=10&fields=id,name,slug${profileFilter ? `&filter=${encodeURIComponent(profileFilter)}` : ''}`,
         {
           headers: { Authorization: `Bearer ${auth.token}` },
           cache: 'no-store',
@@ -78,7 +129,7 @@ export async function GET(request: NextRequest) {
         topProfilesByViews = (data.items ?? []).map((p: { id: string; name: string; views: number; slug?: string }) => ({
           id: p.id,
           name: p.name ?? '–',
-          views: p.views ?? 0,
+          views: viewsByProfile.get(p.id) || 0,
           slug: p.slug,
         }))
       }
@@ -99,6 +150,13 @@ export async function GET(request: NextRequest) {
         phone: clicksPhone,
         message: clicksMessage,
       },
+      daily,
+      activeProfiles,
+      totalUsers,
+      activeStories,
+      unreadContacts,
+      pendingReports,
+      ctr: totalViews > 0 ? Math.round((totalClicks / totalViews) * 1000) / 10 : 0,
       topProfilesByViews,
     })
   } catch {

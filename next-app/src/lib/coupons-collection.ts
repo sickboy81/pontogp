@@ -5,3 +5,5 @@
  */
 export const COUPONS_COLLECTION =
   process.env.POCKETBASE_COUPONS_COLLECTION?.trim() || 'coupons'
+
+export const COUPON_REDEMPTIONS_COLLECTION = 'coupon_redemptions'

@@ -63,7 +63,10 @@ type FormData = {
   body_type: string
   height: string
   weight: string
-  height_exact: string
+  eye_color: string
+  foot_size: string
+  languages: string[]
+  accepts_travel: boolean
   breast_type: string
   pubis_type: string
   services: string[]
@@ -170,7 +173,10 @@ const emptyForm: FormData = {
   body_type: '',
   height: '',
   weight: '',
-  height_exact: '',
+  eye_color: '',
+  foot_size: '',
+  languages: [],
+  accepts_travel: false,
   breast_type: '',
   pubis_type: '',
   services: [],
@@ -244,7 +250,10 @@ function profileToForm(p: Profile | null): FormData {
     body_type: p.body_type != null ? String(p.body_type) : '',
     height: p.height != null ? String(p.height) : '',
     weight: p.weight ?? '',
-    height_exact: p.height_exact ?? '',
+    eye_color: p.eye_color ?? '',
+    foot_size: p.foot_size ?? '',
+    languages: Array.isArray(p.languages) ? p.languages : [],
+    accepts_travel: p.accepts_travel ?? false,
     breast_type: p.breast_type ?? '',
     pubis_type: p.pubis_type ?? '',
     services: Array.isArray(p.services) ? p.services : [],
@@ -452,8 +461,10 @@ export default function DashboardPerfilForm() {
 
   function extractMediaId(urlOrId: string): string {
     if (!urlOrId) return ''
-    const m = urlOrId.match(/([a-z0-9]{15})$/i)
-    return m ? m[1] : urlOrId
+    const value = decodeURIComponent(urlOrId)
+    const urlMatch = value.match(/\/([a-z0-9]{15})\/[^/]+(?:\?.*)?$/i)
+    if (urlMatch) return urlMatch[1]
+    return /^[a-z0-9]{15}$/i.test(value) ? value : ''
   }
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -758,7 +769,10 @@ export default function DashboardPerfilForm() {
         body_type: String(form.body_type ?? '').trim() || null,
         height: toTrimmed(form.height) ? Number(form.height) : null,
         weight: toTrimmed(form.weight) || null,
-        height_exact: toTrimmed(form.height_exact) || null,
+        eye_color: toTrimmed(form.eye_color) || null,
+        foot_size: toTrimmed(form.foot_size) || null,
+        languages: form.languages.length ? form.languages : [],
+        accepts_travel: form.accepts_travel,
         breast_type: toTrimmed(form.breast_type) || null,
         pubis_type: toTrimmed(form.pubis_type) || null,
         services: form.category === 'acompanhante' && form.services?.length ? form.services : (form.category !== 'acompanhante' ? [] : form.services?.length ? form.services : null),
@@ -1070,14 +1084,11 @@ export default function DashboardPerfilForm() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-300">Altura exata</label>
-            <input
-              type="text"
-              value={form.height_exact}
-              onChange={(e) => setForm((f) => ({ ...f, height_exact: e.target.value }))}
-              placeholder="Ex: 1,70m"
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white placeholder-slate-500 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-            />
+            <label className="mb-1 block text-sm font-medium text-slate-300">Cor dos olhos</label>
+            <select value={form.eye_color} onChange={(e) => setForm((f) => ({ ...f, eye_color: e.target.value }))} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500">
+              <option value="">—</option>
+              {['Castanhos', 'Pretos', 'Azuis', 'Verdes', 'Mel', 'Cinzas'].map((color) => <option key={color} value={color}>{color}</option>)}
+            </select>
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-300">Busto</label>
@@ -1104,6 +1115,25 @@ export default function DashboardPerfilForm() {
                 <option key={p} value={p}>{p}</option>
               ))}
             </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-300">Tamanho dos pés</label>
+            <select value={form.foot_size} onChange={(e) => setForm((f) => ({ ...f, foot_size: e.target.value }))} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500">
+              <option value="">—</option>
+              {Array.from({ length: 13 }, (_, index) => String(index + 34)).map((size) => <option key={size} value={size}>{size}</option>)}
+            </select>
+          </div>
+        </div>
+
+        <div className="mt-4 rounded-lg border border-slate-700 bg-slate-800/40 p-4">
+          <p className="mb-2 text-sm font-medium text-slate-300">Idiomas que fala</p>
+          <div className="flex flex-wrap gap-3">
+            {['Português', 'Inglês', 'Espanhol', 'Francês', 'Italiano', 'Alemão'].map((language) => (
+              <label key={language} className="flex cursor-pointer items-center gap-2 text-sm text-slate-300">
+                <input type="checkbox" checked={form.languages.includes(language)} onChange={(e) => setForm((f) => ({ ...f, languages: e.target.checked ? [...f.languages, language] : f.languages.filter((item) => item !== language) }))} className="h-4 w-4 rounded border-slate-600 bg-slate-800 text-primary-600 focus:ring-primary-500" />
+                {language}
+              </label>
+            ))}
           </div>
         </div>
 
@@ -1139,6 +1169,10 @@ export default function DashboardPerfilForm() {
               ))}
             </select>
           </div>
+          <label className="flex cursor-pointer items-center gap-2 self-end pb-2">
+            <input type="checkbox" checked={form.accepts_travel} onChange={(e) => setForm((f) => ({ ...f, accepts_travel: e.target.checked }))} className="h-4 w-4 rounded border-slate-600 bg-slate-800 text-primary-600 focus:ring-primary-500" />
+            <span className="text-sm text-slate-300">Aceita viajar</span>
+          </label>
         </div>
 
         {/* Serviços / Tipos de massagem / Serviços online – conforme categoria */}
@@ -1383,12 +1417,13 @@ export default function DashboardPerfilForm() {
           </>
         )}
 
-        {profile && (
-          <div className="border-t border-slate-700 pt-4">
-            <h3 className="mb-3 font-medium text-slate-300">Horários de atendimento</h3>
-            <ScheduleManager schedule={schedule} onChange={setSchedule} />
-          </div>
-        )}
+        <div className="border-t border-slate-700 pt-4">
+          <h3 className="mb-3 font-medium text-slate-300">Horários de atendimento</h3>
+          <p className="mb-4 text-sm text-slate-400">
+            Informe quando você costuma atender. Você poderá alterar estes horários a qualquer momento.
+          </p>
+          <ScheduleManager schedule={schedule} onChange={setSchedule} />
+        </div>
 
         {/* Serviços especiais – apenas Acompanhante (massagista usa "Final feliz" acima) */}
         {form.category === 'acompanhante' && (

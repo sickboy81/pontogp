@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Flag, MessageCircle, Phone, Share2 } from 'lucide-react'
+import { Flag, Heart, MessageCircle, Phone, Share2 } from 'lucide-react'
 import type { Profile } from '@/lib/types'
 import { socialProfileHref } from '@/lib/social-links'
 import { telegramContactHref, whatsAppContactHref } from '@/lib/contact-prefill'
@@ -32,6 +32,8 @@ type ProfileActionsProps = {
   visiblePhone: string
   onOpenReport: () => void
   onShare: () => void
+  isFavorite: boolean
+  onToggleFavorite: () => void
   onTrackClick: (contactType: TrackableContactType) => void
 }
 
@@ -51,6 +53,8 @@ export default function ProfileActions({
   visiblePhone,
   onOpenReport,
   onShare,
+  isFavorite,
+  onToggleFavorite,
   onTrackClick,
 }: ProfileActionsProps) {
   const hasNetworks =
@@ -72,6 +76,16 @@ export default function ProfileActions({
               Use os canais abaixo conforme a disponibilidade atual do anúncio.
             </p>
           </div>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={onToggleFavorite}
+              className={`inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold transition ${isFavorite ? 'border-red-400/50 bg-red-500/15 text-red-200' : 'border-slate-600 text-slate-300 hover:bg-slate-700 hover:text-white'}`}
+              aria-label={isFavorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+            >
+              <Heart className={`h-4 w-4 ${isFavorite ? 'fill-red-400 text-red-400' : ''}`} />
+              {isFavorite ? 'Favoritado' : 'Favoritar'}
+            </button>
           {canReport && (
             <div className="flex gap-2">
               <button
@@ -101,6 +115,7 @@ export default function ProfileActions({
               <Share2 className="h-4 w-4" />
             </button>
           )}
+          </div>
         </div>
 
         <div className="mt-4">
@@ -226,6 +241,17 @@ export default function ProfileActions({
             )}
           </div>
         </div>
+      )}
+
+      {canReport && (
+        <button
+          type="button"
+          onClick={onOpenReport}
+          className="inline-flex items-center gap-2 text-xs text-slate-500 transition hover:text-amber-300"
+        >
+          <Flag className="h-3.5 w-3.5" />
+          Denunciar este perfil
+        </button>
       )}
     </div>
   )

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { BarChart3, Eye, MousePointer, MessageCircle, Phone, Send } from 'lucide-react'
+import { BarChart3, Eye, MousePointer, MessageCircle, Phone, RefreshCw, Send, Users, UserCheck, AlertTriangle, Mail } from 'lucide-react'
 
 interface AnalyticsData {
   totalViews: number
@@ -12,19 +12,41 @@ interface AnalyticsData {
   clicksLast7Days: number
   clicksLast30Days: number
   clicksByType: { whatsapp: number; telegram: number; phone: number; message: number }
+  daily: { date: string; views: number; clicks: number }[]
+  activeProfiles: number
+  totalUsers: number
+  activeStories: number
+  unreadContacts: number
+  pendingReports: number
+  ctr: number
   topProfilesByViews: { id: string; name: string; views: number; slug?: string }[]
 }
 
 export default function AdminAnalyticsPage() {
   const [data, setData] = useState<AnalyticsData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [refreshing, setRefreshing] = useState(false)
+
+  const load = async (initial = false) => {
+    if (initial) setLoading(true)
+    else setRefreshing(true)
+    setError('')
+    try {
+      const r = await fetch('/api/admin/analytics', { credentials: 'include', cache: 'no-store' })
+      const d = await r.json().catch(() => ({}))
+      if (!r.ok) throw new Error(d.error || 'Não foi possível carregar os analytics.')
+      setData(d)
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Não foi possível carregar os analytics.')
+    } finally {
+      setLoading(false)
+      setRefreshing(false)
+    }
+  }
 
   useEffect(() => {
-    fetch('/api/admin/analytics', { credentials: 'include' })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => setData(d || null))
-      .catch(() => setData(null))
-      .finally(() => setLoading(false))
+    void load(true)
   }, [])
 
   if (loading) {
@@ -48,6 +70,7 @@ export default function AdminAnalyticsPage() {
     clicksLast7Days: 0,
     clicksLast30Days: 0,
     clicksByType: { whatsapp: 0, telegram: 0, phone: 0, message: 0 },
+    daily: [], activeProfiles: 0, totalUsers: 0, activeStories: 0, unreadContacts: 0, pendingReports: 0, ctr: 0,
     topProfilesByViews: [],
   }
 
@@ -68,13 +91,15 @@ export default function AdminAnalyticsPage() {
     <div>
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold text-white">Analytics</h1>
-        <Link
-          href="/admin"
-          className="flex items-center gap-2 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-300 hover:bg-slate-700"
-        >
-          Voltar ao painel
-        </Link>
+        <div className="flex gap-2">
+          <button type="button" onClick={() => void load()} disabled={refreshing} className="flex items-center gap-2 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-300 hover:bg-slate-700 disabled:opacity-50">
+            <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} /> Atualizar
+          </button>
+          <Link href="/admin" className="flex items-center gap-2 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-300 hover:bg-slate-700">Voltar ao painel</Link>
+        </div>
       </div>
+
+      {error && <div className="mb-6 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">{error}</div>}
 
       <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-6">
@@ -107,6 +132,18 @@ export default function AdminAnalyticsPage() {
         </div>
       </div>
 
+      <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        {([
+          { label: 'Perfis ativos', value: d.activeProfiles, Icon: UserCheck, color: 'text-emerald-400' },
+          { label: 'Usuários', value: d.totalUsers, Icon: Users, color: 'text-cyan-400' },
+          { label: 'Cereja Stories ativos', value: d.activeStories, Icon: BarChart3, color: 'text-pink-400' },
+          { label: 'Contatos não lidos', value: d.unreadContacts, Icon: Mail, color: 'text-amber-400' },
+          { label: 'Denúncias pendentes', value: d.pendingReports, Icon: AlertTriangle, color: 'text-red-400' },
+        ] as Array<{ label: string; value: number; Icon: typeof Users; color: string }>).map(({ label, value, Icon: MetricIcon, color }) => {
+          return <div key={label} className="rounded-xl border border-slate-700 bg-slate-800/50 p-4"><div className={`flex items-center gap-2 text-sm ${color}`}><MetricIcon className="h-5 w-5" />{label}</div><p className="mt-2 text-2xl font-bold text-white">{value.toLocaleString('pt-BR')}</p></div>
+        })}
+      </div>
+
       <div className="mb-8 grid gap-4 sm:grid-cols-2">
         <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-6">
           <h2 className="mb-4 text-lg font-semibold text-white">Views e cliques por período</h2>
@@ -114,6 +151,10 @@ export default function AdminAnalyticsPage() {
             <div className="flex justify-between">
               <dt className="text-slate-400">Últimos 30 dias (views)</dt>
               <dd className="font-medium text-white">{d.viewsLast30Days.toLocaleString('pt-BR')}</dd>
+            </div>
+            <div className="flex justify-between border-t border-slate-700 pt-2">
+              <dt className="text-slate-400">CTR (cliques / views)</dt>
+              <dd className="font-medium text-primary-300">{d.ctr.toLocaleString('pt-BR')}%</dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-slate-400">Últimos 30 dias (cliques)</dt>
@@ -138,6 +179,14 @@ export default function AdminAnalyticsPage() {
             })}
           </ul>
         </div>
+      </div>
+
+      <div className="mb-8 rounded-xl border border-slate-700 bg-slate-800/50 p-6">
+        <div className="mb-5 flex items-center justify-between"><div><h2 className="text-lg font-semibold text-white">Atividade dos últimos 30 dias</h2><p className="text-sm text-slate-400">Eventos reais de visualização e contato</p></div><div className="flex gap-4 text-xs text-slate-400"><span><i className="mr-1 inline-block h-2 w-2 rounded-full bg-primary-400" />Views</span><span><i className="mr-1 inline-block h-2 w-2 rounded-full bg-emerald-400" />Cliques</span></div></div>
+        <div className="flex h-48 items-end gap-1 overflow-hidden border-b border-slate-700 pb-1">
+          {d.daily.map((row) => { const max = Math.max(1, ...d.daily.map((item) => Math.max(item.views, item.clicks))); return <div key={row.date} className="group flex h-full min-w-[8px] flex-1 items-end justify-center gap-px" title={`${row.date}: ${row.views} views, ${row.clicks} cliques`}><div className="w-1/2 rounded-t bg-primary-400/80" style={{ height: `${Math.max(row.views ? 4 : 0, (row.views / max) * 100)}%` }} /><div className="w-1/2 rounded-t bg-emerald-400/80" style={{ height: `${Math.max(row.clicks ? 4 : 0, (row.clicks / max) * 100)}%` }} /></div> })}
+        </div>
+        <div className="mt-2 flex justify-between text-[10px] text-slate-500"><span>{d.daily[0]?.date || '—'}</span><span>{d.daily.at(-1)?.date || '—'}</span></div>
       </div>
 
       <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-6">

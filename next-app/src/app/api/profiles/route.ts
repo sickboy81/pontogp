@@ -187,7 +187,10 @@ export async function POST(request: NextRequest) {
     if (body.body_type != null) data.body_type = body.body_type
     if (body.height != null) data.height = Number(body.height)
     if (body.weight != null) data.weight = body.weight
-    if (body.height_exact != null) data.height_exact = body.height_exact
+    if (body.eye_color != null) data.eye_color = body.eye_color
+    if (body.foot_size != null) data.foot_size = body.foot_size
+    if (body.languages != null) data.languages = Array.isArray(body.languages) ? body.languages : []
+    if (body.accepts_travel != null) data.accepts_travel = body.accepts_travel === true
     if (body.breast_type != null) data.breast_type = body.breast_type
     if (body.pubis_type != null) data.pubis_type = body.pubis_type
     if (body.onlyfans != null) data.onlyfans = body.onlyfans

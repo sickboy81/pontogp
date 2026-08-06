@@ -907,6 +907,15 @@ export default function DashboardClient() {
                         <p className="mt-2 text-sm italic text-slate-500">Sem legenda</p>
                       )}
                       <div className="mt-2 flex flex-wrap gap-2">
+                        <Link
+                          href={`/perfil/${profile?.id}?stories=1&story=${encodeURIComponent(s.id)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 rounded-lg border border-primary-500/50 bg-primary-500/10 px-3 py-1.5 text-sm text-primary-200 hover:bg-primary-500/20"
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                          Abrir story
+                        </Link>
                         <button
                           type="button"
                           onClick={() => setEditingStory({ id: s.id, text: s.text })}

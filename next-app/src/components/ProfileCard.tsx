@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { Heart, MapPin, CheckCircle, Star } from 'lucide-react'
 import type { Profile } from '@/lib/types'
@@ -17,6 +18,7 @@ interface ProfileCardProps {
 
 export default function ProfileCard({ profile, index = 0, planColor, priority = false }: ProfileCardProps) {
   const user = useAuthStore((s) => s.user)
+  const router = useRouter()
   const isFavorite = useFavoritesStore((s) => s.isFavorite(profile.id))
   const toggleFavorite = useFavoritesStore((s) => s.toggleFavorite)
   const mainPhoto = profile.thumbnail || profile.photos?.[0]
@@ -25,7 +27,10 @@ export default function ProfileCard({ profile, index = 0, planColor, priority = 
   async function handleFavoriteClick(e: React.MouseEvent) {
     e.preventDefault()
     e.stopPropagation()
-    if (!user) return
+    if (!user) {
+      router.push(`/login?callbackUrl=${encodeURIComponent(window.location.pathname)}`)
+      return
+    }
     await toggleFavorite(profile.id)
   }
 
@@ -92,18 +97,16 @@ export default function ProfileCard({ profile, index = 0, planColor, priority = 
               </span>
             )}
           </div>
-          {user && (
-            <button
-              type="button"
-              onClick={handleFavoriteClick}
-              className="absolute right-2 top-2 rounded-full bg-black/50 p-2 backdrop-blur-sm transition hover:bg-black/70"
-              aria-label={isFavorite ? 'Remover dos favoritos' : 'Favoritar'}
-            >
-              <Heart
-                className={`h-5 w-5 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-white'}`}
-              />
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={handleFavoriteClick}
+            className="absolute right-2 top-2 rounded-full bg-black/50 p-2 backdrop-blur-sm transition hover:bg-black/70"
+            aria-label={isFavorite ? 'Remover dos favoritos' : 'Favoritar'}
+          >
+            <Heart
+              className={`h-5 w-5 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-white'}`}
+            />
+          </button>
         </div>
         <div className="p-4">
           <h3 className="mb-1 truncate font-semibold text-lg text-white">{profile.name}</h3>

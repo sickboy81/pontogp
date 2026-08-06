@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { getAuthCookieFromHeader, getUserIdFromToken } from '@/lib/auth-cookie'
 import { enforceUserRateLimit, RATE_LIMIT_POLICIES } from '@/lib/api-rate-limit.mjs'
-import { imageFileToWebp, isRasterImageMime, resolveImageMime } from '@/lib/server/media-upload'
+import { imageFileToWatermarkedWebp, isRasterImageMime, resolveImageMime } from '@/lib/server/media-upload'
 import { mapProfile } from '@/lib/api/profiles'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
@@ -73,7 +73,7 @@ export async function POST(
 
     let fileForPb: File
     try {
-      fileForPb = await imageFileToWebp(file)
+      fileForPb = await imageFileToWatermarkedWebp(file)
     } catch {
       return Response.json(
         { error: 'Não foi possível processar a imagem. Tente outro arquivo.' },
