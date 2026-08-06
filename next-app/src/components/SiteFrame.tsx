@@ -11,11 +11,12 @@ import { SEO_STATES } from '@/lib/seo-states'
 export default function SiteFrame({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const isAtProfileRoute = !!pathname && pathname.startsWith('/@')
+  const isMaintenanceRoute = pathname === '/manutencao'
   const priorityCities = getPrioritySeoCities()
   const prioritySlugSet = new Set(priorityCities.map((item) => item.slug))
 
-  if (isAtProfileRoute) {
-    // Perfil em formato "link na bio": tela limpa, sem chrome do site.
+  if (isAtProfileRoute || isMaintenanceRoute) {
+    // Perfis link-bio e manutenção usam telas isoladas, sem o chrome do site.
     return <main className="min-h-screen">{children}</main>
   }
 

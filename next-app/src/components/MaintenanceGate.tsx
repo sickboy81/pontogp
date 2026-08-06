@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useLayoutEffect, useState } from 'react'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { useAuthStore, isAdminRole } from '@/store/auth'
 
 const ALLOWED_PREFIXES = [
@@ -30,7 +30,6 @@ function LoadingShell({ text = 'Carregando…' }: { text?: string }) {
 
 export default function MaintenanceGate({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  const router = useRouter()
   const user = useAuthStore((s) => s.user)
   const [authHydrated, setAuthHydrated] = useState(false)
   const [maintenance, setMaintenance] = useState<{ enabled: boolean } | null>(null)
@@ -62,8 +61,8 @@ export default function MaintenanceGate({ children }: { children: React.ReactNod
     if (isAllowed(pathname)) return
     if (!authHydrated) return
     if (isAdminRole(user?.role)) return
-    router.replace('/manutencao')
-  }, [maintenance, pathname, user?.role, authHydrated, router])
+    window.location.replace('/manutencao')
+  }, [maintenance, pathname, user?.role, authHydrated])
 
   if (!maintenance) {
     return <>{children}</>

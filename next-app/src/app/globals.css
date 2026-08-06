@@ -30,6 +30,101 @@ body {
   @apply bg-slate-900 text-slate-100 antialiased;
 }
 
+.maintenance-page {
+  background:
+    radial-gradient(circle at 12% 18%, rgba(225, 29, 72, 0.16), transparent 30rem),
+    radial-gradient(circle at 86% 82%, rgba(245, 158, 11, 0.13), transparent 32rem),
+    #080d1d;
+}
+
+.maintenance-grid {
+  position: absolute;
+  inset: 0;
+  opacity: 0.2;
+  background-image: linear-gradient(rgba(148, 163, 184, 0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(148, 163, 184, 0.08) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: linear-gradient(to bottom, transparent, black 20%, black 80%, transparent);
+}
+
+.maintenance-orb {
+  position: absolute;
+  border-radius: 999px;
+  filter: blur(1px);
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.maintenance-orb-one {
+  width: 18rem;
+  height: 18rem;
+  left: -8rem;
+  top: 18%;
+  background: radial-gradient(circle, rgba(225, 29, 72, 0.3), transparent 68%);
+  animation: maintenance-float-one 9s ease-in-out infinite;
+}
+
+.maintenance-orb-two {
+  width: 24rem;
+  height: 24rem;
+  right: -10rem;
+  bottom: 8%;
+  background: radial-gradient(circle, rgba(245, 158, 11, 0.22), transparent 68%);
+  animation: maintenance-float-two 11s ease-in-out infinite;
+}
+
+.maintenance-card {
+  animation: maintenance-card-in 720ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.maintenance-sparkle {
+  animation: maintenance-sparkle 3.5s ease-in-out infinite;
+}
+
+.maintenance-pulse {
+  animation: maintenance-pulse 2.2s ease-out infinite;
+}
+
+.maintenance-status-dot {
+  box-shadow: 0 0 0 0 rgba(252, 211, 77, 0.6);
+  animation: maintenance-status 2s ease-out infinite;
+}
+
+@keyframes maintenance-card-in {
+  from { opacity: 0; transform: translateY(24px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes maintenance-float-one {
+  50% { transform: translate(32px, -22px) scale(1.12); }
+}
+
+@keyframes maintenance-float-two {
+  50% { transform: translate(-28px, 24px) scale(0.9); }
+}
+
+@keyframes maintenance-sparkle {
+  50% { transform: rotate(18deg) scale(1.18); opacity: 0.55; }
+}
+
+@keyframes maintenance-pulse {
+  0% { transform: scale(0.8); opacity: 0.65; }
+  70%, 100% { transform: scale(1.55); opacity: 0; }
+}
+
+@keyframes maintenance-status {
+  70%, 100% { box-shadow: 0 0 0 7px rgba(252, 211, 77, 0); }
+  0% { box-shadow: 0 0 0 0 rgba(252, 211, 77, 0.55); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .maintenance-card,
+  .maintenance-orb-one,
+  .maintenance-orb-two,
+  .maintenance-sparkle,
+  .maintenance-pulse,
+  .maintenance-status-dot { animation: none; }
+}
+
 @keyframes announcement-marquee {
   from { transform: translateX(100%); }
   to { transform: translateX(-100%); }
