@@ -163,6 +163,7 @@ export async function POST(request: NextRequest) {
       let planId = record.plan ?? null
       let searchDays = 30
       let contactDays = 30
+      let autoBumpByDefault = false
       const couponMatch = record.description?.match(/\|\s*COUPON:([a-z0-9]{15})\s*$/i)
       const couponId = couponMatch?.[1] ?? null
 
@@ -214,7 +215,7 @@ export async function POST(request: NextRequest) {
           )
           let planSlug: string | undefined
           if (planRes.ok) {
-            const planJson = (await planRes.json()) as { slug?: string; subscription_days?: number }
+            const planJson = (await planRes.json()) as { slug?: string; subscription_days?: number; daily_bumps?: number }
             planSlug = planJson.slug
 
             if (!couponId) {
@@ -232,6 +233,8 @@ export async function POST(request: NextRequest) {
                 contactDays = 30
               }
             }
+
+            autoBumpByDefault = planJson.slug !== 'gratis' && Number(planJson.daily_bumps) > 0
 
             const settingsRes = await fetch(
               `${PB_URL}/api/collections/settings/records?filter=${encodeURIComponent('key = "expiration_durations"')}&perPage=1&fields=value`,
@@ -269,6 +272,7 @@ export async function POST(request: NextRequest) {
             plan: planId,
             search_expires_at: searchExpiresAt,
             contact_expires_at: contactExpiresAt,
+            auto_bump: autoBumpByDefault,
           }),
         })
       }

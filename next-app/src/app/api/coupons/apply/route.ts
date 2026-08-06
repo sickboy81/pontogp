@@ -81,6 +81,7 @@ export async function POST(request: NextRequest) {
         plan: coupon.plan_id,
         search_expires_at: searchExpiresAt,
         contact_expires_at: contactExpiresAt,
+        auto_bump: true,
       }),
     })
 

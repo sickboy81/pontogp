@@ -2,6 +2,7 @@ import type { Profile, Schedule } from '@/lib/types'
 import { parseProfileVisibilityPolicy, type ProfileVisibilityPolicy } from '@/lib/parse-expiration-settings'
 import { isPublicProfileStatus } from '@/lib/profile-publication.mjs'
 import { selectOwnerProfileRecord } from '@/lib/profile-owner-record.mjs'
+import { isProfileEffectivelyOnline } from '@/lib/profile-presence.mjs'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
@@ -44,8 +45,7 @@ export function mapProfile(record: Record<string, unknown> & { expand?: Record<s
   const created = (record.created ?? record.date_created ?? record.created_at) as string
   const updated = (record.updated ?? record.date_updated ?? record.updated_at) as string
   const onlineUntil = record.online_until as string | undefined
-  const isOnline =
-    record.is_online === true && (!onlineUntil || new Date(onlineUntil) > new Date())
+  const isOnline = isProfileEffectivelyOnline(record.is_online, onlineUntil)
 
   const planEx = expand.plan
   let plan_slug: string | undefined
@@ -342,7 +342,7 @@ export async function getProfile(id: string): Promise<Profile | null> {
     const now = new Date()
     const res = await fetch(
       `${PB_URL}/api/collections/profiles/records/${id}?expand=photos,videos,audio,plan`,
-      { next: { revalidate: 60 } }
+      { cache: 'no-store' }
     )
     if (!res.ok) return null
     const record = await res.json()
@@ -369,7 +369,7 @@ export async function getProfileBySlug(slug: string): Promise<Profile | null> {
     const filter = `slug = "${slug}"`
     const res = await fetch(
       `${PB_URL}/api/collections/profiles/records?filter=${encodeURIComponent(filter)}&perPage=1&expand=photos,videos,audio,plan`,
-      { next: { revalidate: 60 } }
+    { cache: 'no-store' }
     )
     if (!res.ok) return null
     const data = await res.json()

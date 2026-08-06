@@ -447,7 +447,6 @@ export default function StoryViewer({
 
   const onWheel = (e: React.WheelEvent) => {
     if (Math.abs(e.deltaY) < 40) return
-    e.preventDefault()
     if (e.deltaY > 0) goNext()
     else goPrev()
   }

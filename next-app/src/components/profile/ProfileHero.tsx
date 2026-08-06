@@ -58,20 +58,23 @@ export default function ProfileHero({
                   Verificado
                 </span>
               )}
-              {profile.is_online && (
-                <span className="rounded-full border border-green-400/30 bg-green-500/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-green-200">
-                  Online agora
-                </span>
-              )}
               {unavailable && (
                 <span className="rounded-full border border-amber-400/30 bg-amber-500/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-amber-200">
                   Indisponível
                 </span>
               )}
             </div>
-            <h1 className="mt-4 text-3xl font-black tracking-tight text-white md:text-4xl">
-              {profile.name}
-            </h1>
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <h1 className="text-3xl font-black tracking-tight text-white md:text-4xl">
+                {profile.name}
+              </h1>
+              {profile.is_online && (
+                <span className="inline-flex items-center gap-2 rounded-full border border-green-300/60 bg-green-500/25 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-green-100 shadow-[0_0_18px_rgba(74,222,128,0.35)]">
+                  <span className="h-2 w-2 animate-pulse rounded-full bg-green-300 shadow-[0_0_8px_rgba(134,239,172,0.9)]" aria-hidden="true" />
+                  Online agora
+                </span>
+              )}
+            </div>
             <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-slate-200">
               <span className="inline-flex items-center gap-1.5">
                 <MapPin className="h-4 w-4 text-primary-300" />
