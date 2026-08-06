@@ -84,10 +84,11 @@ export default function ProfileActions({
               <button
                 type="button"
                 onClick={onOpenReport}
-                className="rounded-full border border-slate-600 p-3 text-slate-400 transition hover:bg-slate-700 hover:text-amber-400"
+                className="inline-flex items-center gap-2 rounded-full border border-amber-400/40 bg-amber-500/10 px-3 py-2 text-xs font-semibold text-amber-200 transition hover:bg-amber-500/20 hover:text-amber-100"
                 aria-label="Denunciar anúncio"
               >
                 <Flag className="h-4 w-4" />
+                <span>Denunciar perfil</span>
               </button>
             </div>
           )}

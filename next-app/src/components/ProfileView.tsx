@@ -45,11 +45,13 @@ export default function ProfileView({
   const [storyStartIndex, setStoryStartIndex] = useState(0)
   const [storiesLoaded, setStoriesLoaded] = useState(false)
   const canMessage = user && user.id !== profile.user_id
-  const canReport = user && user.id !== profile.user_id
+  // A denúncia deve estar disponível também para visitantes sem conta.
+  const canReport = !user || user.id !== profile.user_id
   const [lightboxIndex, setLightboxIndex] = useState(0)
   const [reportOpen, setReportOpen] = useState(false)
   const [reportReason, setReportReason] = useState('')
   const [reportDescription, setReportDescription] = useState('')
+  const [reportEmail, setReportEmail] = useState('')
   const [reportSubmitting, setReportSubmitting] = useState(false)
   const [messagesSettings, setMessagesSettings] = useState<PublicInternalMessagesSettings>({
     loaded: false,
@@ -137,6 +139,7 @@ export default function ProfileView({
           profileId: profile.id,
           reason: reportReason || 'Outro',
           description: reportDescription.trim(),
+          email: reportEmail.trim(),
         }),
       })
       const data = await res.json().catch(() => ({}))
@@ -148,6 +151,7 @@ export default function ProfileView({
       setReportOpen(false)
       setReportReason('')
       setReportDescription('')
+      setReportEmail('')
     } finally {
       setReportSubmitting(false)
     }
@@ -307,9 +311,26 @@ export default function ProfileView({
               Descreva o motivo da denúncia. Nossa equipe analisará em breve.
             </p>
             <div className="space-y-4">
+              {!user && (
+                <div>
+                  <label htmlFor="report-email" className="mb-1 block text-xs font-medium text-slate-500">
+                    E-mail para acompanhamento <span className="text-amber-300">*</span>
+                  </label>
+                  <input
+                    id="report-email"
+                    type="email"
+                    required
+                    value={reportEmail}
+                    onChange={(e) => setReportEmail(e.target.value)}
+                    placeholder="seu@email.com"
+                    className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white placeholder:text-slate-500 outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                </div>
+              )}
               <div>
-                <label className="mb-1 block text-xs font-medium text-slate-500">Motivo</label>
+                <label className="mb-1 block text-xs font-medium text-slate-500">Motivo <span className="text-amber-300">*</span></label>
                 <select
+                  required
                   value={reportReason}
                   onChange={(e) => setReportReason(e.target.value)}
                   className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white outline-none focus:ring-2 focus:ring-primary-500"
@@ -321,11 +342,12 @@ export default function ProfileView({
                 </select>
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-slate-500">Descrição (opcional)</label>
+                <label className="mb-1 block text-xs font-medium text-slate-500">Descrição <span className="text-amber-300">*</span></label>
                 <textarea
                   value={reportDescription}
                   onChange={(e) => setReportDescription(e.target.value)}
                   rows={3}
+                  required
                   placeholder="Detalhes adicionais..."
                   className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white placeholder:text-slate-500 outline-none focus:ring-2 focus:ring-primary-500"
                 />
