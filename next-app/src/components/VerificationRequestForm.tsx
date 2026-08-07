@@ -38,7 +38,8 @@ export default function VerificationRequestForm({ profile, onSuccess }: Verifica
       })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
-        throw new Error((data as { error?: string }).error || 'Erro ao enviar')
+        const d = data as { error?: string; detail?: string }
+        throw new Error(d.detail ? `${d.error || 'Erro'}: ${d.detail}` : d.error || 'Erro ao enviar')
       }
       setSuccess(true)
       onSuccess?.()

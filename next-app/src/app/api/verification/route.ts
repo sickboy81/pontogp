@@ -144,6 +144,8 @@ export async function POST(request: NextRequest) {
     const created = await createRes.json()
     return Response.json(created)
   } catch (e) {
-    return Response.json({ error: 'Erro ao enviar solicitação' }, { status: 500 })
+    const detail = e instanceof Error ? e.message : String(e)
+    console.error('[verification] POST error:', e)
+    return Response.json({ error: 'Erro ao enviar solicitação', detail }, { status: 500 })
   }
 }
