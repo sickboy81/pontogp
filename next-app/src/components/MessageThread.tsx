@@ -42,6 +42,7 @@ export default function MessageThread({
         `/api/messages/conversation?otherUserId=${encodeURIComponent(otherUserId)}`,
         { credentials: 'include' }
       )
+      if (!res.ok) throw new Error('Não foi possível carregar esta conversa.')
       const list = (await res.json()) as Message[]
       setMessages(list)
       const unreadIds = list
@@ -57,6 +58,7 @@ export default function MessageThread({
       }
     } catch (e) {
       console.error('[MessageThread] Error loading conversation:', e)
+      setMessages([])
     } finally {
       setLoading(false)
     }

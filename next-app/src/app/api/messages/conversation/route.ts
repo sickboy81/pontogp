@@ -24,10 +24,10 @@ export async function GET(request: NextRequest) {
   try {
     const filter = `(sender = "${userId}" && recipient = "${otherUserId}") || (sender = "${otherUserId}" && recipient = "${userId}")`
     const res = await fetch(
-      `${PB_URL}/api/collections/messages/records?perPage=200&expand=sender,recipient&sort=created_at&filter=${encodeURIComponent(filter)}`,
+      `${PB_URL}/api/collections/messages/records?perPage=200&expand=sender,recipient&sort=created&filter=${encodeURIComponent(filter)}`,
       { headers: { Authorization: `Bearer ${token}` } }
     )
-    if (!res.ok) return Response.json([])
+    if (!res.ok) return Response.json({ error: 'Não foi possível carregar esta conversa.' }, { status: 502 })
     const data = await res.json()
     const items = (data.items || []) as Record<string, unknown>[]
     const messages: Message[] = items.map((rec) => mapMessage(rec))

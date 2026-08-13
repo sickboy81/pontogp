@@ -9,7 +9,7 @@ const schema = JSON.parse(readFileSync(join(root, 'pocketbase-schema.json'), 'ut
 const collections = new Map(schema.collections.map((collection) => [collection.name, collection]))
 
 const contracts = {
-  users: ['role', 'status', 'plan', 'chat_blocked'],
+  users: ['role', 'status', 'verified', 'document_verified', 'plan', 'chat_blocked'],
   profiles: [
     'user',
     'status',
@@ -46,6 +46,14 @@ for (const status of ['pending', 'paid', 'failed', 'refunded']) {
 }
 
 const profiles = collections.get('profiles')
+const users = collections.get('users')
+const protectedUserFields = ['role', 'status', 'verified', 'document_verified', 'plan', 'chat_blocked']
+const expectedUserUpdateRule =
+  `(id = @request.auth.id && ${protectedUserFields.map((field) => `@request.body.${field}:changed = false`).join(' && ')}) || @request.auth.role = 'admin'`
+if (users?.updateRule !== expectedUserUpdateRule) {
+  failures.push('regra de atualização de users deve bloquear alteração direta dos campos protegidos por usuários comuns')
+}
+
 const expectedProfileCreateRule =
   'user = @request.auth.id && @request.body.status = "inactive"'
 const expectedProfileUpdateRule =

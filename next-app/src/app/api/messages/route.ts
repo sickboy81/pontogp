@@ -10,6 +10,7 @@ import { getAdminToken } from '@/lib/pocketbase-admin'
 import { mapMessage } from '@/lib/api/messages'
 import { enforceUserRateLimit, RATE_LIMIT_POLICIES } from '@/lib/api-rate-limit.mjs'
 import type { Message } from '@/lib/types'
+import { validateMessageInput } from '@/lib/message-input.mjs'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
@@ -44,10 +45,10 @@ export async function GET(request: NextRequest) {
   try {
     const filter = `sender = "${userId}" || recipient = "${userId}"`
     const res = await fetch(
-      `${PB_URL}/api/collections/messages/records?perPage=500&expand=sender,recipient&sort=-created_at&filter=${encodeURIComponent(filter)}`,
+      `${PB_URL}/api/collections/messages/records?perPage=500&expand=sender,recipient&sort=-created&filter=${encodeURIComponent(filter)}`,
       { headers: { Authorization: `Bearer ${token}` } }
     )
-    if (!res.ok) return Response.json([])
+    if (!res.ok) return Response.json({ error: 'Não foi possível carregar suas mensagens.' }, { status: 502 })
     const data = await res.json()
     const items = (data.items || []) as Record<string, unknown>[]
     const messages: Message[] = items.map((rec) => mapMessage(rec))
@@ -78,17 +79,19 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const recipientId = body?.recipient_id ?? body?.recipient
-    const content = (body?.content ?? '').trim()
+    const input = validateMessageInput(userId, body?.recipient_id ?? body?.recipient, body?.content)
+    if (input.error) return Response.json({ error: input.error }, { status: 400 })
+    const recipientId = input.recipientId
+    const content = input.content
     if (!recipientId || !content) {
-      return Response.json({ error: 'recipient_id e content obrigatórios' }, { status: 400 })
+      return Response.json({ error: 'Mensagem inválida.' }, { status: 400 })
     }
 
     const [userA, userB] = blockKey(userId, recipientId)
     const blockFilter = `user_a = "${userA}" && user_b = "${userB}" && blocked = true`
     const blockRes = await fetch(
       `${PB_URL}/api/collections/message_blocks/records?perPage=1&filter=${encodeURIComponent(blockFilter)}`,
-      { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' }
+      { headers: { Authorization: `Bearer ${await getAdminToken() || token}` }, cache: 'no-store' }
     )
     if (blockRes.ok) {
       const blockData = await blockRes.json()

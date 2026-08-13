@@ -16,6 +16,8 @@ export default function VerificationRequestForm({ profile, onSuccess }: Verifica
   const [docFront, setDocFront] = useState<File | null>(null)
   const [docBack, setDocBack] = useState<File | null>(null)
   const [selfie, setSelfie] = useState<File | null>(null)
+  const [fullName, setFullName] = useState(profile.name || '')
+  const [documentType, setDocumentType] = useState('rg')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -23,11 +25,17 @@ export default function VerificationRequestForm({ profile, onSuccess }: Verifica
       setError('Envie documento (frente e verso) e selfie')
       return
     }
+    if (!fullName.trim()) {
+      setError('Informe seu nome completo conforme o documento')
+      return
+    }
     setLoading(true)
     setError(null)
     try {
       const fd = new FormData()
       fd.append('profileId', profile.id)
+      fd.append('full_name', fullName.trim())
+      fd.append('document_type', documentType)
       fd.append('document_front', docFront)
       fd.append('document_back', docBack)
       fd.append('selfie', selfie)
@@ -81,6 +89,18 @@ export default function VerificationRequestForm({ profile, onSuccess }: Verifica
       )}
       <div className="space-y-4">
         <div>
+          <label className="mb-1 block text-sm text-slate-400" htmlFor="verification-full-name">Nome completo conforme o documento</label>
+          <input id="verification-full-name" type="text" required value={fullName} onChange={(e) => setFullName(e.target.value)} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white placeholder-slate-500" />
+        </div>
+        <div>
+          <label className="mb-1 block text-sm text-slate-400" htmlFor="verification-document-type">Tipo de documento</label>
+          <select id="verification-document-type" value={documentType} onChange={(e) => setDocumentType(e.target.value)} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white">
+            <option value="rg">RG</option>
+            <option value="cnh">CNH</option>
+            <option value="passport">Passaporte</option>
+          </select>
+        </div>
+        <div>
           <label className="mb-1 block text-sm text-slate-400">Documento - Frente</label>
           <input
             type="file"
@@ -111,6 +131,7 @@ export default function VerificationRequestForm({ profile, onSuccess }: Verifica
           />
         </div>
       </div>
+      <p className="mt-3 text-xs text-slate-500">Imagens de até 15 MB são convertidas e otimizadas para WebP; PDFs devem ter até 5 MB. Os documentos ficam disponíveis apenas para análise da equipe.</p>
       <button
         type="submit"
         disabled={loading}

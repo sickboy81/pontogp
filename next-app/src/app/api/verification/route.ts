@@ -1,8 +1,11 @@
 import { NextRequest } from 'next/server'
 import { getAuthCookieFromHeader, getUserIdFromToken } from '@/lib/auth-cookie'
 import { imageFileToWebp, isRasterImageMime, resolveImageMime } from '@/lib/server/media-upload'
+import { buildVerificationPayload } from '@/lib/verification-payload.mjs'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
+const MAX_STORED_FILE_SIZE = 5 * 1024 * 1024
+const MAX_IMAGE_INPUT_SIZE = 15 * 1024 * 1024
 
 export const dynamic = 'force-dynamic'
 
@@ -50,11 +53,14 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
     const profileId = formData.get('profileId') as string | null
+    const fullName = formData.get('full_name') as string | null
+    const documentType = formData.get('document_type') as string | null
     const docFront = formData.get('document_front') as File | null
     const docBack = formData.get('document_back') as File | null
     const selfie = formData.get('selfie') as File | null
 
     if (!profileId) return Response.json({ error: 'profileId obrigatório' }, { status: 400 })
+    if (!fullName?.trim()) return Response.json({ error: 'Informe seu nome completo conforme o documento.' }, { status: 400 })
 
     const files = [docFront, docBack, selfie].filter((f) => f && f instanceof Blob && f.size > 0)
     if (files.length < 3) {
@@ -64,10 +70,19 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const maxEach = 10 * 1024 * 1024
     for (const f of [docFront, docBack, selfie]) {
-      if (f && f.size > maxEach) {
-        return Response.json({ error: 'Cada arquivo deve ter no máximo 10 MB.' }, { status: 400 })
+      if (!f) continue
+      const isPdf = f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf')
+      const maxInputSize = isPdf ? MAX_STORED_FILE_SIZE : MAX_IMAGE_INPUT_SIZE
+      if (f.size > maxInputSize) {
+        return Response.json(
+          {
+            error: isPdf
+              ? 'Cada PDF deve ter no máximo 5 MB.'
+              : 'Cada imagem deve ter no máximo 15 MB para ser otimizada.',
+          },
+          { status: 400 }
+        )
       }
     }
 
@@ -79,7 +94,7 @@ export async function POST(request: NextRequest) {
         throw new Error('INVALID_DOC')
       }
       const webp = await imageFileToWebp(f)
-      if (webp.size > maxEach) {
+      if (webp.size > MAX_STORED_FILE_SIZE) {
         throw new Error('TOO_LARGE')
       }
       return webp
@@ -102,7 +117,7 @@ export async function POST(request: NextRequest) {
       }
       if (msg === 'TOO_LARGE') {
         return Response.json(
-          { error: 'Imagem otimizada excede 10 MB. Envie foto com resolução menor.' },
+          { error: 'Imagem otimizada excede 5 MB. Envie foto com resolução menor.' },
           { status: 400 }
         )
       }
@@ -120,9 +135,8 @@ export async function POST(request: NextRequest) {
     }
 
     const pbForm = new FormData()
-    pbForm.append('profile', profileId)
-    pbForm.append('user', userId)
-    pbForm.append('status', 'pending')
+    const verificationPayload = buildVerificationPayload({ profileId, userId, fullName, documentType })
+    for (const [key, value] of Object.entries(verificationPayload)) pbForm.append(key, value)
     pbForm.append('document_front', frontOut)
     pbForm.append('document_back', backOut)
     pbForm.append('selfie', selfieOut)

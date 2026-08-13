@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server'
 import { getAuthCookieFromHeader, getUserIdFromToken } from '@/lib/auth-cookie'
+import { getAdminToken } from '@/lib/pocketbase-admin'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
@@ -25,11 +26,12 @@ export async function GET(request: NextRequest) {
   if (!otherUserId) return Response.json({ error: 'otherUserId obrigatório' }, { status: 400 })
 
   const [userA, userB] = blockKey(userId, otherUserId)
+  const authorization = `Bearer ${await getAdminToken() || token}`
   try {
     const filter = `user_a = "${userA}" && user_b = "${userB}"`
     const res = await fetch(
       `${PB_URL}/api/collections/message_blocks/records?perPage=1&filter=${encodeURIComponent(filter)}`,
-      { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' }
+      { headers: { Authorization: authorization }, cache: 'no-store' }
     )
     if (!res.ok) return Response.json({ blocked: false })
     const data = await res.json()
@@ -53,11 +55,12 @@ export async function POST(request: NextRequest) {
   if (!otherUserId) return Response.json({ error: 'otherUserId obrigatório' }, { status: 400 })
 
   const [userA, userB] = blockKey(userId, otherUserId)
+  const authorization = `Bearer ${await getAdminToken() || token}`
   try {
     const filter = `user_a = "${userA}" && user_b = "${userB}"`
     const listRes = await fetch(
       `${PB_URL}/api/collections/message_blocks/records?perPage=1&filter=${encodeURIComponent(filter)}`,
-      { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' }
+      { headers: { Authorization: authorization }, cache: 'no-store' }
     )
     if (!listRes.ok) return Response.json({ error: 'Erro ao verificar bloqueio' }, { status: 500 })
     const listData = await listRes.json()
@@ -68,7 +71,7 @@ export async function POST(request: NextRequest) {
         `${PB_URL}/api/collections/message_blocks/records/${existing.id}`,
         {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          headers: { 'Content-Type': 'application/json', Authorization: authorization },
           body: JSON.stringify({ blocked: block }),
         }
       )
@@ -86,7 +89,7 @@ export async function POST(request: NextRequest) {
 
     const createRes = await fetch(`${PB_URL}/api/collections/message_blocks/records`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      headers: { 'Content-Type': 'application/json', Authorization: authorization },
       body: JSON.stringify({ user_a: userA, user_b: userB, blocked: true }),
     })
     if (!createRes.ok) {

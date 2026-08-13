@@ -1,5 +1,5 @@
 {
-  "exportedAt": "2026-08-05T21:17:18.048Z",
+  "exportedAt": "2026-08-13T11:41:01.086Z",
   "baseUrl": "https://pocketbase.cerejavip.com",
   "collections": [
     {
@@ -514,7 +514,7 @@
       "listRule": "id = @request.auth.id || @request.auth.role = 'admin'",
       "viewRule": "id = @request.auth.id || @request.auth.role = 'admin'",
       "createRule": "",
-      "updateRule": "id = @request.auth.id || @request.auth.role = 'admin'",
+      "updateRule": "(id = @request.auth.id && @request.body.role:changed = false && @request.body.status:changed = false && @request.body.verified:changed = false && @request.body.document_verified:changed = false && @request.body.plan:changed = false && @request.body.chat_blocked:changed = false) || @request.auth.role = 'admin'",
       "deleteRule": "id = @request.auth.id || @request.auth.role = 'admin'",
       "schema": [
         {
@@ -784,7 +784,7 @@
       "type": "base",
       "listRule": "",
       "viewRule": "",
-      "createRule": "@request.auth.id != \"\"",
+      "createRule": "@request.auth.role = \"admin\"",
       "updateRule": "@request.auth.id != \"\"",
       "deleteRule": "@request.auth.id != \"\"",
       "schema": [
@@ -1811,6 +1811,7 @@
           "type": "json"
         },
         {
+          "autogeneratePattern": "",
           "help": "",
           "hidden": false,
           "id": "txtcerejaeye",
@@ -2050,7 +2051,7 @@
       "type": "base",
       "listRule": "@request.auth.id = recipient",
       "viewRule": "@request.auth.id = recipient",
-      "createRule": "@request.auth.id != \"\"",
+      "createRule": "@request.auth.role = \"admin\"",
       "updateRule": "@request.auth.id = recipient",
       "deleteRule": "@request.auth.id = recipient",
       "schema": [
@@ -2833,8 +2834,8 @@
       "id": "pbc_2569792458",
       "name": "verification_requests",
       "type": "base",
-      "listRule": "@request.auth.id != \"\"",
-      "viewRule": "@request.auth.id != \"\"",
+      "listRule": "user = @request.auth.id || @request.auth.role = \"admin\"",
+      "viewRule": "user = @request.auth.id || @request.auth.role = \"admin\"",
       "createRule": "@request.auth.id != \"\"",
       "updateRule": "",
       "deleteRule": "",
@@ -3555,11 +3556,11 @@
       "id": "pbc_3726736864",
       "name": "message_blocks",
       "type": "base",
-      "listRule": "@request.auth.id != \"\"",
-      "viewRule": "@request.auth.id != \"\"",
-      "createRule": "@request.auth.role = \"admin\"",
-      "updateRule": "@request.auth.role = \"admin\"",
-      "deleteRule": "@request.auth.role = \"admin\"",
+      "listRule": "@request.auth.id = user_a || @request.auth.id = user_b || @request.auth.role = \"admin\"",
+      "viewRule": "@request.auth.id = user_a || @request.auth.id = user_b || @request.auth.role = \"admin\"",
+      "createRule": "@request.auth.id = user_a || @request.auth.id = user_b || @request.auth.role = \"admin\"",
+      "updateRule": "@request.auth.id = user_a || @request.auth.id = user_b || @request.auth.role = \"admin\"",
+      "deleteRule": "@request.auth.id = user_a || @request.auth.id = user_b || @request.auth.role = \"admin\"",
       "schema": [
         {
           "autogeneratePattern": "[a-z0-9]{15}",
@@ -4357,6 +4358,7 @@
       "schema": [
         {
           "autogeneratePattern": "[a-z0-9]{15}",
+          "help": "",
           "hidden": false,
           "id": "textcouponreserveid",
           "max": 15,
@@ -4370,6 +4372,8 @@
           "type": "text"
         },
         {
+          "autogeneratePattern": "",
+          "help": "",
           "hidden": false,
           "id": "textcouponreservekey",
           "max": 120,
@@ -4380,10 +4384,11 @@
           "primaryKey": false,
           "required": true,
           "system": false,
-          "type": "text",
-          "unique": true
+          "type": "text"
         },
         {
+          "autogeneratePattern": "",
+          "help": "",
           "hidden": false,
           "id": "textcouponreservecoupon",
           "max": 15,
@@ -4397,6 +4402,8 @@
           "type": "text"
         },
         {
+          "autogeneratePattern": "",
+          "help": "",
           "hidden": false,
           "id": "textcouponreserveuser",
           "max": 15,
@@ -4410,6 +4417,8 @@
           "type": "text"
         },
         {
+          "autogeneratePattern": "",
+          "help": "",
           "hidden": false,
           "id": "textcouponreservestatus",
           "max": 20,

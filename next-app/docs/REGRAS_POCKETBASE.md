@@ -11,6 +11,36 @@ Este documento descreve as coleções usadas pelo next-app e as regras recomenda
 
 ## Coleções críticas
 
+### `users` — campos controlados
+
+Usuários comuns podem atualizar somente os dados não sensíveis da própria conta.
+O `updateRule` exige que `role`, `status`, `verified`, `document_verified`,
+`plan` e `chat_blocked` não tenham mudado; administradores continuam podendo
+alterá-los. A confirmação de email, a verificação documental, a moderação e o
+webhook PIX usam operações administrativas no servidor e permanecem válidas.
+
+Regra exportada e validada:
+
+```text
+(id = @request.auth.id && @request.body.role:changed = false && @request.body.status:changed = false && @request.body.verified:changed = false && @request.body.document_verified:changed = false && @request.body.plan:changed = false && @request.body.chat_blocked:changed = false) || @request.auth.role = 'admin'
+```
+
+Antes de aplicar em produção, faça backup verificável do banco e uploads do
+volume PocketBase. Em seguida, no `next-app`, valide o arquivo e importe-o com
+credenciais administrativas de runtime (nunca gravadas no Git):
+
+```bash
+npm run schema:check
+npm run schema:import
+npm run schema
+npm run schema:check
+```
+
+O segundo `schema:check` confirma que a regra retornada/exportada continua
+protegendo os seis campos. Teste também um PATCH com JWT de usuário comum (deve
+retornar 400/403 e preservar os valores) e o mesmo PATCH via painel/admin e
+webhook PIX (deve continuar atualizando quando autorizado).
+
 ### `payments`
 
 - **Uso:** criação de registro ao gerar PIX (token do usuário); leitura/atualização no webhook (token admin).

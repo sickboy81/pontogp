@@ -45,10 +45,12 @@ export default function MensagensClient() {
     try {
       setLoading(true)
       const res = await fetch('/api/messages', { credentials: 'include' })
+      if (!res.ok) throw new Error('Não foi possível carregar suas mensagens.')
       const list = (await res.json()) as Message[]
       setMessages(list)
     } catch (e) {
       console.error('Error loading messages:', e)
+      setMessages([])
     } finally {
       setLoading(false)
     }
