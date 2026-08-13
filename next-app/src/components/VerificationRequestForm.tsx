@@ -18,6 +18,7 @@ export default function VerificationRequestForm({ profile, onSuccess }: Verifica
   const [selfie, setSelfie] = useState<File | null>(null)
   const [fullName, setFullName] = useState(profile.name || '')
   const [documentType, setDocumentType] = useState('rg')
+  const [termsAccepted, setTermsAccepted] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -29,6 +30,10 @@ export default function VerificationRequestForm({ profile, onSuccess }: Verifica
       setError('Informe seu nome completo conforme o documento')
       return
     }
+    if (!termsAccepted) {
+      setError('Aceite os termos para enviar a solicitação')
+      return
+    }
     setLoading(true)
     setError(null)
     try {
@@ -36,6 +41,7 @@ export default function VerificationRequestForm({ profile, onSuccess }: Verifica
       fd.append('profileId', profile.id)
       fd.append('full_name', fullName.trim())
       fd.append('document_type', documentType)
+      fd.append('terms_accepted', 'true')
       fd.append('document_front', docFront)
       fd.append('document_back', docBack)
       fd.append('selfie', selfie)
@@ -92,6 +98,10 @@ export default function VerificationRequestForm({ profile, onSuccess }: Verifica
           <label className="mb-1 block text-sm text-slate-400" htmlFor="verification-full-name">Nome completo conforme o documento</label>
           <input id="verification-full-name" type="text" required value={fullName} onChange={(e) => setFullName(e.target.value)} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white placeholder-slate-500" />
         </div>
+        <label className="flex items-start gap-2 text-sm text-slate-300">
+          <input type="checkbox" checked={termsAccepted} onChange={(e) => setTermsAccepted(e.target.checked)} className="mt-1" />
+          <span>Confirmo que os dados enviados são verdadeiros e aceito os termos da solicitação de verificação.</span>
+        </label>
         <div>
           <label className="mb-1 block text-sm text-slate-400" htmlFor="verification-document-type">Tipo de documento</label>
           <select id="verification-document-type" value={documentType} onChange={(e) => setDocumentType(e.target.value)} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white">

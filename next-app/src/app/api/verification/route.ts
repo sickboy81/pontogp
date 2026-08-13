@@ -55,12 +55,14 @@ export async function POST(request: NextRequest) {
     const profileId = formData.get('profileId') as string | null
     const fullName = formData.get('full_name') as string | null
     const documentType = formData.get('document_type') as string | null
+    const termsAccepted = formData.get('terms_accepted') === 'true'
     const docFront = formData.get('document_front') as File | null
     const docBack = formData.get('document_back') as File | null
     const selfie = formData.get('selfie') as File | null
 
     if (!profileId) return Response.json({ error: 'profileId obrigatório' }, { status: 400 })
     if (!fullName?.trim()) return Response.json({ error: 'Informe seu nome completo conforme o documento.' }, { status: 400 })
+    if (!termsAccepted) return Response.json({ error: 'Aceite os termos para enviar a solicitação.' }, { status: 400 })
 
     const files = [docFront, docBack, selfie].filter((f) => f && f instanceof Blob && f.size > 0)
     if (files.length < 3) {
@@ -135,7 +137,7 @@ export async function POST(request: NextRequest) {
     }
 
     const pbForm = new FormData()
-    const verificationPayload = buildVerificationPayload({ profileId, userId, fullName, documentType })
+    const verificationPayload = buildVerificationPayload({ profileId, userId, fullName, documentType, termsAccepted })
     for (const [key, value] of Object.entries(verificationPayload)) pbForm.append(key, value)
     pbForm.append('document_front', frontOut)
     pbForm.append('document_back', backOut)

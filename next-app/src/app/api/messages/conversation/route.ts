@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { getAuthCookieFromHeader, getUserIdFromToken } from '@/lib/auth-cookie'
 import { mapMessage } from '@/lib/api/messages'
+import { getAdminToken } from '@/lib/pocketbase-admin'
 import type { Message } from '@/lib/types'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
@@ -25,7 +26,7 @@ export async function GET(request: NextRequest) {
     const filter = `(sender = "${userId}" && recipient = "${otherUserId}") || (sender = "${otherUserId}" && recipient = "${userId}")`
     const res = await fetch(
       `${PB_URL}/api/collections/messages/records?perPage=200&expand=sender,recipient&sort=created&filter=${encodeURIComponent(filter)}`,
-      { headers: { Authorization: `Bearer ${token}` } }
+      { headers: { Authorization: `Bearer ${await getAdminToken() || token}` } }
     )
     if (!res.ok) return Response.json({ error: 'Não foi possível carregar esta conversa.' }, { status: 502 })
     const data = await res.json()
