@@ -1,6 +1,6 @@
 'use client'
 
-import { BadgeCheck, Clock3, MapPin, Sparkles, Star } from 'lucide-react'
+import { BadgeCheck, Clock3, MapPin, Star } from 'lucide-react'
 import Link from 'next/link'
 import type { Profile, Schedule } from '@/lib/types'
 import { formatPrice } from '@/utils/format'
@@ -68,14 +68,16 @@ export default function ProfileSummary({
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.24fr)_minmax(280px,0.76fr)]">
         <section className="rounded-[1.75rem] border border-slate-700/70 bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800/80 p-6">
           <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-            <span className="inline-flex items-center gap-2 rounded-full border border-primary-500/20 bg-primary-500/10 px-3 py-1 text-primary-200">
-              <Sparkles className="h-3.5 w-3.5" />
-              Perfil premium
-            </span>
+            {profile.verified && (
+              <span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1 text-emerald-200">
+                <BadgeCheck className="h-3.5 w-3.5" />
+                Perfil verificado
+              </span>
+            )}
             {profile.featured && (
               <span className="inline-flex items-center gap-2 rounded-full border border-amber-400/20 bg-amber-500/10 px-3 py-1 text-amber-200">
                 <Star className="h-3.5 w-3.5" />
-                Destaque
+                Perfil em destaque
               </span>
             )}
           </div>
