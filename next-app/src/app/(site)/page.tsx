@@ -6,9 +6,9 @@ import { getHomeSearchParamsURL, resolveHomeCanonical } from '@/lib/seo-home'
 
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://cerejavip.com'
 
-const DEFAULT_TITLE = 'CerejaVIP - Acompanhantes Verificadas em Todo Brasil'
+const DEFAULT_TITLE = 'CerejaVIP | Acompanhantes de todo o brasil'
 const DEFAULT_DESCRIPTION =
-  'Encontre acompanhantes verificadas em todo o Brasil, com fotos reais, filtros por cidade e contato direto. Perfis femininos, masculinos, trans e massagistas.'
+  'venha conhecer nossas cerejas'
 
 const HOME_OG_IMAGE = `${SITE_URL}/opengraph-image`
 const HOME_TWITTER_IMAGE = `${SITE_URL}/twitter-image`
