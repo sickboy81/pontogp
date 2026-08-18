@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const res = await fetch(
-      `${PB_URL}/api/collections/notifications/records?page=${page}&perPage=${perPage}&sort=-created&filter=${encodeURIComponent(filter)}`,
+      `${PB_URL}/api/collections/notifications/records?page=${page}&perPage=${perPage}&filter=${encodeURIComponent(filter)}`,
       { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' }
     )
     if (!res.ok) return Response.json({ items: [], totalItems: 0, unreadCount: 0 })
