@@ -254,11 +254,12 @@ export default function ProfileView({
               unavailable={isUnavailable}
               tagChipClass={tagChipClass}
               priceItems={priceItems}
+              canReport={!!canReport}
+              onOpenReport={() => setReportOpen(true)}
             />
             <ProfileActions
               profile={profile}
               profileUrl={profileUrl}
-              canReport={!!canReport}
               canMessage={!!canMessage}
               canStartMessage={canStartMessage}
               contactExpired={contactExpired}
@@ -271,7 +272,6 @@ export default function ProfileView({
               visibleWhatsapp={visibleWhatsapp}
               visibleTelegram={visibleTelegram}
               visiblePhone={visiblePhone}
-              onOpenReport={() => setReportOpen(true)}
               onShare={handleShare}
               onTrackClick={trackClick}
             />

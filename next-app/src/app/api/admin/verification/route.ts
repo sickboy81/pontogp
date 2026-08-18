@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
   const filter = status === 'all' ? '' : 'status = "pending"'
 
   try {
-    const url = `${PB_URL}/api/collections/verification_requests/records?perPage=50&sort=-created${filter ? `&filter=${encodeURIComponent(filter)}` : ''}&expand=profile,user&fields=id,profile,user,status,created,document_front,document_back,selfie,expand`
+    const url = `${PB_URL}/api/collections/verification_requests/records?perPage=50${filter ? `&filter=${encodeURIComponent(filter)}` : ''}&expand=profile,user&fields=id,profile,user,status,created,document_front,document_back,selfie,expand`
     const res = await fetch(url, {
       headers: { Authorization: `Bearer ${auth.token}` },
       cache: 'no-store',

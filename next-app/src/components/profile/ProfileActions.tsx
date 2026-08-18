@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Flag, Heart, MessageCircle, Phone, Share2 } from 'lucide-react'
+import { Heart, MessageCircle, Phone, Share2 } from 'lucide-react'
 import type { Profile } from '@/lib/types'
 import { socialProfileHref } from '@/lib/social-links'
 import { telegramContactHref, whatsAppContactHref } from '@/lib/contact-prefill'
@@ -19,7 +19,6 @@ type TrackableContactType =
 type ProfileActionsProps = {
   profile: Profile
   profileUrl: string
-  canReport: boolean
   canMessage: boolean
   canStartMessage: boolean
   contactExpired: boolean
@@ -30,7 +29,6 @@ type ProfileActionsProps = {
   visibleWhatsapp: string
   visibleTelegram: string
   visiblePhone: string
-  onOpenReport: () => void
   onShare: () => void
   isFavorite: boolean
   onToggleFavorite: () => void
@@ -40,7 +38,6 @@ type ProfileActionsProps = {
 export default function ProfileActions({
   profile,
   profileUrl,
-  canReport,
   canMessage,
   canStartMessage,
   contactExpired,
@@ -51,7 +48,6 @@ export default function ProfileActions({
   visibleWhatsapp,
   visibleTelegram,
   visiblePhone,
-  onOpenReport,
   onShare,
   isFavorite,
   onToggleFavorite,
@@ -86,35 +82,14 @@ export default function ProfileActions({
               <Heart className={`h-4 w-4 ${isFavorite ? 'fill-red-400 text-red-400' : ''}`} />
               {isFavorite ? 'Favoritado' : 'Favoritar'}
             </button>
-          {canReport && (
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={onShare}
-                className="rounded-full border border-slate-600 p-3 text-slate-300 transition hover:bg-slate-700 hover:text-white"
-              >
-                <Share2 className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                onClick={onOpenReport}
-                className="inline-flex items-center gap-2 rounded-full border border-amber-400/40 bg-amber-500/10 px-3 py-2 text-xs font-semibold text-amber-200 transition hover:bg-amber-500/20 hover:text-amber-100"
-                aria-label="Denunciar anúncio"
-              >
-                <Flag className="h-4 w-4" />
-                <span>Denunciar perfil</span>
-              </button>
-            </div>
-          )}
-          {!canReport && (
-            <button
-              type="button"
-              onClick={onShare}
-              className="rounded-full border border-slate-600 p-3 text-slate-300 transition hover:bg-slate-700 hover:text-white"
-            >
-              <Share2 className="h-4 w-4" />
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={onShare}
+            className="rounded-full border border-slate-600 p-3 text-slate-300 transition hover:bg-slate-700 hover:text-white"
+            aria-label="Compartilhar perfil"
+          >
+            <Share2 className="h-4 w-4" />
+          </button>
           </div>
         </div>
 
@@ -243,16 +218,6 @@ export default function ProfileActions({
         </div>
       )}
 
-      {canReport && (
-        <button
-          type="button"
-          onClick={onOpenReport}
-          className="inline-flex items-center gap-2 text-xs text-slate-500 transition hover:text-amber-300"
-        >
-          <Flag className="h-3.5 w-3.5" />
-          Denunciar este perfil
-        </button>
-      )}
     </div>
   )
 }

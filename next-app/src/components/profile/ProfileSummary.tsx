@@ -1,6 +1,6 @@
 'use client'
 
-import { BadgeCheck, Clock3, MapPin, Star } from 'lucide-react'
+import { BadgeCheck, Clock3, Flag, MapPin, Star } from 'lucide-react'
 import Link from 'next/link'
 import type { Profile, Schedule } from '@/lib/types'
 import { formatPrice } from '@/utils/format'
@@ -13,6 +13,8 @@ type ProfileSummaryProps = {
   unavailable: boolean
   tagChipClass: string
   priceItems: PriceItem[]
+  canReport: boolean
+  onOpenReport: () => void
 }
 
 const DAY_LABELS: Record<string, string> = {
@@ -54,6 +56,8 @@ export default function ProfileSummary({
   unavailable,
   tagChipClass,
   priceItems,
+  canReport,
+  onOpenReport,
 }: ProfileSummaryProps) {
   const primaryPrices = priceItems.slice(0, 4)
   const secondaryPrices = priceItems.slice(4)
@@ -67,18 +71,31 @@ export default function ProfileSummary({
     <div className="profile-reveal flex-1 space-y-6">
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.24fr)_minmax(280px,0.76fr)]">
         <section className="rounded-[1.75rem] border border-slate-700/70 bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800/80 p-6">
-          <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-            {profile.verified && (
-              <span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1 text-emerald-200">
-                <BadgeCheck className="h-3.5 w-3.5" />
-                Perfil verificado
-              </span>
-            )}
-            {profile.featured && (
-              <span className="inline-flex items-center gap-2 rounded-full border border-amber-400/20 bg-amber-500/10 px-3 py-1 text-amber-200">
-                <Star className="h-3.5 w-3.5" />
-                Perfil em destaque
-              </span>
+          <div className="flex flex-wrap items-center justify-between gap-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+            <div className="flex flex-wrap items-center gap-2">
+              {profile.verified && (
+                <span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1 text-emerald-200">
+                  <BadgeCheck className="h-3.5 w-3.5" />
+                  Perfil verificado
+                </span>
+              )}
+              {profile.featured && (
+                <span className="inline-flex items-center gap-2 rounded-full border border-amber-400/20 bg-amber-500/10 px-3 py-1 text-amber-200">
+                  <Star className="h-3.5 w-3.5" />
+                  Perfil em destaque
+                </span>
+              )}
+            </div>
+            {canReport && (
+              <button
+                type="button"
+                onClick={onOpenReport}
+                className="inline-flex items-center gap-2 rounded-full border border-amber-400/40 bg-amber-500/10 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-amber-200 transition hover:bg-amber-500/20 hover:text-amber-100"
+                aria-label="Denunciar perfil"
+              >
+                <Flag className="h-3.5 w-3.5" />
+                Denunciar perfil
+              </button>
             )}
           </div>
 

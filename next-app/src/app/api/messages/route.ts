@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
   try {
     const filter = `sender = "${userId}" || recipient = "${userId}"`
     const res = await fetch(
-      `${PB_URL}/api/collections/messages/records?perPage=500&expand=sender,recipient&sort=-created&filter=${encodeURIComponent(filter)}`,
+      `${PB_URL}/api/collections/messages/records?perPage=500&expand=sender,recipient&filter=${encodeURIComponent(filter)}`,
       { headers: { Authorization: `Bearer ${token}` } }
     )
     if (!res.ok) return Response.json({ error: 'Não foi possível carregar suas mensagens.' }, { status: 502 })

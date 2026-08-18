@@ -20,6 +20,7 @@
     "smoke:critical": "node scripts/smoke-critical.mjs"
   },
   "dependencies": {
+    "@sentry/nextjs": "^10.70.0",
     "ffmpeg-static": "^5.3.0",
     "lucide-react": "^1.8.0",
     "next": "16.3.0-preview.10",
