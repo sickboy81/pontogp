@@ -3,8 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, CheckCircle, Loader2, XCircle } from 'lucide-react'
-
-const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
+import { buildVerificationFilePath } from '@/lib/verification-file.mjs'
 
 interface VerificationRequest {
   id: string
@@ -19,10 +18,6 @@ interface VerificationRequest {
   document_front?: string
   document_back?: string
   selfie?: string
-}
-
-function fileUrl(collection: string, recordId: string, filename: string) {
-  return `${PB_URL}/api/files/${collection}/${recordId}/${filename}`
 }
 
 export default function AdminVerificacao() {
@@ -161,45 +156,45 @@ export default function AdminVerificacao() {
                 </span>
               </div>
               <div className="mb-4 grid grid-cols-3 gap-4">
-                {r.document_front && (
+                {r.document_front && buildVerificationFilePath(r.id, 'document_front') && (
                   <a
-                    href={fileUrl('verification_requests', r.id, r.document_front)}
+                    href={buildVerificationFilePath(r.id, 'document_front') || '#'}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="overflow-hidden rounded-lg border border-slate-600 bg-slate-700"
                   >
                     <img
-                      src={fileUrl('verification_requests', r.id, r.document_front)}
+                      src={buildVerificationFilePath(r.id, 'document_front') || undefined}
                       alt="Documento frente"
                       className="h-32 w-full object-cover"
                     />
                     <p className="p-2 text-center text-xs text-slate-400">Documento - Frente</p>
                   </a>
                 )}
-                {r.document_back && (
+                {r.document_back && buildVerificationFilePath(r.id, 'document_back') && (
                   <a
-                    href={fileUrl('verification_requests', r.id, r.document_back)}
+                    href={buildVerificationFilePath(r.id, 'document_back') || '#'}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="overflow-hidden rounded-lg border border-slate-600 bg-slate-700"
                   >
                     <img
-                      src={fileUrl('verification_requests', r.id, r.document_back)}
+                      src={buildVerificationFilePath(r.id, 'document_back') || undefined}
                       alt="Documento verso"
                       className="h-32 w-full object-cover"
                     />
                     <p className="p-2 text-center text-xs text-slate-400">Documento - Verso</p>
                   </a>
                 )}
-                {r.selfie && (
+                {r.selfie && buildVerificationFilePath(r.id, 'selfie') && (
                   <a
-                    href={fileUrl('verification_requests', r.id, r.selfie)}
+                    href={buildVerificationFilePath(r.id, 'selfie') || '#'}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="overflow-hidden rounded-lg border border-slate-600 bg-slate-700"
                   >
                     <img
-                      src={fileUrl('verification_requests', r.id, r.selfie)}
+                      src={buildVerificationFilePath(r.id, 'selfie') || undefined}
                       alt="Selfie"
                       className="h-32 w-full object-cover"
                     />

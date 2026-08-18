@@ -27,6 +27,9 @@ export async function GET(request: NextRequest) {
       user: r.user,
       status: r.status,
       created: r.created,
+      document_front: r.document_front,
+      document_back: r.document_back,
+      selfie: r.selfie,
       expand: r.expand,
     }))
     return Response.json({ items })
