@@ -105,6 +105,7 @@ export default function AdminUsuarios() {
   const [saving, setSaving] = useState(false)
   const [loadDetail, setLoadDetail] = useState(false)
   const [userCreated, setUserCreated] = useState<string | null>(null)
+  const [originalRole, setOriginalRole] = useState('')
 
   useEffect(() => {
     const t = setTimeout(() => setQDeb(q.trim()), 350)
@@ -163,6 +164,7 @@ export default function AdminUsuarios() {
         setForm(rowToForm({} as UserRow, detail))
         setUserEmail((detail as { email?: string }).email || '')
         setUserCreated((detail as { created?: string }).created || null)
+        setOriginalRole((detail as { role?: string }).role || '')
       })
       .catch(() => {})
       .finally(() => {
@@ -178,16 +180,19 @@ export default function AdminUsuarios() {
     setForm(rowToForm(u))
     setUserEmail(u.email || '')
     setUserCreated(null)
+    setOriginalRole(u.role || '')
   }
 
   const closeEdit = () => {
     setEditId(null)
     setForm(EMPTY)
     setUserEmail('')
+    setOriginalRole('')
   }
 
   const save = async () => {
     if (!editId) return
+    if (originalRole && originalRole !== form.role && !window.confirm('Confirma a alteração da função desta conta?')) return
     setSaving(true)
     try {
       const res = await fetch(`/api/admin/users/${editId}`, {
@@ -219,6 +224,7 @@ export default function AdminUsuarios() {
   }
 
   const quickUpdate = async (u: UserRow, update: Record<string, boolean | string>) => {
+    if (!window.confirm('Confirma esta alteração rápida na conta?')) return
     const res = await fetch(`/api/admin/users/${u.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify(update) })
     const json = await res.json().catch(() => ({}))
     if (!res.ok) toast.error((json as { error?: string }).error || 'Não foi possível atualizar')
