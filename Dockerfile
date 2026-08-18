@@ -12,7 +12,9 @@ ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
 ENV NEXT_PUBLIC_TURNSTILE_SITE_KEY=$NEXT_PUBLIC_TURNSTILE_SITE_KEY
 
 COPY next-app/package*.json ./
-RUN npm ci
+# Sentry 10 declara suporte a Next 16 estável, enquanto este projeto ainda usa
+# o preview 16.3.0; manter a mesma resolução usada no lockfile local.
+RUN npm ci --legacy-peer-deps
 COPY next-app/ ./
 RUN npm run build
 
