@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Loader2, Pencil, X } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, Filter, Loader2, Pencil, ShieldCheck, UserRound, Users, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 interface UserRow {
@@ -12,6 +12,7 @@ interface UserRow {
   role?: string
   status?: string
   verified?: boolean
+  document_verified?: boolean
   created?: string
 }
 
@@ -25,6 +26,13 @@ type EditForm = {
   verified: boolean
   document_verified: boolean
 }
+
+type GroupKey = 'users' | 'advertisers' | 'admins'
+const GROUPS: { key: GroupKey; label: string; icon: typeof Users }[] = [
+  { key: 'users', label: 'Utilizadores', icon: UserRound },
+  { key: 'advertisers', label: 'Anunciantes', icon: Users },
+  { key: 'admins', label: 'Administradores', icon: ShieldCheck },
+]
 
 const EMPTY: EditForm = {
   name: '',
@@ -85,6 +93,11 @@ export default function AdminUsuarios() {
   const [page, setPage] = useState(1)
   const [q, setQ] = useState('')
   const [qDeb, setQDeb] = useState('')
+  const [group, setGroup] = useState<GroupKey>('users')
+  const [status, setStatus] = useState('')
+  const [verified, setVerified] = useState('')
+  const [documentVerified, setDocumentVerified] = useState('')
+  const [counts, setCounts] = useState<Record<GroupKey, number>>({ users: 0, advertisers: 0, admins: 0 })
 
   const [editId, setEditId] = useState<string | null>(null)
   const [form, setForm] = useState<EditForm>(EMPTY)
@@ -100,12 +113,15 @@ export default function AdminUsuarios() {
 
   useEffect(() => {
     setPage(1)
-  }, [qDeb])
+  }, [qDeb, group, status, verified, documentVerified])
 
   const load = useCallback(async () => {
     setLoading(true)
-    const params = new URLSearchParams({ page: String(page), perPage: '20' })
+    const params = new URLSearchParams({ page: String(page), perPage: '20', group })
     if (qDeb.length >= 2) params.set('q', qDeb)
+    if (status) params.set('status', status)
+    if (verified) params.set('verified', verified)
+    if (documentVerified) params.set('documentVerified', documentVerified)
     try {
       const r = await fetch(`/api/admin/users?${params}`, { credentials: 'include' })
       const d = r.ok ? await r.json() : { items: [], totalItems: 0, page: 1, perPage: 20 }
@@ -115,11 +131,26 @@ export default function AdminUsuarios() {
     } finally {
       setLoading(false)
     }
-  }, [page, qDeb])
+  }, [page, qDeb, group, status, verified, documentVerified])
 
   useEffect(() => {
     load()
   }, [load])
+
+  useEffect(() => {
+    let cancelled = false
+    Promise.all(
+      GROUPS.map(async ({ key }) => {
+        const params = new URLSearchParams({ group: key, perPage: '1', summary: '1' })
+        const response = await fetch(`/api/admin/users?${params}`, { credentials: 'include' })
+        const json = response.ok ? await response.json() : { totalItems: 0 }
+        return [key, Number(json.totalItems) || 0] as const
+      })
+    ).then((entries) => {
+      if (!cancelled) setCounts(Object.fromEntries(entries) as Record<GroupKey, number>)
+    }).catch(() => {})
+    return () => { cancelled = true }
+  }, [data, group, status, verified, documentVerified])
 
   useEffect(() => {
     if (!editId) return
@@ -187,6 +218,13 @@ export default function AdminUsuarios() {
     }
   }
 
+  const quickUpdate = async (u: UserRow, update: Record<string, boolean | string>) => {
+    const res = await fetch(`/api/admin/users/${u.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify(update) })
+    const json = await res.json().catch(() => ({}))
+    if (!res.ok) toast.error((json as { error?: string }).error || 'Não foi possível atualizar')
+    else { toast.success('Conta atualizada'); load() }
+  }
+
   const totalPages = data ? Math.max(1, Math.ceil(data.totalItems / data.perPage)) : 1
 
   const currentRoleInList = ROLE_CHOICES.some((o) => o.value === form.role)
@@ -200,13 +238,27 @@ export default function AdminUsuarios() {
         <ArrowLeft className="h-4 w-4" />
         Voltar ao painel
       </Link>
-      <h1 className="mb-2 text-2xl font-bold text-white">Utilizadores</h1>
+      <h1 className="mb-2 text-2xl font-bold text-white">Contas da plataforma</h1>
       <p className="mb-4 max-w-3xl text-sm text-slate-500">
-        Pesquisa por email ou nome, abre <strong className="text-slate-400">Gerir</strong> para alterar função, estado
-        da conta, verificação de email, nome e contacto. O email não pode ser alterado aqui (PocketBase).
+        Utilizadores, anunciantes e administradores ficam separados. Pesquise e aplique ações somente dentro do grupo selecionado.
       </p>
 
-      <div className="mb-4 flex max-w-md flex-col gap-2 sm:flex-row sm:items-end">
+      <div className="mb-5 grid gap-2 md:grid-cols-3">
+        {GROUPS.map(({ key, label, icon: Icon }) => (
+          <button key={key} type="button" onClick={() => setGroup(key)} className={`flex items-center justify-between rounded-xl border p-4 text-left transition ${group === key ? 'border-primary-500 bg-primary-500/10' : 'border-slate-700 bg-slate-900/40 hover:border-slate-500'}`}>
+            <span className="flex items-center gap-3 text-sm font-medium text-white"><Icon className="h-5 w-5 text-primary-400" />{label}</span>
+            <span className="text-xl font-bold text-white">{counts[key]}</span>
+          </button>
+        ))}
+      </div>
+
+      <div className="mb-4 flex flex-wrap gap-2 border-b border-slate-800 pb-4">
+        {GROUPS.map(({ key, label }) => (
+          <button key={key} type="button" onClick={() => setGroup(key)} className={`rounded-lg px-4 py-2 text-sm font-medium ${group === key ? 'bg-primary-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`}>{label}</button>
+        ))}
+      </div>
+
+      <div className="mb-4 flex flex-wrap items-end gap-2">
         <div className="flex-1">
           <label className="mb-1 block text-xs text-slate-500">Pesquisar (mín. 2 caracteres)</label>
           <input
@@ -217,7 +269,10 @@ export default function AdminUsuarios() {
             className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white placeholder:text-slate-500"
           />
         </div>
-        <p className="text-xs text-slate-500">{data?.totalItems != null ? `${data.totalItems} contas` : ''}</p>
+        <label className="text-xs text-slate-500">Estado<select value={status} onChange={(e) => setStatus(e.target.value)} className="mt-1 block rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white"><option value="">Todos</option><option value="active">Ativos</option><option value="inactive">Inativos</option></select></label>
+        <label className="text-xs text-slate-500">Email<select value={verified} onChange={(e) => setVerified(e.target.value)} className="mt-1 block rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white"><option value="">Todos</option><option value="yes">Verificado</option><option value="no">Não verificado</option></select></label>
+        <label className="text-xs text-slate-500">Documento<select value={documentVerified} onChange={(e) => setDocumentVerified(e.target.value)} className="mt-1 block rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white"><option value="">Todos</option><option value="yes">Verificado</option><option value="no">Não verificado</option></select></label>
+        <p className="flex items-center gap-1 text-xs text-slate-500"><Filter className="h-3.5 w-3.5" />{data?.totalItems != null ? `${data.totalItems} contas` : ''}</p>
       </div>
 
       {loading ? (
@@ -232,9 +287,9 @@ export default function AdminUsuarios() {
                 <tr>
                   <th className="p-4 font-medium text-slate-300">Email</th>
                   <th className="p-4 font-medium text-slate-300">Nome</th>
-                  <th className="p-4 font-medium text-slate-300">Função</th>
                   <th className="p-4 font-medium text-slate-300">Estado</th>
                   <th className="p-4 font-medium text-slate-300">Verificado</th>
+                  <th className="p-4 font-medium text-slate-300">Documento</th>
                   <th className="p-4 font-medium text-slate-300" />
                 </tr>
               </thead>
@@ -242,7 +297,7 @@ export default function AdminUsuarios() {
                 {data?.items.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="p-8 text-center text-slate-500">
-                      Nenhum utilizador encontrado. Ajuste a pesquisa.
+                      Nenhuma conta encontrada neste grupo. Ajuste a pesquisa ou os filtros.
                     </td>
                   </tr>
                 ) : (
@@ -250,7 +305,6 @@ export default function AdminUsuarios() {
                     <tr key={u.id} className="hover:bg-slate-800/30">
                       <td className="p-4 text-white">{u.email ?? '-'}</td>
                       <td className="p-4 text-slate-300">{u.name ?? '-'}</td>
-                      <td className="p-4 text-slate-300 font-mono text-xs">{u.role ?? '-'}</td>
                       <td className="p-4 text-slate-300">{u.status ?? '-'}</td>
                       <td className="p-4">
                         {u.verified ? (
@@ -259,7 +313,12 @@ export default function AdminUsuarios() {
                           <span className="text-slate-500">Não</span>
                         )}
                       </td>
+                      <td className="p-4">{u.document_verified ? <CheckCircle2 className="h-4 w-4 text-green-400" /> : <span className="text-slate-500">Não</span>}</td>
                       <td className="p-4 text-right">
+                        <div className="mb-2 flex justify-end gap-1">
+                          <button type="button" title={u.status === 'active' ? 'Inativar conta' : 'Ativar conta'} onClick={() => quickUpdate(u, { status: u.status === 'active' ? 'inactive' : 'active' })} className="rounded border border-slate-600 p-1.5 text-slate-300 hover:bg-slate-700">{u.status === 'active' ? 'Inativar' : 'Ativar'}</button>
+                          <button type="button" title="Alternar verificação de email" onClick={() => quickUpdate(u, { verified: !u.verified })} className="rounded border border-slate-600 p-1.5 text-slate-300 hover:bg-slate-700">{u.verified ? 'Desverificar' : 'Verificar'}</button>
+                        </div>
                         <button
                           type="button"
                           onClick={() => openEdit(u)}
