@@ -355,6 +355,16 @@ export default function SiteHeader() {
             )}
           </div>
 
+          {!isAuthenticated && (
+            <Link
+              href="/register?tipo=advertiser"
+              className="ml-1 inline-flex h-10 items-center justify-center rounded-lg bg-primary-600 px-2.5 text-xs font-semibold text-white transition hover:bg-primary-500 md:hidden"
+              onClick={closeAll}
+            >
+              Anunciar grátis
+            </Link>
+          )}
+
           {/* Um único hambúrguer: no desktop abre dropdown (Início, Anunciantes, Planos, Dashboard/Sair); no mobile abre o drawer */}
           <div className="relative" ref={menuRef}>
             <button
