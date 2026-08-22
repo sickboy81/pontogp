@@ -3,6 +3,12 @@ export function renewalBaseDate(value, now = new Date()) {
   return current && !Number.isNaN(current.getTime()) && current > now ? current : now
 }
 
+export function renewalExpiryDate(value, durationDays, now = new Date()) {
+  const expiry = new Date(renewalBaseDate(value, now))
+  expiry.setDate(expiry.getDate() + Math.max(1, Number(durationDays) || 0))
+  return expiry
+}
+
 export function canAddMedia(plan, type, currentCount) {
   const field = type === 'photos' ? 'max_photos' : type === 'videos' ? 'max_videos' : 'max_audio'
   const limit = Number(plan?.[field])

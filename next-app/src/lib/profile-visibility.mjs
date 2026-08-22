@@ -146,6 +146,19 @@ export function buildProfileListCutoff(
 }
 
 /**
+ * Filtro usado nas listagens públicas. Perfis entre a remoção da busca e o
+ * arquivamento continuam acessíveis por URL direta, mas não são listados.
+ */
+export function buildPublicProfileLifecycleFilter(
+  now = new Date(),
+  policy = DEFAULT_PROFILE_VISIBILITY_POLICY,
+) {
+  const cutoff = buildProfileListCutoff(now, policy)
+  const formattedCutoff = new Date(cutoff).toISOString().replace('T', ' ')
+  return `status != "archived" && (search_expires_at = "" || search_expires_at > "${formattedCutoff}")`
+}
+
+/**
  * @param {string | number | Date} [now]
  * @param {ProfileVisibilityPolicy} [policy]
  */

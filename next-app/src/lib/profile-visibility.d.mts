@@ -43,6 +43,11 @@ export function buildProfileListCutoff(
   policy?: ProfileVisibilityPolicy,
 ): Date
 
+export function buildPublicProfileLifecycleFilter(
+  now?: string | number | Date,
+  policy?: ProfileVisibilityPolicy,
+): string
+
 export function buildProfileArchiveCutoff(
   now?: string | number | Date,
   policy?: ProfileVisibilityPolicy,

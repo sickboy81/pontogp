@@ -54,8 +54,7 @@ schema; caso contrário, remova os controles/campos legados do código.
 ### Cleanup de expiração
 
 `next-app/scripts/cleanup_profiles.mjs` agora está no cron diário do Dockerfile.
-Antes do primeiro deploy com essa rotina:
-Antes de agendar:
+Antes de manter ou alterar essa rotina em produção:
 
 - faça backup verificável do banco e dos uploads do PocketBase;
 - execute `CLEANUP_DRY_RUN=true npm run cleanup-profiles` contra ambiente

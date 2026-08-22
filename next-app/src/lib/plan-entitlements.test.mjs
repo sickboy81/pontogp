@@ -6,6 +6,7 @@ import {
   isPaymentFulfilled,
   renewalBaseDate,
   profileVisualEntitlementPatch,
+  renewalExpiryDate,
   shouldEnableVisualHighlight,
 } from './plan-entitlements.mjs'
 
@@ -14,6 +15,14 @@ test('renovação preserva o maior vencimento existente', () => {
   const current = new Date('2026-09-01T12:00:00.000Z')
   assert.equal(renewalBaseDate(current.toISOString(), now).toISOString(), current.toISOString())
   assert.equal(renewalBaseDate('', now).toISOString(), now.toISOString())
+})
+
+test('cupom também preserva dias restantes ao calcular a nova validade', () => {
+  const now = new Date('2026-08-22T12:00:00.000Z')
+  assert.equal(
+    renewalExpiryDate('2026-09-01T12:00:00.000Z', 30, now).toISOString(),
+    '2026-10-01T12:00:00.000Z',
+  )
 })
 
 test('limites de mídia bloqueiam upload acima da capacidade do plano', () => {

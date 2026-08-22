@@ -70,8 +70,8 @@ continuar sendo copiado pelo Dockerfile.
 
 O `0 0` segue o fuso horário do container. O script calcula a data de negócio
 em `America/Sao_Paulo`, portanto não substitua essa lógica por data local
-implícita. O cleanup de expiração de perfis é outro processo e não está
-incluído neste cron.
+implícita. O cleanup de expiração é outro processo, agendado diariamente às
+01:00 pelo Dockerfile.
 
 ## Checklist de saúde (produção)
 

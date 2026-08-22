@@ -10,6 +10,7 @@ import {
   isProfileDirectlyVisible,
   isProfileListed,
   parseProfileVisibilityPolicy,
+  buildPublicProfileLifecycleFilter,
 } from './profile-visibility.mjs'
 
 const NOW = new Date('2026-06-14T12:00:00.000Z')
@@ -91,6 +92,13 @@ test('builds the list cutoff from the search removal window', () => {
     buildProfileListCutoff(NOW).toISOString(),
     expiredDaysAgo(DEFAULT_PROFILE_VISIBILITY_POLICY.remove_from_search_after_days),
   )
+})
+
+test('builds the public list filter from the search removal window, not archive window', () => {
+  const filter = buildPublicProfileLifecycleFilter(NOW)
+  assert.match(filter, /search_expires_at = ""/)
+  assert.match(filter, /2026-05-15 12:00:00\.000Z/)
+  assert.doesNotMatch(filter, /2026-03-16 12:00:00\.000Z/)
 })
 
 test('builds the archive cutoff from the configured archive window', () => {

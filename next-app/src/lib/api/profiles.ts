@@ -3,12 +3,9 @@ import { parseProfileVisibilityPolicy, type ProfileVisibilityPolicy } from '@/li
 import { isPublicProfileStatus } from '@/lib/profile-publication.mjs'
 import { selectOwnerProfileRecord } from '@/lib/profile-owner-record.mjs'
 import { isProfileEffectivelyOnline } from '@/lib/profile-presence.mjs'
+import { buildPublicProfileLifecycleFilter } from '@/lib/profile-visibility.mjs'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
-
-function toPBDate(d: Date = new Date()) {
-  return d.toISOString().replace('T', ' ')
-}
 
 /** Mapeia registro PocketBase (com expand) para Profile. Exportado para uso em rotas (ex.: favoritos). */
 export function mapProfile(record: Record<string, unknown> & { expand?: Record<string, unknown> }): Profile | null {
@@ -169,9 +166,7 @@ function isProfileBeyondArchiveWindow(
 }
 
 function buildLifecycleFilter(policy: ProfileVisibilityPolicy): string {
-  const cutoff = new Date()
-  cutoff.setDate(cutoff.getDate() - policy.archive_after_days)
-  return `status != "archived" && (search_expires_at = "" || search_expires_at > "${toPBDate(cutoff)}")`
+  return buildPublicProfileLifecycleFilter(new Date(), policy)
 }
 
 const SORT_MAP: Record<string, string> = {

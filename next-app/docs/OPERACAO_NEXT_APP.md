@@ -27,8 +27,8 @@ Documento para evitar regressões por uso do legado Vite.
    - não copiar `/app` inteiro do builder para o runtime.
 4. Cron scripts oficiais:
    - bump conforme `next-app/docs/BUMPS_E_AUTO_BUMP.md`;
-   - o cleanup de expiração não está agendado e só deve ser ativado
-     explicitamente no Coolify após a validação segura abaixo.
+   - o cleanup de expiração é executado diariamente pelo Dockerfile às 01:00
+     no fuso do container; valide os logs após cada deploy.
 
 ## Regras de mudança
 
@@ -106,8 +106,8 @@ Antes de qualquer ativação:
    cutoff informado no log e a ausência de perfis dentro da janela.
 5. Execute sem dry-run primeiro nesse ambiente e confira que dados/uploads
    continuam presentes e apenas o status dos candidatos mudou.
-6. Somente então crie explicitamente o job no Coolify, com logs e
-   monitoramento. O Dockerfile não agenda esse cleanup.
+6. O Dockerfile já agenda esse cleanup. No Coolify, confirme que o container
+   mantém o cron ativo e monitore `/var/log/cleanup_profiles.log`.
 
 ## Email transacional com Resend
 

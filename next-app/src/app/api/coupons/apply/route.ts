@@ -3,6 +3,7 @@ import { getAuthCookieFromHeader, getUserIdFromToken } from '@/lib/auth-cookie'
 import { getProfileByUserId } from '@/lib/api/profiles'
 import { getAdminToken } from '@/lib/pocketbase-admin'
 import { COUPON_REDEMPTIONS_COLLECTION, COUPONS_COLLECTION } from '@/lib/coupons-collection'
+import { profileVisualEntitlementPatch, renewalExpiryDate } from '@/lib/plan-entitlements.mjs'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
@@ -78,6 +79,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const planRes = await fetch(`${PB_URL}/api/collections/plans/records/${coupon.plan_id}?fields=id,slug,featured,daily_bumps`, {
+      headers: authHeader,
+      cache: 'no-store',
+    })
+    if (!planRes.ok) return Response.json({ error: 'Plano do cupom não encontrado' }, { status: 400 })
+    const plan = (await planRes.json()) as { id?: string; slug?: string; featured?: boolean; daily_bumps?: number }
+
     let reservationId: string | null = null
     const reservationLimit = maxUses == null ? 1 : Math.max(0, maxUses)
     for (let slot = 0; slot < reservationLimit; slot += 1) {
@@ -105,10 +113,8 @@ export async function POST(request: NextRequest) {
 
     const durationDays = Number(coupon.duration_days) || 30
     const now = new Date()
-    const searchExpires = new Date(now)
-    searchExpires.setDate(searchExpires.getDate() + durationDays)
-    const contactExpires = new Date(now)
-    contactExpires.setDate(contactExpires.getDate() + durationDays)
+    const searchExpires = renewalExpiryDate(profile.search_expires_at, durationDays, now)
+    const contactExpires = renewalExpiryDate(profile.contact_expires_at, durationDays, now)
     const searchExpiresAt = searchExpires.toISOString().replace('T', ' ').slice(0, 19)
     const contactExpiresAt = contactExpires.toISOString().replace('T', ' ').slice(0, 19)
 
@@ -119,7 +125,8 @@ export async function POST(request: NextRequest) {
         plan: coupon.plan_id,
         search_expires_at: searchExpiresAt,
         contact_expires_at: contactExpiresAt,
-        auto_bump: true,
+        auto_bump: plan.slug !== 'gratis' && Number(plan.daily_bumps) > 0,
+        ...profileVisualEntitlementPatch(plan),
       }),
     })
     if (!profileRes.ok) {
