@@ -51,6 +51,10 @@ export async function POST(request: NextRequest) {
   if (!userId) return Response.json({ error: 'Token inválido' }, { status: 401 })
 
   try {
+    const contentType = request.headers.get('content-type') || ''
+    if (!contentType.toLowerCase().includes('multipart/form-data')) {
+      return Response.json({ error: 'Envie os documentos usando multipart/form-data.' }, { status: 400 })
+    }
     const formData = await request.formData()
     const profileId = formData.get('profileId') as string | null
     const fullName = formData.get('full_name') as string | null
