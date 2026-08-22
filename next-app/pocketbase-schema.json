@@ -2420,33 +2420,6 @@
           "type": "text"
         },
         {
-          "help": "Perfil beneficiado pela cobrança PIX",
-          "hidden": false,
-          "id": "relationpaymentprofile",
-          "cascadeDelete": false,
-          "collectionId": "pbc_3414089001",
-          "maxSelect": 1,
-          "minSelect": 0,
-          "name": "profile",
-          "presentable": false,
-          "required": false,
-          "system": false,
-          "type": "relation"
-        },
-        {
-          "help": "Preenchido somente depois da ativação do benefício",
-          "hidden": false,
-          "id": "textpaymentfulfilledat",
-          "max": 0,
-          "min": 0,
-          "name": "fulfilled_at",
-          "pattern": "",
-          "presentable": false,
-          "required": false,
-          "system": false,
-          "type": "text"
-        },
-        {
           "help": "",
           "hidden": false,
           "id": "bool1358543748",
@@ -4347,6 +4320,33 @@
           "pattern": "",
           "presentable": false,
           "primaryKey": false,
+          "required": false,
+          "system": false,
+          "type": "text"
+        },
+        {
+          "help": "Perfil beneficiado pela cobrança PIX",
+          "hidden": false,
+          "id": "relationpaymentprofile",
+          "cascadeDelete": false,
+          "collectionId": "pbc_3414089001",
+          "maxSelect": 1,
+          "minSelect": 0,
+          "name": "profile",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "relation"
+        },
+        {
+          "help": "Preenchido somente depois da ativação do benefício",
+          "hidden": false,
+          "id": "textpaymentfulfilledat",
+          "max": 0,
+          "min": 0,
+          "name": "fulfilled_at",
+          "pattern": "",
+          "presentable": false,
           "required": false,
           "system": false,
           "type": "text"
