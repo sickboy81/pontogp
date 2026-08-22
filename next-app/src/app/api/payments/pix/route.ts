@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { getAuthCookieFromHeader, getUserIdFromToken } from '@/lib/auth-cookie'
 import { enforceUserRateLimit, RATE_LIMIT_POLICIES } from '@/lib/api-rate-limit.mjs'
 import { isValidCpfOrCnpj, onlyDigits } from '@/lib/brazil-document'
+import { getAdminToken } from '@/lib/pocketbase-admin'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 const PIXGO_URL = 'https://pixgo.org/api/v1'
@@ -32,27 +33,42 @@ export async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as {
       planId?: string
-      planSlug?: string
-      amount: number
+      billingPeriod?: 'weekly' | 'monthly'
       profileId?: string
       description?: string
       customerName?: string
       customerEmail?: string
       receiverCpf?: string
-      couponId?: string
     }
-    const amount = Number(body.amount)
+    const billingPeriod = body.billingPeriod === 'monthly' || body.billingPeriod === 'weekly' ? body.billingPeriod : null
+    if (!billingPeriod) return Response.json({ error: 'Período de cobrança inválido.' }, { status: 400 })
+    if (!body.planId || !/^[a-z0-9]{15}$/i.test(body.planId)) {
+      return Response.json({ error: 'Plano inválido.' }, { status: 400 })
+    }
+    if (!body.profileId || !/^[a-z0-9]{15}$/i.test(body.profileId)) {
+      return Response.json({ error: 'Perfil de anunciante inválido.' }, { status: 400 })
+    }
+
+    const adminToken = await getAdminToken()
+    if (!adminToken) return Response.json({ error: 'Serviço indisponível.' }, { status: 503 })
+    const authHeader = { Authorization: `Bearer ${adminToken}` }
+    const [planRes, profileRes] = await Promise.all([
+      fetch(`${PB_URL}/api/collections/plans/records/${body.planId}`, { headers: authHeader, cache: 'no-store' }),
+      fetch(`${PB_URL}/api/collections/profiles/records/${body.profileId}?fields=id,user,status`, { headers: authHeader, cache: 'no-store' }),
+    ])
+    if (!planRes.ok) return Response.json({ error: 'Plano não encontrado.' }, { status: 400 })
+    if (!profileRes.ok) return Response.json({ error: 'Perfil não encontrado.' }, { status: 400 })
+    const plan = (await planRes.json()) as { id: string; slug?: string; name?: string; enabled?: boolean; target_type?: string; price_weekly?: number; price_monthly?: number }
+    const profile = (await profileRes.json()) as { id: string; user?: string; status?: string }
+    if (profile.user !== userId) return Response.json({ error: 'Este perfil não pertence à sua conta.' }, { status: 403 })
+    if (plan.enabled !== true || plan.target_type !== 'advertiser') return Response.json({ error: 'Este plano não está disponível para compra.' }, { status: 400 })
+    const amount = Number(billingPeriod === 'weekly' ? plan.price_weekly : plan.price_monthly)
+    if (!Number.isFinite(amount) || amount < 10) return Response.json({ error: 'Este plano não possui preço válido para o período selecionado.' }, { status: 400 })
     const receiverCpf = onlyDigits(body.receiverCpf || '')
     const baseDescription =
       (body.description || '').trim() ||
-      `Plano CerejaVIP${body.planSlug ? ` - ${body.planSlug}` : ''}`
-    let metadata = ''
-    if (body.profileId && /^[a-z0-9]{15}$/i.test(body.profileId)) {
-      metadata += ` | PROFILE:${body.profileId}`
-    }
-    if (body.couponId && typeof body.couponId === 'string' && body.couponId.length <= 20) {
-      metadata += ` | COUPON:${body.couponId}`
-    }
+      `Plano CerejaVIP - ${plan.slug || plan.name || plan.id}`
+    const metadata = ` | PROFILE:${body.profileId} | PERIOD:${billingPeriod}`
     const description = `${baseDescription.slice(0, Math.max(0, 200 - metadata.length))}${metadata}`
 
     if (!amount || amount < 10) {
@@ -115,7 +131,7 @@ export async function POST(request: NextRequest) {
 
     const paymentRecord = {
       user: userId,
-      plan: body.planId || null,
+      plan: plan.id,
       amount,
       status: 'pending',
       method: 'pix',

@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server'
 import type { Plan } from '@/lib/types'
+import { requireAdmin } from '@/lib/api/admin-auth'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
@@ -30,6 +31,9 @@ function mapPlan(record: Record<string, unknown>): Plan {
 /** GET: lista planos habilitados. Query: enabledOnly=true (default). */
 export async function GET(request: NextRequest) {
   const enabledOnly = request.nextUrl.searchParams.get('enabledOnly') !== 'false'
+  if (!enabledOnly && !(await requireAdmin(request))) {
+    return Response.json({ error: 'Não autorizado' }, { status: 401 })
+  }
   try {
     const filter = enabledOnly ? 'enabled = true' : ''
     const url = `${PB_URL}/api/collections/plans/records?perPage=50&sort=price_monthly${filter ? `&filter=${encodeURIComponent(filter)}` : ''}`

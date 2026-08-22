@@ -1,6 +1,8 @@
 import { NextRequest } from 'next/server'
 import { getAuthCookieFromHeader, getUserIdFromToken } from '@/lib/auth-cookie'
+import { getAdminToken } from '@/lib/pocketbase-admin'
 
+const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 const PIXGO_URL = 'https://pixgo.org/api/v1'
 const PIXGO_API_KEY = process.env.PIXGO_API_KEY
 
@@ -27,6 +29,14 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    const adminToken = await getAdminToken()
+    if (!adminToken) return Response.json({ error: 'Serviço indisponível' }, { status: 503 })
+    const paymentRes = await fetch(
+      `${PB_URL}/api/collections/payments/records?filter=${encodeURIComponent(`external_id="${paymentId.replace(/"/g, '\\"')}" && user="${userId}"`)}&perPage=1&fields=id,external_id,user`,
+      { headers: { Authorization: `Bearer ${adminToken}` }, cache: 'no-store' }
+    )
+    const paymentData = (await paymentRes.json().catch(() => ({}))) as { items?: unknown[] }
+    if (!paymentRes.ok || !paymentData.items?.length) return Response.json({ error: 'Pagamento não encontrado' }, { status: 404 })
     const res = await fetch(`${PIXGO_URL}/payment/${paymentId}/status`, {
       headers: { 'X-API-Key': PIXGO_API_KEY },
     })

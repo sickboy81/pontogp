@@ -10,7 +10,7 @@ interface PlanPaymentModalProps {
   isOpen: boolean
   onClose: () => void
   planId?: string
-  planSlug?: string
+  billingPeriod: 'weekly' | 'monthly'
   planName: string
   amount: number
   profileId?: string
@@ -30,7 +30,7 @@ export default function PlanPaymentModal({
   isOpen,
   onClose,
   planId,
-  planSlug,
+  billingPeriod,
   planName,
   amount,
   profileId,
@@ -46,8 +46,6 @@ export default function PlanPaymentModal({
   const [linkPagamento, setLinkPagamento] = useState<string | null>(null)
   const [externalRef, setExternalRef] = useState<string | null>(null)
   const [polling, setPolling] = useState(false)
-  const [couponCode, setCouponCode] = useState('')
-  const [couponError, setCouponError] = useState<string | null>(null)
   const [receiverCpf, setReceiverCpf] = useState('')
   const [receiverCpfError, setReceiverCpfError] = useState<string | null>(null)
   const userRole = useAuthStore((s) => s.user?.role)
@@ -56,30 +54,11 @@ export default function PlanPaymentModal({
   const createPix = useCallback(async () => {
     setLoading(true)
     setPixError(null)
-    setCouponError(null)
     setReceiverCpfError(null)
     if (!isValidCpfOrCnpj(receiverCpf)) {
       setReceiverCpfError('Informe um CPF ou CNPJ válido.')
       setLoading(false)
       return
-    }
-    let couponId: string | undefined
-    const code = couponCode.trim().toUpperCase()
-    if (code) {
-      try {
-        const valRes = await fetch(`/api/coupons/validate?code=${encodeURIComponent(code)}`)
-        const valData = (await valRes.json()) as { valid?: boolean; coupon_id?: string; error?: string }
-        if (!valData.valid || !valData.coupon_id) {
-          setCouponError(valData.error || 'Cupom inválido')
-          setLoading(false)
-          return
-        }
-        couponId = valData.coupon_id
-      } catch {
-        setCouponError('Erro ao validar cupom')
-        setLoading(false)
-        return
-      }
     }
     try {
       const res = await fetch('/api/payments/pix', {
@@ -88,14 +67,12 @@ export default function PlanPaymentModal({
         credentials: 'include',
         body: JSON.stringify({
           planId,
-          planSlug,
-          amount,
+          billingPeriod,
           profileId,
           description: `CerejaVIP - ${planName}`,
           customerName,
           customerEmail,
           receiverCpf,
-          ...(couponId && { couponId }),
         }),
       })
       const data = await res.json()
@@ -116,11 +93,9 @@ export default function PlanPaymentModal({
     }
   }, [
     planId,
-    planSlug,
-    amount,
+    billingPeriod,
     profileId,
     planName,
-    couponCode,
     customerName,
     customerEmail,
     receiverCpf,
@@ -136,8 +111,6 @@ export default function PlanPaymentModal({
       setLinkPagamento(null)
       setExternalRef(null)
       setPolling(false)
-      setCouponCode('')
-      setCouponError(null)
       setReceiverCpf('')
       setReceiverCpfError(null)
     }
@@ -236,19 +209,6 @@ export default function PlanPaymentModal({
                 O QR Code só poderá ser pago pelo titular deste CPF/CNPJ. Pagamentos feitos por
                 outra pessoa serão rejeitados pela PixGo.
               </p>
-              <label className="block text-xs text-slate-500">Cupom (opcional)</label>
-              <input
-                type="text"
-                value={couponCode}
-                onChange={(e) => {
-                  setCouponCode(e.target.value.toUpperCase())
-                  setCouponError(null)
-                }}
-                placeholder="Código do cupom"
-                maxLength={20}
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-primary-500 focus:outline-none"
-              />
-              {couponError && <p className="text-xs text-red-400">{couponError}</p>}
               <button
                 type="button"
                 onClick={createPix}

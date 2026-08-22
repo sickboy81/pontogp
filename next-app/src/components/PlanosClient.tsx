@@ -384,7 +384,7 @@ export default function PlanosClient() {
           isOpen
           onClose={() => setPaymentModal(null)}
           planId={paymentModal.plan.id}
-          planSlug={paymentModal.plan.slug}
+          billingPeriod={billingPeriod}
           planName={`${paymentModal.plan.name} (${billingPeriod === 'weekly' ? 'Semanal' : 'Mensal'})`}
           amount={paymentModal.amount}
           profileId={paymentModal.profile.id}

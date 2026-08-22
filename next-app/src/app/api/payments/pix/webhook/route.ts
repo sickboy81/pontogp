@@ -143,26 +143,35 @@ export async function POST(request: NextRequest) {
     if (!listRes.ok) return Response.json({ received: true }, { status: 200 })
 
     const listJson = (await listRes.json()) as {
-      items?: { id: string; profile?: string; plan?: string; description?: string }[]
+      items?: { id: string; profile?: string; plan?: string; description?: string; status?: string }[]
     }
     const items = listJson.items || []
     if (items.length === 0) return Response.json({ received: true }, { status: 200 })
 
     const record = items[0]
+    if (event === 'payment.completed' && record.status === 'paid') {
+      return Response.json({ received: true, duplicate: true }, { status: 200 })
+    }
     const profileMatch = record.description?.match(/\|\s*PROFILE:([a-z0-9]{15})(?:\s*\||\s*$)/i)
     const profileId = record.profile || profileMatch?.[1] || null
     const authHeader = { Authorization: `Bearer ${token}` }
 
-    await fetch(`${PB_URL}/api/collections/payments/records/${record.id}`, {
+    const paymentPatchRes = await fetch(`${PB_URL}/api/collections/payments/records/${record.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', ...authHeader },
       body: JSON.stringify({ status: newStatus }),
     })
+    if (!paymentPatchRes.ok) {
+      console.error('[pix-webhook] Falha ao atualizar status do pagamento.', { paymentId, status: paymentPatchRes.status })
+      return Response.json({ error: 'Pagamento não atualizado' }, { status: 503 })
+    }
 
     if (newStatus === 'paid' && profileId) {
       let planId = record.plan ?? null
-      let searchDays = 30
-      let contactDays = 30
+      const periodMatch = record.description?.match(/\|\s*PERIOD:(weekly|monthly)(?:\s*\||\s*$)/i)
+      const billingPeriod = periodMatch?.[1]?.toLowerCase() === 'weekly' ? 'weekly' : 'monthly'
+      let searchDays = billingPeriod === 'weekly' ? 7 : 30
+      let contactDays = billingPeriod === 'weekly' ? 7 : 30
       let autoBumpByDefault = false
       const couponMatch = record.description?.match(/\|\s*COUPON:([a-z0-9]{15})\s*$/i)
       const couponId = couponMatch?.[1] ?? null
@@ -226,8 +235,9 @@ export async function POST(request: NextRequest) {
                 typeof planJson.subscription_days === 'number' &&
                 planJson.subscription_days > 0
               ) {
-                searchDays = planJson.subscription_days
-                contactDays = planJson.subscription_days
+                const configuredDays = billingPeriod === 'weekly' ? 7 : planJson.subscription_days
+                searchDays = configuredDays
+                contactDays = configuredDays
               } else {
                 searchDays = 30
                 contactDays = 30
@@ -244,7 +254,7 @@ export async function POST(request: NextRequest) {
               const setData = (await settingsRes.json()) as { items?: { value?: unknown }[] }
               const durations = parseExpirationDurationsValue(setData.items?.[0]?.value)
               const bySlug = planSlug ? durations[planSlug] : undefined
-              if (bySlug) {
+              if (billingPeriod === 'monthly' && bySlug) {
                 if (typeof bySlug.contact_days === 'number' && bySlug.contact_days >= 1) {
                   contactDays = Math.max(1, Math.floor(bySlug.contact_days))
                 }
@@ -265,7 +275,7 @@ export async function POST(request: NextRequest) {
         const searchExpiresAt = searchExpires.toISOString().replace('T', ' ').slice(0, 19)
         const contactExpiresAt = contactExpires.toISOString().replace('T', ' ').slice(0, 19)
 
-        await fetch(`${PB_URL}/api/collections/profiles/records/${profileId}`, {
+        const profilePatchRes = await fetch(`${PB_URL}/api/collections/profiles/records/${profileId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json', ...authHeader },
           body: JSON.stringify({
@@ -275,6 +285,10 @@ export async function POST(request: NextRequest) {
             auto_bump: autoBumpByDefault,
           }),
         })
+        if (!profilePatchRes.ok) {
+          console.error('[pix-webhook] Falha ao ativar o plano no perfil.', { paymentId, profileId, status: profilePatchRes.status })
+          return Response.json({ error: 'Plano não ativado' }, { status: 503 })
+        }
       }
     }
 
