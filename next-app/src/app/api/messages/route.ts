@@ -11,6 +11,7 @@ import { mapMessage } from '@/lib/api/messages'
 import { enforceUserRateLimit, RATE_LIMIT_POLICIES } from '@/lib/api-rate-limit.mjs'
 import type { Message } from '@/lib/types'
 import { validateMessageInput } from '@/lib/message-input.mjs'
+import { sendWebPushToUser } from '@/lib/web-push.mjs'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
@@ -143,6 +144,7 @@ export async function POST(request: NextRequest) {
       } catch {
         // ignore
       }
+      void sendWebPushToUser({ userId: recipientId, title: 'Nova mensagem', body: content.slice(0, 200), url: '/mensagens', adminToken }).catch(() => undefined)
     }
 
     // re-fetch with expand to return full Message

@@ -14,7 +14,7 @@ export default function LegacySwCleanup() {
       try {
         if ('serviceWorker' in navigator) {
           const regs = await navigator.serviceWorker.getRegistrations()
-          await Promise.all(regs.map((r) => r.unregister()))
+          await Promise.all(regs.filter((r) => !r.active?.scriptURL.endsWith('/push-sw.js')).map((r) => r.unregister()))
         }
         if ('caches' in window) {
           const keys = await caches.keys()

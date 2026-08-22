@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Bell, ArrowLeft, Loader2, Check } from 'lucide-react'
+import PushNotificationPrompt from '@/components/PushNotificationPrompt'
 
 interface NotificationItem {
   id: string
@@ -69,6 +70,10 @@ export default function NotificacoesPage() {
         <Bell className="h-7 w-7 text-primary-500" />
         Notificações
       </h1>
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-700 bg-slate-800/40 p-4">
+        <p className="text-sm text-slate-300">Receba alertas de mensagens, pagamentos e verificação mesmo fora do site.</p>
+        <PushNotificationPrompt />
+      </div>
 
       {loading ? (
         <div className="flex justify-center py-12">

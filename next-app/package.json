@@ -30,6 +30,7 @@
     "react-dom": "19.2.8",
     "react-hot-toast": "^2.4.1",
     "sharp": "0.35.3",
+    "web-push": "^3.6.7",
     "zustand": "^4.4.7"
   },
   "devDependencies": {
