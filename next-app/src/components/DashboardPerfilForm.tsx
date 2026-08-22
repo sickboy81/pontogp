@@ -486,6 +486,20 @@ export default function DashboardPerfilForm() {
     return /^[a-z0-9]{15}$/i.test(value) ? value : ''
   }
 
+  const preparePhoto = async (file: File): Promise<File> => {
+    if (!file.type.startsWith('image/') || file.size <= 2 * 1024 * 1024) return file
+    const bitmap = await createImageBitmap(file)
+    const maxDimension = 2400
+    const scale = Math.min(1, maxDimension / Math.max(bitmap.width, bitmap.height))
+    const canvas = document.createElement('canvas')
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale))
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale))
+    canvas.getContext('2d')?.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
+    bitmap.close()
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.86))
+    return blob ? new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg', lastModified: Date.now() }) : file
+  }
+
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
     if (files.length === 0 || !profile) return
@@ -499,7 +513,8 @@ export default function DashboardPerfilForm() {
     setPhotoUploadProgress({ current: 0, total: files.length })
     setError(null)
     try {
-      for (const [index, file] of files.entries()) {
+      for (const [index, originalFile] of files.entries()) {
+        const file = await preparePhoto(originalFile)
         const fd = new FormData()
         fd.append('file', file)
         const res = await fetch(`/api/profiles/${profile.id}/photos`, {

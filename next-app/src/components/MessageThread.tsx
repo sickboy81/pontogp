@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Send, ArrowLeft, CheckCheck, Ban, ShieldOff } from 'lucide-react'
+import { Send, ArrowLeft, Check, CheckCheck, Ban, ShieldOff } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
 import type { Message } from '@/lib/types'
 import { formatRelativeTime } from '@/utils/format'
@@ -231,7 +231,7 @@ export default function MessageThread({
                   >
                     <p className="whitespace-pre-wrap break-words text-sm">{msg.content}</p>
                     <div className="mt-1 flex items-center justify-end gap-1 text-xs opacity-80">
-                      {isMe && (msg.read ? <CheckCheck className="h-3.5 w-3" /> : null)}
+                      {isMe && (msg.read ? <CheckCheck aria-label="Lida" className="h-3.5 w-3" /> : <Check aria-label="Enviada" className="h-3.5 w-3" />)}
                       <span>{formatRelativeTime(msg.created_at)}</span>
                     </div>
                   </div>
