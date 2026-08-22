@@ -454,6 +454,16 @@ export default function DashboardPerfilForm() {
     ? canRemoveProfilePhoto(profile.status, photoCount)
     : false
 
+  useEffect(() => {
+    if (!profile || (!hasUnsavedBioChanges && !hasUnsavedContactChanges)) return
+    const warnBeforeLeaving = (event: BeforeUnloadEvent) => {
+      event.preventDefault()
+      event.returnValue = 'Você tem alterações não salvas.'
+    }
+    window.addEventListener('beforeunload', warnBeforeLeaving)
+    return () => window.removeEventListener('beforeunload', warnBeforeLeaving)
+  }, [profile, hasUnsavedBioChanges, hasUnsavedContactChanges])
+
   const toggleNeighborhood = (neighborhood: string, checked: boolean) => {
     setForm((f) => ({
       ...f,

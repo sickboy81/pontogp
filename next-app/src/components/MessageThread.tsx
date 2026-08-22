@@ -139,6 +139,7 @@ export default function MessageThread({
       }
     } catch (e) {
       console.error('Error sending message:', e)
+      toast.error('Não foi possível enviar a mensagem. Tente novamente.')
     } finally {
       setSending(false)
     }
