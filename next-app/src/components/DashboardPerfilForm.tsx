@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, ImagePlus, Loader2, Mic, Plus, Save, Trash2, Video, Settings, BarChart3, Link2, Copy, TrendingUp, Clock, Target, Lightbulb, GripVertical, AlertTriangle, RefreshCw } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, ImagePlus, Loader2, Mic, Plus, Save, Trash2, Video, Settings, BarChart3, Link2, Copy, TrendingUp, Clock, Target, Lightbulb, GripVertical, AlertTriangle, RefreshCw } from 'lucide-react'
 import type { Profile, Schedule } from '@/lib/types'
 import {
   CATEGORIES, GENDERS, STATES, ETHNICITIES, HAIR_COLORS, BODY_TYPES, BREAST_TYPES, PUBIS_TYPES,
@@ -892,6 +892,15 @@ export default function DashboardPerfilForm() {
     )
   }
 
+  const completionItems = [
+    { label: 'Nome e localização', done: Boolean(form.name.trim() && form.city && form.state) },
+    { label: 'Descrição mínima', done: form.bio.trim().length >= MIN_PROFILE_BIO_LENGTH },
+    { label: 'Pelo menos 3 fotos', done: (profile?.photos?.length || 0) >= MIN_PROFILE_PHOTOS },
+    { label: 'Contato público', done: Boolean(form.whatsapp || form.telegram || form.phone) },
+    { label: 'Preços informados', done: form.price_rows.some((row) => row.price.trim().length > 0) },
+  ]
+  const completionPercent = Math.round((completionItems.filter((item) => item.done).length / completionItems.length) * 100)
+
   return (
     <div className="mx-auto max-w-2xl">
       <Link
@@ -904,6 +913,24 @@ export default function DashboardPerfilForm() {
       <h1 className="mb-2 text-2xl font-bold text-white">
         {profile ? 'Editar perfil' : 'Criar perfil'}
       </h1>
+      {profile && (
+        <section aria-labelledby="profile-completion-title" className="mb-6 rounded-xl border border-slate-700 bg-slate-800/50 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 id="profile-completion-title" className="font-semibold text-white">Completude do perfil</h2>
+              <p className="text-sm text-slate-400">Complete estes itens para publicar e converter melhor.</p>
+            </div>
+            <span className="text-lg font-bold text-primary-400">{completionPercent}%</span>
+          </div>
+          <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-700" role="progressbar" aria-valuenow={completionPercent} aria-valuemin={0} aria-valuemax={100}>
+            <div className="h-full rounded-full bg-primary-500 transition-all" style={{ width: `${completionPercent}%` }} />
+          </div>
+          <ul className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+            {completionItems.map((item) => <li key={item.label} className={item.done ? 'text-emerald-300' : 'text-slate-400'}><CheckCircle2 className="mr-2 inline h-4 w-4" />{item.label}</li>)}
+          </ul>
+        </section>
+      )}
+
       {profile && (
         <p className="mb-4 text-slate-400">Editando: {profile.name}</p>
       )}

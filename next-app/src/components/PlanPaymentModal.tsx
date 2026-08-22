@@ -49,6 +49,7 @@ export default function PlanPaymentModal({
   const [externalRef, setExternalRef] = useState<string | null>(null)
   const [polling, setPolling] = useState(false)
   const [activatingPlan, setActivatingPlan] = useState(false)
+  const [paymentStatus, setPaymentStatus] = useState<'pending' | 'processing' | 'expired' | 'failed' | null>(null)
   const [receiverCpf, setReceiverCpf] = useState('')
   const [receiverCpfError, setReceiverCpfError] = useState<string | null>(null)
   const idempotencyKey = useRef<string | null>(null)
@@ -119,6 +120,7 @@ export default function PlanPaymentModal({
       setExternalRef(null)
       setPolling(false)
       setActivatingPlan(false)
+      setPaymentStatus(null)
       idempotencyKey.current = null
       setReceiverCpf('')
       setReceiverCpfError(null)
@@ -141,6 +143,7 @@ export default function PlanPaymentModal({
           onClose()
         } else if (status === 'processing') {
           setActivatingPlan(true)
+          setPaymentStatus('processing')
         } else if (
           status === 'cancelled' ||
           status === 'expired' ||
@@ -148,6 +151,7 @@ export default function PlanPaymentModal({
           status === 'erro'
         ) {
           setPolling(false)
+          setPaymentStatus(status === 'expired' ? 'expired' : 'failed')
         }
       } catch {
         // Ignora erro de polling
@@ -295,6 +299,18 @@ export default function PlanPaymentModal({
                   <Loader2 className="h-4 w-4 animate-spin" />
                   {activatingPlan ? 'Pagamento confirmado. Ativando seu plano...' : 'Aguardando pagamento...'}
                 </p>
+              )}
+              {paymentStatus === 'expired' && (
+                <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-center text-sm text-amber-200">
+                  Este PIX expirou. Gere uma nova cobrança para continuar.
+                  <button type="button" onClick={() => { setStep('init'); setPaymentStatus(null); setExternalRef(null) }} className="mt-2 block w-full rounded-lg border border-amber-400/50 px-3 py-2 font-medium hover:bg-amber-500/10">Gerar novo PIX</button>
+                </div>
+              )}
+              {paymentStatus === 'failed' && (
+                <div className="rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-center text-sm text-red-200">
+                  Não foi possível confirmar este pagamento. Gere uma nova cobrança.
+                  <button type="button" onClick={() => { setStep('init'); setPaymentStatus(null); setExternalRef(null) }} className="mt-2 block w-full rounded-lg border border-red-400/50 px-3 py-2 font-medium hover:bg-red-500/10">Tentar novamente</button>
+                </div>
               )}
             </div>
           )}

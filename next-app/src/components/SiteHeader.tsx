@@ -387,6 +387,7 @@ export default function SiteHeader() {
                 <div className="my-1 border-t border-slate-600" />
                 {isAuthenticated ? (
                   <>
+                    <Link href="/register?tipo=advertiser" className="block px-4 py-2 text-sm font-semibold text-primary-400 hover:bg-slate-700 hover:text-primary-300" onClick={closeAll}>Anunciar grátis</Link>
                     <Link href="/dashboard" className="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-700 hover:text-white" onClick={closeAll}>Dashboard</Link>
                     {isAdmin && (
                       <Link href="/admin" className="block px-4 py-2 text-sm text-amber-400 hover:bg-slate-700 hover:text-amber-300" onClick={closeAll}>Admin</Link>
@@ -446,6 +447,7 @@ export default function SiteHeader() {
             {mainNav}
             {isAuthenticated ? (
               <>
+                <Link href="/register?tipo=advertiser" className="rounded-lg border border-primary-500/60 px-4 py-2 text-primary-300 hover:bg-primary-500/10" onClick={closeAll}>Anunciar grátis</Link>
                 <Link href="/favoritos" className="text-slate-300 hover:text-white" onClick={closeAll}>Favoritos</Link>
                 <Link href="/mensagens" className="text-slate-300 hover:text-white" onClick={closeAll}>Mensagens</Link>
                 <Link href="/notificacoes" className="text-slate-300 hover:text-white" onClick={closeAll}>Notificações</Link>
