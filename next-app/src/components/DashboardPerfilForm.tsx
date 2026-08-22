@@ -489,6 +489,12 @@ export default function DashboardPerfilForm() {
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
     if (files.length === 0 || !profile) return
+    const oversized = files.find((file) => file.size > 5 * 1024 * 1024)
+    if (oversized) {
+      setError(`A foto “${oversized.name}” ultrapassa o limite de 5 MB.`)
+      e.target.value = ''
+      return
+    }
     setPhotoUploading(true)
     setPhotoUploadProgress({ current: 0, total: files.length })
     setError(null)
@@ -524,6 +530,7 @@ export default function DashboardPerfilForm() {
     if (!profile) return
     const photoId = extractMediaId(photoUrlOrId)
     if (!photoId) return
+    if (!window.confirm('Remover esta foto do perfil?')) return
     setPhotoDeleting(photoId)
     setError(null)
     try {
@@ -601,6 +608,11 @@ export default function DashboardPerfilForm() {
   const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file || !profile) return
+    if (file.size > 100 * 1024 * 1024) {
+      setError('O vídeo ultrapassa o limite de 100 MB.')
+      e.target.value = ''
+      return
+    }
     setVideoUploading(true)
     setError(null)
     try {
@@ -633,6 +645,7 @@ export default function DashboardPerfilForm() {
     if (!profile) return
     const videoId = extractMediaId(videoUrlOrId)
     if (!videoId) return
+    if (!window.confirm('Remover este vídeo do perfil?')) return
     setVideoDeleting(videoId)
     setError(null)
     try {
@@ -658,6 +671,11 @@ export default function DashboardPerfilForm() {
   const handleAudioUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file || !profile) return
+    if (file.size > 10 * 1024 * 1024) {
+      setError('O áudio ultrapassa o limite de 10 MB.')
+      e.target.value = ''
+      return
+    }
     setAudioUploading(true)
     setError(null)
     try {
@@ -688,6 +706,7 @@ export default function DashboardPerfilForm() {
 
   const handleAudioDelete = async () => {
     if (!profile) return
+    if (!window.confirm('Remover o áudio de apresentação?')) return
     setAudioDeleting(true)
     setError(null)
     try {
@@ -1834,7 +1853,7 @@ export default function DashboardPerfilForm() {
                   >
                     <img
                       src={url}
-                      alt=""
+                      alt={`${isPrimary ? 'Foto principal' : 'Foto do'} perfil`}
                       className="h-full w-full object-cover"
                     />
                     {isPrimary ? (
