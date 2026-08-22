@@ -2077,10 +2077,11 @@ export default function DashboardPerfilForm() {
                 </div>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
                 {[
                   ['Visitantes únicos', stats?.insights?.uniqueVisitors ?? 0, 'nos últimos 30 dias'],
                   ['Mensagens recebidas', stats?.insights?.messagesLast30Days ?? 0, 'nos últimos 30 dias'],
+                  ['Conversão em mensagem', stats?.insights?.messageRate == null ? '—' : `${stats.insights.messageRate}%`, 'mensagens por clique'],
                   ['Variação de visitas', stats?.insights?.viewsChangeLast7Days == null ? '—' : `${stats.insights.viewsChangeLast7Days > 0 ? '+' : ''}${stats.insights.viewsChangeLast7Days}%`, 'últimos 7 dias vs. anteriores'],
                   ['Variação de cliques', stats?.insights?.clicksChangeLast7Days == null ? '—' : `${stats.insights.clicksChangeLast7Days > 0 ? '+' : ''}${stats.insights.clicksChangeLast7Days}%`, 'últimos 7 dias vs. anteriores'],
                 ].map(([label, value, description]) => (

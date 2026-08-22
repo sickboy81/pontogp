@@ -21,6 +21,11 @@ export function shouldEnableVisualHighlight(plan) {
   return plan?.slug === 'ouro' && plan?.featured === true
 }
 
+export function profileVisualEntitlementPatch(plan) {
+  const enabled = shouldEnableVisualHighlight(plan)
+  return { featured: enabled, visual_highlight: enabled }
+}
+
 export function isPaymentFulfilled(payment) {
   return payment?.status === 'paid' && typeof payment?.fulfilled_at === 'string' && payment.fulfilled_at.length > 0
 }

@@ -4,6 +4,7 @@ import { getAdminToken } from '@/lib/pocketbase-admin'
 import { buildProfilePlanRenewalFromPlanRef } from '@/lib/plan-renewal-dates'
 import { canSaveProfileContacts } from '@/lib/profile-publication.mjs'
 import { isProfileBumpEligible } from '@/lib/profile-bump-eligibility.mjs'
+import { profileVisualEntitlementPatch } from '@/lib/plan-entitlements.mjs'
 import type { Profile } from '@/lib/types'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
@@ -121,6 +122,11 @@ export async function PATCH(
       update.plan = renewal.plan
       update.search_expires_at = renewal.search_expires_at
       update.contact_expires_at = renewal.contact_expires_at
+      const planRecord = await fetch(`${PB_URL}/api/collections/plans/records/${renewal.plan}?fields=slug,featured`, {
+        headers: { Authorization: `Bearer ${adminToken}` },
+        cache: 'no-store',
+      })
+      if (planRecord.ok) Object.assign(update, profileVisualEntitlementPatch(await planRecord.json()))
       authForPatch = adminToken
     }
 

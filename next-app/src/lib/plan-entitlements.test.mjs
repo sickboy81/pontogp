@@ -5,6 +5,7 @@ import {
   canAddMedia,
   isPaymentFulfilled,
   renewalBaseDate,
+  profileVisualEntitlementPatch,
   shouldEnableVisualHighlight,
 } from './plan-entitlements.mjs'
 
@@ -42,4 +43,10 @@ test('destaque visual é concedido somente ao plano Ouro', () => {
   assert.equal(shouldEnableVisualHighlight({ slug: 'prata', featured: true }), false)
   assert.equal(shouldEnableVisualHighlight({ slug: 'ouro', featured: true }), true)
   assert.equal(shouldEnableVisualHighlight({ slug: 'ouro', featured: false }), false)
+})
+
+test('downgrade remove o destaque visual do perfil', () => {
+  assert.deepEqual(profileVisualEntitlementPatch({ slug: 'gratis' }), { featured: false, visual_highlight: false })
+  assert.deepEqual(profileVisualEntitlementPatch({ slug: 'prata', featured: true }), { featured: false, visual_highlight: false })
+  assert.deepEqual(profileVisualEntitlementPatch({ slug: 'ouro', featured: true }), { featured: true, visual_highlight: true })
 })

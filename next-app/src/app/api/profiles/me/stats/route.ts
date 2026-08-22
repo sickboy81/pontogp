@@ -113,6 +113,27 @@ export async function GET(request: NextRequest) {
   const previousViews7Filter = `${baseFilter} && created >= "${toPBDate(previous7Start)}" && created < "${toPBDate(since7)}"`
   const previousClicks7Filter = `${baseFilter} && created >= "${toPBDate(previous7Start)}" && created < "${toPBDate(since7)}"`
 
+  if (analyticsLevel === 'views') {
+    const views = await fetchCount(adminToken, 'profile_views', baseFilter)
+    return Response.json({ analyticsLevel, totals: { views: views || profile.views || 0 } })
+  }
+
+  if (analyticsLevel === 'basic') {
+    const [views, clicks, favorites] = await Promise.all([
+      fetchCount(adminToken, 'profile_views', baseFilter),
+      fetchCount(adminToken, 'profile_clicks', baseFilter),
+      fetchCount(adminToken, 'favorites', baseFilter),
+    ])
+    return Response.json({
+      analyticsLevel,
+      totals: {
+        views: views || profile.views || 0,
+        clicks: clicks || profile.clicks || 0,
+        favorites: favorites || profile.favorites_count || 0,
+      },
+    })
+  }
+
   const [
     totalViews,
     totalClicks,
@@ -178,14 +199,6 @@ export async function GET(request: NextRequest) {
     favorites: favoritesCount || profile.favorites_count || 0,
     stories: stories.length,
     storyViews,
-  }
-
-  if (analyticsLevel === 'views') {
-    return Response.json({ analyticsLevel, totals: { views: totals.views } })
-  }
-
-  if (analyticsLevel === 'basic') {
-    return Response.json({ analyticsLevel, totals: { views: totals.views, clicks: totals.clicks, favorites: totals.favorites } })
   }
 
   const uniqueVisitors = new Set(viewRows30.map((row) => row.viewer_ip).filter(Boolean)).size

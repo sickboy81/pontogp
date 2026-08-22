@@ -14,6 +14,10 @@ interface PlanRow {
   price_weekly?: number
   daily_bumps?: number
   max_photos?: number
+  max_videos?: number
+  max_audio?: number
+  analytics?: boolean
+  featured?: boolean
   target_type?: string
   created?: string
   features?: unknown
@@ -43,6 +47,10 @@ const EMPTY_FORM = {
   price_weekly: 0,
   daily_bumps: 0,
   max_photos: 10,
+  max_videos: 0,
+  max_audio: 0,
+  analytics: false,
+  featured: false,
   target_type: 'advertiser',
   featuresText: '',
 }
@@ -89,6 +97,10 @@ export default function AdminPlanos() {
       price_weekly: Number(plan.price_weekly) || 0,
       daily_bumps: Number(plan.daily_bumps) || 0,
       max_photos: Number(plan.max_photos) || 10,
+      max_videos: Number(plan.max_videos) || 0,
+      max_audio: Number(plan.max_audio) || 0,
+      analytics: !!plan.analytics,
+      featured: !!plan.featured,
       target_type: plan.target_type || 'advertiser',
       featuresText: featuresToText(plan.features),
     })
@@ -112,6 +124,10 @@ export default function AdminPlanos() {
         price_weekly: form.price_weekly,
         daily_bumps: form.daily_bumps,
         max_photos: form.max_photos,
+        max_videos: form.max_videos,
+        max_audio: form.max_audio,
+        analytics: form.analytics,
+        featured: form.slug.trim().toLowerCase() === 'ouro' && form.featured,
         target_type: form.target_type,
         features: textToFeatures(form.featuresText),
       }
@@ -301,6 +317,16 @@ export default function AdminPlanos() {
                 onChange={(e) => setForm((f) => ({ ...f, max_photos: Number(e.target.value) || 0 }))}
               />
             </div>
+            <div className="w-full sm:max-w-xs">
+              <label htmlFor="admin-plan-max-videos" className="mb-1 block text-xs font-medium text-slate-300">Máximo de vídeos</label>
+              <input id="admin-plan-max-videos" type="number" min={-1} className="w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-white" value={form.max_videos} onChange={(e) => setForm((f) => ({ ...f, max_videos: Number(e.target.value) || 0 }))} />
+            </div>
+            <div className="w-full sm:max-w-xs">
+              <label htmlFor="admin-plan-max-audio" className="mb-1 block text-xs font-medium text-slate-300">Máximo de áudios</label>
+              <input id="admin-plan-max-audio" type="number" min={-1} className="w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-white" value={form.max_audio} onChange={(e) => setForm((f) => ({ ...f, max_audio: Number(e.target.value) || 0 }))} />
+            </div>
+            <label className="flex items-center gap-2 text-sm text-slate-300"><input type="checkbox" checked={form.analytics} onChange={(e) => setForm((f) => ({ ...f, analytics: e.target.checked }))} /> Analytics completo</label>
+            <label className="flex items-center gap-2 text-sm text-slate-300"><input type="checkbox" checked={form.featured} disabled={form.slug.trim().toLowerCase() !== 'ouro'} onChange={(e) => setForm((f) => ({ ...f, featured: e.target.checked }))} /> Destaque visual (Ouro)</label>
             <label
               htmlFor="admin-plan-enabled"
               className="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-600 bg-slate-800/80 px-3 py-2 text-sm text-slate-200"
