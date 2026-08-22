@@ -4352,6 +4352,20 @@
           "type": "text"
         },
         {
+          "help": "Chave para impedir cobranças duplicadas",
+          "hidden": false,
+          "id": "textpaymentidempotencykey",
+          "max": 120,
+          "min": 8,
+          "name": "idempotency_key",
+          "pattern": "^[A-Za-z0-9._:-]+$",
+          "presentable": false,
+          "primaryKey": false,
+          "required": false,
+          "system": false,
+          "type": "text"
+        },
+        {
           "hidden": false,
           "id": "autodate2990389176",
           "name": "created",

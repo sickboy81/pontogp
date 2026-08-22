@@ -22,6 +22,10 @@ export async function POST(request: NextRequest) {
   if (!userId) return Response.json({ error: 'Token inválido' }, { status: 401 })
   const limited = enforceUserRateLimit(request, 'pix-create', userId, RATE_LIMIT_POLICIES.pix)
   if (limited) return limited
+  const idempotencyKey = (request.headers.get('idempotency-key') || '').trim()
+  if (!/^[A-Za-z0-9._:-]{8,120}$/.test(idempotencyKey)) {
+    return Response.json({ error: 'Identificador da cobrança inválido. Tente novamente.' }, { status: 400 })
+  }
 
   if (!PIXGO_API_KEY || PIXGO_API_KEY.length < 32) {
     return Response.json(
@@ -81,6 +85,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const existingRes = await fetch(
+      `${PB_URL}/api/collections/payments/records?filter=${encodeURIComponent(`user="${userId}" && idempotency_key="${idempotencyKey.replace(/"/g, '\\"')}"`)}&perPage=1&fields=id,external_id,status`,
+      { headers: authHeader, cache: 'no-store' },
+    )
+    if (existingRes.ok) {
+      const existing = (await existingRes.json()) as { items?: { external_id?: string; status?: string }[] }
+      const payment = existing.items?.[0]
+      if (payment) {
+        return Response.json({ error: 'Esta cobrança já foi criada. Não gere outro PIX.', payment_id: payment.external_id, status: payment.status }, { status: 409 })
+      }
+    }
+
     const externalId = `CV_${Date.now()}_${userId.slice(0, 8)}`
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || ''
     const webhookUrl = baseUrl ? `${baseUrl.replace(/\/$/, '')}/api/payments/pix/webhook` : undefined
@@ -138,6 +154,7 @@ export async function POST(request: NextRequest) {
       method: 'pix',
       external_id: d.payment_id,
       description,
+      idempotency_key: idempotencyKey,
     }
 
     const paymentSaveRes = await fetch(`${PB_URL}/api/collections/payments/records`, {

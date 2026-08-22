@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Copy, Loader2, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAuthStore, isAdminRole } from '@/store/auth'
@@ -48,6 +48,7 @@ export default function PlanPaymentModal({
   const [polling, setPolling] = useState(false)
   const [receiverCpf, setReceiverCpf] = useState('')
   const [receiverCpfError, setReceiverCpfError] = useState<string | null>(null)
+  const idempotencyKey = useRef<string | null>(null)
   const userRole = useAuthStore((s) => s.user?.role)
   const showSimulate = isAdminRole(userRole)
 
@@ -61,9 +62,10 @@ export default function PlanPaymentModal({
       return
     }
     try {
+      if (!idempotencyKey.current) idempotencyKey.current = crypto.randomUUID()
       const res = await fetch('/api/payments/pix', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Idempotency-Key': idempotencyKey.current },
         credentials: 'include',
         body: JSON.stringify({
           planId,
@@ -111,6 +113,7 @@ export default function PlanPaymentModal({
       setLinkPagamento(null)
       setExternalRef(null)
       setPolling(false)
+      idempotencyKey.current = null
       setReceiverCpf('')
       setReceiverCpfError(null)
     }

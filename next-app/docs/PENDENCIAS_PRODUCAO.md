@@ -53,8 +53,8 @@ schema; caso contrário, remova os controles/campos legados do código.
 
 ### Cleanup de expiração
 
-`next-app/scripts/cleanup_profiles.mjs` existe, mas não está no cron do
-Dockerfile e deve continuar desativado até uma ativação explícita no Coolify.
+`next-app/scripts/cleanup_profiles.mjs` agora está no cron diário do Dockerfile.
+Antes do primeiro deploy com essa rotina:
 Antes de agendar:
 
 - faça backup verificável do banco e dos uploads do PocketBase;
@@ -65,6 +65,11 @@ Antes de agendar:
 - valide que a execução preserva registros e uploads e altera somente o
   status para `archived`;
 - configure logs, monitoramento e uma rotina de rollback.
+
+O script `notify-expiring-plans.mjs` também roda diariamente. Ele cria uma
+notificação interna e envia email via Resend sete dias antes e no dia do
+vencimento. Não existe renovação automática: o anunciante precisa iniciar um
+novo pagamento PIX.
 
 O cleanup não deve reagir a `contact_expires_at` nem arquivar um perfil assim
 que `search_expires_at` vence.

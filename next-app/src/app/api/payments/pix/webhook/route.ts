@@ -1,6 +1,5 @@
 import { NextRequest } from 'next/server'
 import crypto from 'crypto'
-import { COUPONS_COLLECTION } from '@/lib/coupons-collection'
 import { getAdminToken } from '@/lib/pocketbase-admin'
 import { parseExpirationDurationsValue } from '@/lib/parse-expiration-settings'
 import { enforceIpRateLimit, RATE_LIMIT_POLICIES } from '@/lib/api-rate-limit.mjs'
@@ -169,49 +168,6 @@ export async function POST(request: NextRequest) {
       let searchDays = billingPeriod === 'weekly' ? 7 : 30
       let contactDays = billingPeriod === 'weekly' ? 7 : 30
       let autoBumpByDefault = false
-      const couponMatch = record.description?.match(/\|\s*COUPON:([a-z0-9]{15})\s*$/i)
-      const couponId = couponMatch?.[1] ?? null
-
-      if (couponId) {
-        try {
-          const couponRes = await fetch(
-            `${PB_URL}/api/collections/${COUPONS_COLLECTION}/records/${couponId}`,
-            { headers: { Authorization: `Bearer ${token}` } }
-          )
-          if (couponRes.ok) {
-            const coupon = (await couponRes.json()) as {
-              plan_id?: string
-              duration_days?: number
-              used_count?: number
-              active?: boolean
-              max_uses?: number
-              expires_at?: string
-            }
-            if (coupon.active !== false && coupon.plan_id) {
-              const expired = coupon.expires_at && new Date(coupon.expires_at) <= new Date()
-              const maxUses = coupon.max_uses != null ? Number(coupon.max_uses) : null
-              const usedCount = Number(coupon.used_count) || 0
-              if (!expired && (maxUses == null || usedCount < maxUses)) {
-                planId = coupon.plan_id
-                const days = Number(coupon.duration_days) || 30
-                searchDays = days
-                contactDays = days
-                await fetch(`${PB_URL}/api/collections/${COUPONS_COLLECTION}/records/${couponId}`, {
-                  method: 'PATCH',
-                  headers: { 'Content-Type': 'application/json', ...authHeader },
-                  body: JSON.stringify({ used_count: usedCount + 1 }),
-                })
-              }
-            }
-          }
-        } catch {
-          // segue com plano do pagamento
-        }
-      }
-
-      if (!planId) {
-        planId = record.plan ?? null
-      }
       if (planId) {
         try {
           const planRes = await fetch(
@@ -223,21 +179,19 @@ export async function POST(request: NextRequest) {
             const planJson = (await planRes.json()) as { slug?: string; subscription_days?: number; daily_bumps?: number }
             planSlug = planJson.slug
 
-            if (!couponId) {
-              if (planJson.slug === 'gratis') {
+            if (planJson.slug === 'gratis') {
                 searchDays = 7
                 contactDays = 7
-              } else if (
+            } else if (
                 typeof planJson.subscription_days === 'number' &&
                 planJson.subscription_days > 0
-              ) {
+            ) {
                 const configuredDays = billingPeriod === 'weekly' ? 7 : planJson.subscription_days
                 searchDays = configuredDays
                 contactDays = configuredDays
-              } else {
+            } else {
                 searchDays = 30
                 contactDays = 30
-              }
             }
 
             autoBumpByDefault = planJson.slug !== 'gratis' && Number(planJson.daily_bumps) > 0

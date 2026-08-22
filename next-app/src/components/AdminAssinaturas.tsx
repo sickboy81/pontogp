@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Loader2 } from 'lucide-react'
-import toast from 'react-hot-toast'
 
 interface SubscriptionRow {
   id: string
@@ -41,23 +40,6 @@ export default function AdminAssinaturas() {
     load()
   }, [load])
 
-  const toggleAutoRenew = async (row: SubscriptionRow) => {
-    if (row.source === 'profile') return
-    const res = await fetch(`/api/admin/subscriptions/${row.id}`, {
-      method: 'PATCH',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ auto_renew: !row.auto_renew }),
-    })
-    const json = await res.json().catch(() => ({}))
-    if (!res.ok) {
-      toast.error((json as { error?: string }).error || 'Erro ao atualizar assinatura')
-      return
-    }
-    toast.success('Assinatura atualizada')
-    load()
-  }
-
   const formatDate = (value: string | null) => {
     if (!value) return '-'
     try {
@@ -91,7 +73,7 @@ export default function AdminAssinaturas() {
       <p className="mb-6 max-w-3xl text-sm text-slate-500">
         A coleção <code className="text-slate-400">subscriptions</code> costuma estar vazia: o plano fica no{' '}
         <strong className="text-slate-400">perfil</strong> (após renovação/PIX). Nesse caso, a lista abaixo mostra
-        a vigência a partir do perfil. A coluna <span className="text-primary-400">Origem</span> indica a fonte.
+        a vigência a partir do perfil. A renovação é manual via PIX; não há cobrança automática. A coluna <span className="text-primary-400">Origem</span> indica a fonte.
       </p>
 
       {loading ? (
@@ -139,17 +121,7 @@ export default function AdminAssinaturas() {
                   <td className="p-4 text-slate-300">{formatDate(row.starts_at)}</td>
                   <td className="p-4 text-slate-300">{formatDate(row.expires_at)}</td>
                   <td className="p-4 text-slate-400">
-                    {row.source === 'profile' ? (
-                      <span className="text-xs">— (use o perfil / plano)</span>
-                    ) : (
-                    <button
-                      type="button"
-                      onClick={() => toggleAutoRenew(row)}
-                      className="rounded border border-slate-600 px-2 py-1 text-xs text-slate-300 hover:bg-slate-700"
-                    >
-                      {row.auto_renew ? 'Desativar' : 'Ativar'}
-                    </button>
-                    )}
+                    <span className="text-xs">Manual via PIX</span>
                   </td>
                 </tr>
               ))}

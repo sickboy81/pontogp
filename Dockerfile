@@ -39,7 +39,9 @@ COPY auto_bump.cjs ./auto_bump.cjs
 COPY auto_bump_eligibility.cjs ./auto_bump_eligibility.cjs
 COPY scripts/reset-daily-bumps.mjs ./scripts/reset-daily-bumps.mjs
 COPY next-app/scripts/cleanup_profiles.mjs ./scripts/cleanup_profiles.mjs
+COPY next-app/scripts/notify-expiring-plans.mjs ./scripts/notify-expiring-plans.mjs
 COPY next-app/src/lib/profile-visibility.mjs ./src/lib/profile-visibility.mjs
+COPY next-app/src/lib/plan-reminder.mjs ./src/lib/plan-reminder.mjs
 
 # Refresh cron env on each container start
 RUN printf '%s\n' \
@@ -52,6 +54,7 @@ RUN printf '%s\n' \
 RUN /usr/local/bin/export-cron-env.sh && \
     echo "0 0 * * * . /etc/environment.sh && cd /app && node /app/scripts/reset-daily-bumps.mjs >> /var/log/cron.log 2>&1" > /etc/crontabs/root && \
     echo "0 1 * * * . /etc/environment.sh && cd /app && node /app/scripts/cleanup_profiles.mjs >> /var/log/cleanup_profiles.log 2>&1" >> /etc/crontabs/root && \
+    echo "0 8 * * * . /etc/environment.sh && cd /app && node /app/scripts/notify-expiring-plans.mjs >> /var/log/plan_reminders.log 2>&1" >> /etc/crontabs/root && \
     echo "*/5 * * * * . /etc/environment.sh && cd /app && node /app/auto_bump.cjs >> /var/log/auto_bump.log 2>&1" >> /etc/crontabs/root
 
 EXPOSE 3000

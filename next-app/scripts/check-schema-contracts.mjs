@@ -19,7 +19,7 @@ const contracts = {
     'contact_expires_at',
     'search_expires_at',
   ],
-  payments: ['user', 'plan', 'amount', 'status', 'method', 'external_id', 'description'],
+  payments: ['user', 'plan', 'profile', 'amount', 'status', 'method', 'external_id', 'description', 'fulfilled_at', 'idempotency_key'],
   profile_daily_bumps: ['profile', 'date', 'bumps_used'],
   story_likes: ['story', 'user'],
   story_comments: ['story', 'user', 'content'],
