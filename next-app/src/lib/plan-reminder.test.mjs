@@ -35,10 +35,10 @@ test('gera eventos de email para vencimento, retirada da busca e arquivamento', 
   ])
   assert.deepEqual(getPlanLifecycleEvents({
     search_expires_at: '2026-07-23T12:00:00.000Z',
-  }, now).map((event) => event.type), ['search_removed'])
+  }, now).map((event) => event.type), ['plan_expired', 'search_removed'])
   assert.deepEqual(getPlanLifecycleEvents({
     search_expires_at: '2026-05-24T12:00:00.000Z',
-  }, now).map((event) => event.type), ['profile_archived'])
+  }, now).map((event) => event.type), ['plan_expired', 'search_removed', 'profile_archived'])
 })
 
 test('emits contact and plan reminders when contact expires seven days before the plan', () => {
@@ -68,4 +68,16 @@ test('describes the search removal and archive transitions in email content', ()
 
   assert.match(removed.text, /saiu da busca/i)
   assert.match(archived.text, /arquivado/i)
+})
+test('recovers lifecycle emails when the daily cron was offline on the exact day', () => {
+  const events = getPlanLifecycleEvents({
+    search_expires_at: '2026-07-01T12:00:00.000Z',
+    contact_expires_at: '2026-07-01T12:00:00.000Z',
+  }, new Date('2026-08-02T12:00:00.000Z'))
+
+  assert.deepEqual(events.map((event) => event.type), [
+    'plan_expired',
+    'contact_expired',
+    'search_removed',
+  ])
 })

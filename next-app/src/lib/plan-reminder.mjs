@@ -26,12 +26,12 @@ export function getPlanLifecycleEvents(profile, now = new Date()) {
   const searchDays = daysUntil(profile?.search_expires_at, now)
   const contactDays = daysUntil(profile?.contact_expires_at, now)
 
-  if (searchDays === 7) events.push({ type: 'plan_expiring', days: 7, expiresAt: profile.search_expires_at })
-  if (searchDays === 0) events.push({ type: 'plan_expired', days: 0, expiresAt: profile.search_expires_at })
-  if (contactDays === 7) events.push({ type: 'contact_expiring', days: 7, expiresAt: profile.contact_expires_at })
-  if (contactDays === 0) events.push({ type: 'contact_expired', days: 0, expiresAt: profile.contact_expires_at })
-  if (searchDays === -30) events.push({ type: 'search_removed', days: -30, expiresAt: profile.search_expires_at })
-  if (searchDays === -90) events.push({ type: 'profile_archived', days: -90, expiresAt: profile.search_expires_at })
+  if (searchDays != null && searchDays > 0 && searchDays <= 7) events.push({ type: 'plan_expiring', days: searchDays, expiresAt: profile.search_expires_at })
+  if (searchDays != null && searchDays <= 0) events.push({ type: 'plan_expired', days: searchDays, expiresAt: profile.search_expires_at })
+  if (contactDays != null && contactDays > 0 && contactDays <= 7) events.push({ type: 'contact_expiring', days: contactDays, expiresAt: profile.contact_expires_at })
+  if (contactDays != null && contactDays <= 0) events.push({ type: 'contact_expired', days: contactDays, expiresAt: profile.contact_expires_at })
+  if (searchDays != null && searchDays <= -30) events.push({ type: 'search_removed', days: searchDays, expiresAt: profile.search_expires_at })
+  if (searchDays != null && searchDays <= -90) events.push({ type: 'profile_archived', days: searchDays, expiresAt: profile.search_expires_at })
   return events
 }
 
