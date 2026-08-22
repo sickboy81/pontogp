@@ -5,12 +5,15 @@ import Link from 'next/link'
 import { ArrowLeft, Loader2, Plus } from 'lucide-react'
 import type { Plan } from '@/lib/types'
 import toast from 'react-hot-toast'
+import { buildCouponShareUrl } from '@/lib/coupon-contract.mjs'
 
 interface CouponRow {
   id: string
   code: string
   plan_id: string
   plan_name: string | null
+  coupon_type: 'plan' | 'percentage'
+  discount_percent: number | null
   duration_days: number
   max_uses: number | null
   used_count: number
@@ -34,8 +37,10 @@ export default function AdminCuponsPage() {
   const [submitting, setSubmitting] = useState(false)
   const [form, setForm] = useState({
     code: '',
+    coupon_type: 'plan' as 'plan' | 'percentage',
     plan_id: '',
     duration_days: 30,
+    discount_percent: 0,
     max_uses: '' as number | '',
     expires_at: '',
     active: true,
@@ -44,8 +49,10 @@ export default function AdminCuponsPage() {
   const [editingCoupon, setEditingCoupon] = useState<CouponRow | null>(null)
   const [editForm, setEditForm] = useState({
     code: '',
+    coupon_type: 'plan' as 'plan' | 'percentage',
     plan_id: '',
     duration_days: 30,
+    discount_percent: 0,
     max_uses: '' as number | '',
     expires_at: '',
     active: true,
@@ -102,8 +109,10 @@ export default function AdminCuponsPage() {
         credentials: 'include',
         body: JSON.stringify({
           code: form.code.trim().toUpperCase(),
+          coupon_type: form.coupon_type,
           plan_id: form.plan_id,
           duration_days: form.duration_days,
+          discount_percent: form.discount_percent,
           max_uses: form.max_uses === '' ? undefined : Number(form.max_uses),
           expires_at: form.expires_at.trim() || null,
           active: form.active,
@@ -115,7 +124,7 @@ export default function AdminCuponsPage() {
         return
       }
       toast.success('Cupom criado')
-      setForm({ code: '', plan_id: '', duration_days: 30, max_uses: '', expires_at: '', active: true })
+      setForm({ code: '', coupon_type: 'plan', plan_id: '', duration_days: 30, discount_percent: 0, max_uses: '', expires_at: '', active: true })
       setShowForm(false)
       loadCoupons()
     } finally {
@@ -127,8 +136,10 @@ export default function AdminCuponsPage() {
     setEditingCoupon(c)
     setEditForm({
       code: c.code,
+      coupon_type: c.coupon_type,
       plan_id: c.plan_id,
       duration_days: c.duration_days,
+      discount_percent: c.discount_percent ?? 0,
       max_uses: c.max_uses ?? '',
       expires_at: c.expires_at ? c.expires_at.slice(0, 10) : '',
       active: c.active,
@@ -146,8 +157,10 @@ export default function AdminCuponsPage() {
         credentials: 'include',
         body: JSON.stringify({
           code: editForm.code.trim(),
+          coupon_type: editForm.coupon_type,
           plan_id: editForm.plan_id,
           duration_days: editForm.duration_days,
+          discount_percent: editForm.discount_percent,
           max_uses: editForm.max_uses === '' ? null : Number(editForm.max_uses),
           expires_at: editForm.expires_at.trim() || null,
           active: editForm.active,
@@ -224,6 +237,13 @@ export default function AdminCuponsPage() {
                 />
               </div>
               <div>
+                <label className="mb-1 block text-xs text-slate-400">Tipo de cupom</label>
+                <select value={editForm.coupon_type} onChange={(e) => setEditForm((f) => ({ ...f, coupon_type: e.target.value as 'plan' | 'percentage' }))} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white">
+                  <option value="plan">Conceder período de plano</option>
+                  <option value="percentage">Desconto percentual no PIX</option>
+                </select>
+              </div>
+              <div>
                 <label className="mb-1 block text-xs text-slate-400">Plano *</label>
                 <select
                   value={editForm.plan_id}
@@ -246,6 +266,10 @@ export default function AdminCuponsPage() {
                     onChange={(e) => setEditForm((f) => ({ ...f, duration_days: Number(e.target.value) || 30 }))}
                     className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white focus:border-primary-500 focus:outline-none"
                   />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-slate-400">Desconto (%)</label>
+                  <input type="number" min={0} max={100} value={editForm.discount_percent} onChange={(e) => setEditForm((f) => ({ ...f, discount_percent: Number(e.target.value) || 0 }))} disabled={editForm.coupon_type !== 'percentage'} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white disabled:opacity-50" />
                 </div>
                 <div>
                   <label className="mb-1 block text-xs text-slate-400">Máx. usos</label>
@@ -317,6 +341,13 @@ export default function AdminCuponsPage() {
               />
             </div>
             <div>
+              <label className="mb-1 block text-xs text-slate-400">Tipo de cupom</label>
+              <select value={form.coupon_type} onChange={(e) => setForm((f) => ({ ...f, coupon_type: e.target.value as 'plan' | 'percentage' }))} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white">
+                <option value="plan">Conceder período de plano</option>
+                <option value="percentage">Desconto percentual no PIX</option>
+              </select>
+            </div>
+            <div>
               <label className="mb-1 block text-xs text-slate-400">Plano *</label>
               <select
                 value={form.plan_id}
@@ -341,6 +372,10 @@ export default function AdminCuponsPage() {
                 onChange={(e) => setForm((f) => ({ ...f, duration_days: Number(e.target.value) || 30 }))}
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white focus:border-primary-500 focus:outline-none"
               />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-slate-400">Desconto (%)</label>
+              <input type="number" min={0} max={100} value={form.discount_percent} onChange={(e) => setForm((f) => ({ ...f, discount_percent: Number(e.target.value) || 0 }))} disabled={form.coupon_type !== 'percentage'} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white disabled:opacity-50" />
             </div>
             <div>
               <label className="mb-1 block text-xs text-slate-400">Máx. usos (vazio = ilimitado)</label>
@@ -429,7 +464,7 @@ export default function AdminCuponsPage() {
                   data?.items.map((c) => (
                     <tr key={c.id} className="hover:bg-slate-800/30">
                       <td className="p-4 font-mono font-medium text-white">{c.code}</td>
-                      <td className="p-4 text-slate-300">{c.plan_name ?? '-'}</td>
+                      <td className="p-4 text-slate-300">{c.coupon_type === 'percentage' ? `${c.discount_percent ?? 0}% no ${c.plan_name ?? 'plano'}` : c.plan_name ?? '-'}</td>
                       <td className="p-4 text-slate-300">{c.duration_days}</td>
                       <td className="p-4 text-slate-300">
                         {c.used_count}
@@ -454,6 +489,7 @@ export default function AdminCuponsPage() {
                           >
                             Editar
                           </button>
+                          <button type="button" onClick={() => navigator.clipboard.writeText(buildCouponShareUrl(window.location.origin, c.code)).then(() => toast.success('Link copiado'))} className="rounded border border-emerald-600/50 px-2 py-1 text-xs text-emerald-300 hover:bg-emerald-900/30">Copiar link</button>
                           <button
                             type="button"
                             onClick={() => toggleActive(c.id, c.active)}

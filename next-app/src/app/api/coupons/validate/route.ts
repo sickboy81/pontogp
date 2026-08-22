@@ -6,7 +6,7 @@ const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cer
 
 export const dynamic = 'force-dynamic'
 
-/** GET: valida cupom. Query: code=XXX. Retorna { valid, plan_id?, duration_days?, plan_name? } ou { valid: false, error? }. */
+/** GET: valida cupom. Query: code=XXX. Retorna dados do benefício sem consumir o cupom. */
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get('code')?.trim()?.toUpperCase()
   if (!code || code.length < 3) {
@@ -28,6 +28,8 @@ export async function GET(request: NextRequest) {
       items?: Array<{
         id: string
         code: string
+        coupon_type?: string
+        discount_percent?: number
         plan_id: string
         duration_days: number
         max_uses?: number
@@ -55,6 +57,8 @@ export async function GET(request: NextRequest) {
       plan_id: coupon.plan_id,
       duration_days: Number(coupon.duration_days) || 30,
       plan_name: plan?.name || plan?.slug || 'Plano',
+      coupon_type: coupon.coupon_type === 'percentage' ? 'percentage' : 'plan',
+      discount_percent: coupon.coupon_type === 'percentage' ? Math.max(0, Math.min(100, Number(coupon.discount_percent) || 0)) : 0,
     })
   } catch {
     return Response.json({ valid: false, error: 'Erro ao validar cupom' }, { status: 500 })

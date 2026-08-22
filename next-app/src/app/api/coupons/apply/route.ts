@@ -4,6 +4,7 @@ import { getProfileByUserId } from '@/lib/api/profiles'
 import { getAdminToken } from '@/lib/pocketbase-admin'
 import { COUPON_REDEMPTIONS_COLLECTION, COUPONS_COLLECTION } from '@/lib/coupons-collection'
 import { profileVisualEntitlementPatch, renewalExpiryDate } from '@/lib/plan-entitlements.mjs'
+import { normalizeCouponType } from '@/lib/coupon-contract.mjs'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
@@ -47,6 +48,7 @@ export async function POST(request: NextRequest) {
       items?: Array<{
         id: string
         plan_id: string
+        coupon_type?: string
         duration_days: number
         max_uses?: number
         used_count?: number
@@ -64,6 +66,9 @@ export async function POST(request: NextRequest) {
     const usedCount = Number(coupon.used_count) || 0
     if (maxUses != null && usedCount >= maxUses) {
       return Response.json({ error: 'Cupom já utilizado ao máximo' }, { status: 400 })
+    }
+    if (normalizeCouponType(coupon.coupon_type) === 'percentage') {
+      return Response.json({ error: 'Cupons de desconto devem ser usados no pagamento PIX.' }, { status: 400 })
     }
 
     // A unique reservation key makes the redemption decision atomic in PocketBase.

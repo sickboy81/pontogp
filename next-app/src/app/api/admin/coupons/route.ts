@@ -34,6 +34,8 @@ export async function GET(request: NextRequest) {
         code: r.code,
         plan_id: r.plan_id,
         plan_name: plan?.name ?? plan?.slug ?? null,
+        coupon_type: r.coupon_type === 'percentage' ? 'percentage' : 'plan',
+        discount_percent: r.discount_percent != null ? Number(r.discount_percent) : null,
         duration_days: Number(r.duration_days) ?? 30,
         max_uses: r.max_uses != null ? Number(r.max_uses) : null,
         used_count: Number(r.used_count) || 0,
@@ -54,7 +56,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-/** POST: cria cupom (apenas admin). Body: { code, plan_id, duration_days, max_uses?, expires_at?, active? } */
+/** POST: cria cupom (apenas admin). Body: { code, coupon_type?, plan_id, duration_days, discount_percent?, max_uses?, expires_at?, active? } */
 export async function POST(request: NextRequest) {
   const auth = await requireAdmin(request)
   if (!auth) return Response.json({ error: 'Não autorizado' }, { status: 401 })
@@ -65,8 +67,10 @@ export async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as {
       code?: string
+      coupon_type?: 'plan' | 'percentage'
       plan_id?: string
       duration_days?: number
+      discount_percent?: number
       max_uses?: number
       expires_at?: string | null
       active?: boolean
@@ -77,12 +81,16 @@ export async function POST(request: NextRequest) {
     }
     const planId = body.plan_id
     if (!planId) return Response.json({ error: 'Plano obrigatório' }, { status: 400 })
+    const couponType = body.coupon_type === 'percentage' ? 'percentage' : 'plan'
     const durationDays = Math.max(1, Math.min(365, Number(body.duration_days) || 30))
+    const discountPercent = Math.max(0, Math.min(100, Number(body.discount_percent) || 0))
 
     const record: Record<string, unknown> = {
       code,
       plan_id: planId,
+      coupon_type: couponType,
       duration_days: durationDays,
+      discount_percent: couponType === 'percentage' ? discountPercent : 0,
       active: body.active !== false,
     }
     if (body.max_uses != null) record.max_uses = Math.max(0, Number(body.max_uses))

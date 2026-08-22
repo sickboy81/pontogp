@@ -13,6 +13,7 @@ interface PlanPaymentModalProps {
   billingPeriod: 'weekly' | 'monthly'
   planName: string
   amount: number
+  couponCode?: string
   profileId?: string
   customerName?: string
   customerEmail?: string
@@ -33,6 +34,7 @@ export default function PlanPaymentModal({
   billingPeriod,
   planName,
   amount,
+  couponCode,
   profileId,
   customerName,
   customerEmail,
@@ -76,6 +78,7 @@ export default function PlanPaymentModal({
           customerName,
           customerEmail,
           receiverCpf,
+          couponCode,
         }),
       })
       const data = await res.json()
@@ -102,6 +105,7 @@ export default function PlanPaymentModal({
     customerName,
     customerEmail,
     receiverCpf,
+    couponCode,
   ])
 
   useEffect(() => {

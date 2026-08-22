@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import PlanosClient from '@/components/PlanosClient'
 
 export const metadata = {
@@ -7,5 +8,9 @@ export const metadata = {
 }
 
 export default function PlanosPage() {
-  return <PlanosClient />
+  return (
+    <Suspense fallback={null}>
+      <PlanosClient />
+    </Suspense>
+  )
 }

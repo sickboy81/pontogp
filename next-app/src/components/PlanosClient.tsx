@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Check, Star, Loader2 } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
@@ -9,6 +9,7 @@ import type { Plan, Profile } from '@/lib/types'
 import { formatPrice } from '@/utils/format'
 import toast from 'react-hot-toast'
 import PlanPaymentModal from '@/components/PlanPaymentModal'
+import { applyCouponDiscount } from '@/lib/coupon-contract.mjs'
 
 type BillingPeriod = 'weekly' | 'monthly'
 const PLAN_ORDER = ['gratis', 'bronze', 'prata', 'ouro', 'vip', 'premium']
@@ -22,6 +23,7 @@ function hasExpired(iso: string | undefined): boolean {
 
 export default function PlanosClient() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { isAuthenticated, user } = useAuthStore()
   const [plans, setPlans] = useState<Plan[]>([])
   const [profiles, setProfiles] = useState<Profile[]>([])
@@ -37,6 +39,12 @@ export default function PlanosClient() {
   } | null>(null)
   const [couponCode, setCouponCode] = useState('')
   const [couponApplying, setCouponApplying] = useState(false)
+  const [percentageCoupon, setPercentageCoupon] = useState<{ code: string; percent: number; planId: string } | null>(null)
+
+  useEffect(() => {
+    const linkedCoupon = searchParams.get('cupom')?.trim()
+    if (linkedCoupon && !couponCode) setCouponCode(linkedCoupon.toUpperCase())
+  }, [searchParams, couponCode])
 
   useEffect(() => {
     let cancelled = false
@@ -122,6 +130,10 @@ export default function PlanosClient() {
   }
 
   const handleSelectPlan = (plan: Plan) => {
+    if (percentageCoupon && percentageCoupon.planId !== plan.id) {
+      toast.error('Este cupom só pode ser usado no plano configurado.')
+      return
+    }
     if (!isAuthenticated) {
       toast.error('Faça login para assinar um plano')
       router.push(`/login?callbackUrl=${encodeURIComponent('/planos')}`)
@@ -146,7 +158,8 @@ export default function PlanosClient() {
     const amount = getPrice(plan)
     if (amount <= 0) return
     if (profile) {
-      setPaymentModal({ plan, amount, profile })
+      const payableAmount = percentageCoupon ? applyCouponDiscount(amount, percentageCoupon.percent) : amount
+      setPaymentModal({ plan, amount: payableAmount, profile })
     } else {
       toast.error('Crie um perfil antes de assinar um plano pago.')
     }
@@ -168,6 +181,18 @@ export default function PlanosClient() {
     if (!code || couponApplying) return
     setCouponApplying(true)
     try {
+      const validationRes = await fetch(`/api/coupons/validate?code=${encodeURIComponent(code)}`, { cache: 'no-store' })
+      const validation = await validationRes.json().catch(() => ({})) as { valid?: boolean; coupon_type?: string; discount_percent?: number; plan_id?: string; error?: string }
+      if (!validationRes.ok || validation.valid === false) {
+        toast.error(validation.error || 'Cupom inválido')
+        return
+      }
+      if (validation.coupon_type === 'percentage') {
+        const percent = Math.max(0, Math.min(100, Number(validation.discount_percent) || 0))
+        setPercentageCoupon({ code, percent, planId: String(validation.plan_id || '') })
+        toast.success(`Desconto de ${percent}% reservado para o próximo PIX`)
+        return
+      }
       const res = await fetch('/api/coupons/apply', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -181,6 +206,7 @@ export default function PlanosClient() {
       }
       toast.success((data as { message?: string }).message || 'Cupom aplicado!')
       setCouponCode('')
+      setPercentageCoupon(null)
       const profileRes = await fetch('/api/profiles/me', { credentials: 'include' })
       if (profileRes.ok) {
         const p = await profileRes.json()
@@ -257,6 +283,21 @@ export default function PlanosClient() {
               'Aplicar cupom'
             )}
           </button>
+        </div>
+      )}
+
+      {!isAuthenticated && couponCode && (
+        <div className="mx-auto mb-6 max-w-xl rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 text-center text-sm text-amber-200">
+          Cupom <strong>{couponCode}</strong> identificado.{' '}
+          <Link href={`/login?callbackUrl=${encodeURIComponent(`/planos?cupom=${couponCode}`)}`} className="font-semibold underline">
+            Faça login para validar e usar
+          </Link>
+        </div>
+      )}
+
+      {percentageCoupon && (
+        <div className="mx-auto mb-6 max-w-xl rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-4 text-center text-sm text-emerald-200">
+          Cupom <strong>{percentageCoupon.code}</strong> ativo: {percentageCoupon.percent}% de desconto no próximo pagamento PIX.
         </div>
       )}
 
@@ -386,6 +427,7 @@ export default function PlanosClient() {
           billingPeriod={billingPeriod}
           planName={`${paymentModal.plan.name} (${billingPeriod === 'weekly' ? 'Semanal' : 'Mensal'})`}
           amount={paymentModal.amount}
+          couponCode={percentageCoupon?.code}
           profileId={paymentModal.profile.id}
           customerName={user?.first_name || user?.email}
           customerEmail={user?.email}

@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import crypto from 'crypto'
 import { getAdminToken } from '@/lib/pocketbase-admin'
 import { parseExpirationDurationsValue } from '@/lib/parse-expiration-settings'
+import { COUPON_REDEMPTIONS_COLLECTION, COUPONS_COLLECTION } from '@/lib/coupons-collection'
 import { enforceIpRateLimit, RATE_LIMIT_POLICIES } from '@/lib/api-rate-limit.mjs'
 import { isPaymentFulfilled, renewalBaseDate, shouldEnableVisualHighlight } from '@/lib/plan-entitlements.mjs'
 
@@ -143,7 +144,7 @@ export async function POST(request: NextRequest) {
     if (!listRes.ok) return Response.json({ error: 'Pagamento não localizado internamente' }, { status: event === 'payment.completed' ? 503 : 200 })
 
     const listJson = (await listRes.json()) as {
-      items?: { id: string; profile?: string; plan?: string; description?: string; status?: string; fulfilled_at?: string }[]
+      items?: { id: string; user?: string; profile?: string; plan?: string; coupon?: string; description?: string; status?: string; fulfilled_at?: string }[]
     }
     const items = listJson.items || []
     if (items.length === 0) return Response.json({ error: 'Pagamento não localizado internamente' }, { status: event === 'payment.completed' ? 503 : 200 })
@@ -257,6 +258,29 @@ export async function POST(request: NextRequest) {
           headers: { 'Content-Type': 'application/json', ...authHeader },
           body: JSON.stringify({ plan: null, search_expires_at: '', contact_expires_at: '', auto_bump: false, featured: false, visual_highlight: false }),
         })
+      }
+    }
+
+    if (record.coupon && (newStatus === 'paid' || newStatus === 'failed' || newStatus === 'refunded')) {
+      const redemptionRes = await fetch(`${PB_URL}/api/collections/${COUPON_REDEMPTIONS_COLLECTION}/records?filter=${encodeURIComponent(`coupon_id="${record.coupon}" && user_id="${record.user || ''}" && status="reserved"`)}&perPage=1`, { headers: authHeader, cache: 'no-store' })
+      const redemption = redemptionRes.ok ? (await redemptionRes.json() as { items?: Array<{ id: string }> }).items?.[0] : null
+      if (redemption) {
+        await fetch(`${PB_URL}/api/collections/${COUPON_REDEMPTIONS_COLLECTION}/records/${redemption.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', ...authHeader },
+          body: JSON.stringify({ status: newStatus === 'paid' ? 'applied' : 'released' }),
+        })
+        if (newStatus === 'paid') {
+          const couponRes = await fetch(`${PB_URL}/api/collections/${COUPONS_COLLECTION}/records/${record.coupon}?fields=used_count`, { headers: authHeader, cache: 'no-store' })
+          if (couponRes.ok) {
+            const couponData = await couponRes.json() as { used_count?: number }
+            await fetch(`${PB_URL}/api/collections/${COUPONS_COLLECTION}/records/${record.coupon}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json', ...authHeader },
+              body: JSON.stringify({ used_count: (Number(couponData.used_count) || 0) + 1 }),
+            })
+          }
+        }
       }
     }
 

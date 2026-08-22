@@ -3,6 +3,8 @@ import { getAuthCookieFromHeader, getUserIdFromToken } from '@/lib/auth-cookie'
 import { enforceUserRateLimit, RATE_LIMIT_POLICIES } from '@/lib/api-rate-limit.mjs'
 import { isValidCpfOrCnpj, onlyDigits } from '@/lib/brazil-document'
 import { getAdminToken } from '@/lib/pocketbase-admin'
+import { applyCouponDiscount, normalizeCouponType } from '@/lib/coupon-contract.mjs'
+import { COUPON_REDEMPTIONS_COLLECTION, COUPONS_COLLECTION } from '@/lib/coupons-collection'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 const PIXGO_URL = 'https://pixgo.org/api/v1'
@@ -43,6 +45,7 @@ export async function POST(request: NextRequest) {
       customerName?: string
       customerEmail?: string
       receiverCpf?: string
+      couponCode?: string
     }
     const billingPeriod = body.billingPeriod === 'monthly' || body.billingPeriod === 'weekly' ? body.billingPeriod : null
     if (!billingPeriod) return Response.json({ error: 'Período de cobrança inválido.' }, { status: 400 })
@@ -66,8 +69,29 @@ export async function POST(request: NextRequest) {
     const profile = (await profileRes.json()) as { id: string; user?: string; status?: string }
     if (profile.user !== userId) return Response.json({ error: 'Este perfil não pertence à sua conta.' }, { status: 403 })
     if (plan.enabled !== true || plan.target_type !== 'advertiser') return Response.json({ error: 'Este plano não está disponível para compra.' }, { status: 400 })
-    const amount = Number(billingPeriod === 'weekly' ? plan.price_weekly : plan.price_monthly)
-    if (!Number.isFinite(amount) || amount < 10) return Response.json({ error: 'Este plano não possui preço válido para o período selecionado.' }, { status: 400 })
+    const baseAmount = Number(billingPeriod === 'weekly' ? plan.price_weekly : plan.price_monthly)
+    let amount = baseAmount
+    if (!Number.isFinite(baseAmount) || baseAmount < 10) return Response.json({ error: 'Este plano não possui preço válido para o período selecionado.' }, { status: 400 })
+    let coupon: { id: string; coupon_type?: string; discount_percent?: number } | null = null
+    let couponReservationId: string | null = null
+    const couponCode = body.couponCode?.trim()?.toUpperCase()
+    if (couponCode) {
+      const couponRes = await fetch(`${PB_URL}/api/collections/${COUPONS_COLLECTION}/records?filter=${encodeURIComponent(`code="${couponCode.replace(/"/g, '\\"')}"`)}&perPage=1`, { headers: authHeader, cache: 'no-store' })
+      const couponData = couponRes.ok ? await couponRes.json() as { items?: Array<{ id: string; plan_id?: string; coupon_type?: string; discount_percent?: number; active?: boolean; expires_at?: string; max_uses?: number; used_count?: number }> } : null
+      const candidate = couponData?.items?.[0]
+      if (!candidate || candidate.active === false || (candidate.expires_at && new Date(candidate.expires_at) <= new Date())) {
+        return Response.json({ error: 'Cupom de desconto inválido ou expirado.' }, { status: 400 })
+      }
+      if (normalizeCouponType(candidate.coupon_type) !== 'percentage' || candidate.plan_id !== body.planId) {
+        return Response.json({ error: 'Este cupom não é válido para o plano selecionado.' }, { status: 400 })
+      }
+      const maxUses = candidate.max_uses != null ? Number(candidate.max_uses) : null
+      if (maxUses != null && (Number(candidate.used_count) || 0) >= maxUses) return Response.json({ error: 'Cupom já utilizado ao máximo.' }, { status: 400 })
+      const existingCouponUse = await fetch(`${PB_URL}/api/collections/${COUPON_REDEMPTIONS_COLLECTION}/records?filter=${encodeURIComponent(`coupon_id="${candidate.id}" && user_id="${userId}" && status!="released"`)}&perPage=1`, { headers: authHeader, cache: 'no-store' })
+      if (existingCouponUse.ok && ((await existingCouponUse.json() as { items?: unknown[] }).items?.length || 0) > 0) return Response.json({ error: 'Este cupom já foi utilizado nesta conta.' }, { status: 400 })
+      coupon = candidate
+      amount = applyCouponDiscount(baseAmount, Number(candidate.discount_percent) || 0)
+    }
     const receiverCpf = onlyDigits(body.receiverCpf || '')
     const baseDescription =
       (body.description || '').trim() ||
@@ -145,10 +169,21 @@ export async function POST(request: NextRequest) {
     const d = json.data
     if (!d) return Response.json({ error: 'Resposta inválida do PixGo' }, { status: 500 })
 
+    if (coupon) {
+      const reservationRes = await fetch(`${PB_URL}/api/collections/${COUPON_REDEMPTIONS_COLLECTION}/records`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeader },
+        body: JSON.stringify({ reservation_key: `${coupon.id}:${userId}:${idempotencyKey}`, coupon_id: coupon.id, user_id: userId, status: 'reserved' }),
+      })
+      if (!reservationRes.ok) return Response.json({ error: 'Não foi possível reservar o cupom. Gere uma nova cobrança.' }, { status: 409 })
+      couponReservationId = (await reservationRes.json() as { id?: string }).id || null
+    }
+
     const paymentRecord = {
       user: userId,
       profile: body.profileId,
       plan: plan.id,
+      ...(coupon && { coupon: coupon.id }),
       amount,
       status: 'pending',
       method: 'pix',
@@ -166,6 +201,13 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify(paymentRecord),
     })
     if (!paymentSaveRes.ok) {
+      if (couponReservationId) {
+        await fetch(`${PB_URL}/api/collections/${COUPON_REDEMPTIONS_COLLECTION}/records/${couponReservationId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', ...authHeader },
+          body: JSON.stringify({ status: 'released' }),
+        }).catch(() => {})
+      }
       const detail = await paymentSaveRes.text().catch(() => '')
       console.error('[pix-create] Falha ao registrar pagamento no PocketBase:', paymentSaveRes.status, detail)
       return Response.json(

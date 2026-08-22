@@ -3820,6 +3820,34 @@
           "type": "number"
         },
         {
+          "help": "plan entrega um plano; percentage aplica desconto no pagamento PIX do plano selecionado.",
+          "hidden": false,
+          "id": "selectcouponkind01",
+          "maxSelect": 1,
+          "name": "coupon_type",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "select",
+          "values": [
+            "plan",
+            "percentage"
+          ]
+        },
+        {
+          "help": "Percentual aplicado ao preço do PIX, de 0 a 100.",
+          "hidden": false,
+          "id": "numbercoupondiscount1",
+          "max": 100,
+          "min": 0,
+          "name": "discount_percent",
+          "onlyInt": false,
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "number"
+        },
+        {
           "help": "",
           "hidden": false,
           "id": "number2247082791",
@@ -4333,6 +4361,20 @@
           "maxSelect": 1,
           "minSelect": 0,
           "name": "profile",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "relation"
+        },
+        {
+          "help": "Cupom de desconto reservado para esta cobrança PIX",
+          "hidden": false,
+          "id": "relationpaymentcoupon",
+          "cascadeDelete": false,
+          "collectionId": "pbc_1681354482",
+          "maxSelect": 1,
+          "minSelect": 0,
+          "name": "coupon",
           "presentable": false,
           "required": false,
           "system": false,

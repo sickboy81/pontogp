@@ -7,7 +7,7 @@ const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cer
 
 export const dynamic = 'force-dynamic'
 
-/** PATCH: atualiza cupom (apenas admin). Body: { code?, plan_id?, duration_days?, max_uses?, expires_at?, active? } */
+/** PATCH: atualiza cupom (apenas admin). Body: { code?, coupon_type?, plan_id?, duration_days?, discount_percent?, max_uses?, expires_at?, active? } */
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -24,8 +24,10 @@ export async function PATCH(
   try {
     const body = (await request.json()) as {
       code?: string
+      coupon_type?: 'plan' | 'percentage'
       plan_id?: string
       duration_days?: number
+      discount_percent?: number
       max_uses?: number
       expires_at?: string | null
       active?: boolean
@@ -36,8 +38,10 @@ export async function PATCH(
       if (code.length < 3) return Response.json({ error: 'Código inválido' }, { status: 400 })
       record.code = code
     }
+    if (body.coupon_type !== undefined) record.coupon_type = body.coupon_type === 'percentage' ? 'percentage' : 'plan'
     if (body.plan_id !== undefined) record.plan_id = body.plan_id
     if (body.duration_days !== undefined) record.duration_days = Math.max(1, Math.min(365, Number(body.duration_days) || 30))
+    if (body.discount_percent !== undefined) record.discount_percent = Math.max(0, Math.min(100, Number(body.discount_percent) || 0))
     if (body.max_uses !== undefined) record.max_uses = body.max_uses == null ? null : Math.max(0, Number(body.max_uses))
     if (body.expires_at !== undefined) record.expires_at = body.expires_at || ''
     if (body.active !== undefined) record.active = body.active
