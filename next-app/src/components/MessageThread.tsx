@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Send, ArrowLeft, Check, CheckCheck, Ban, ShieldOff } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
+import { getPb } from '@/lib/pb'
 import type { Message } from '@/lib/types'
 import { formatRelativeTime } from '@/utils/format'
 import toast from 'react-hot-toast'
@@ -85,6 +86,26 @@ export default function MessageThread({
     const interval = setInterval(loadConversation, 5000)
     return () => clearInterval(interval)
   }, [loadConversation, loadBlockStatus])
+
+  useEffect(() => {
+    if (!userId || !otherUserId) return
+    const pb = getPb()
+    let active = true
+    const onMessageChange = (event: { record?: Record<string, unknown> }) => {
+      const record = event.record || {}
+      const sender = String(record.sender_id || record.sender || '')
+      const recipient = String(record.recipient_id || record.recipient || '')
+      const belongsToConversation =
+        (sender === userId && recipient === otherUserId) ||
+        (sender === otherUserId && recipient === userId)
+      if (active && belongsToConversation) void loadConversation()
+    }
+    void pb.collection('messages').subscribe('*', onMessageChange).catch(() => undefined)
+    return () => {
+      active = false
+      void pb.collection('messages').unsubscribe('*').catch(() => undefined)
+    }
+  }, [userId, otherUserId, loadConversation])
 
   const handleBlockToggle = async () => {
     if (blockLoading) return
