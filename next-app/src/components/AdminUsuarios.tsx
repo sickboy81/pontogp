@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, CheckCircle2, Filter, Loader2, Pencil, ShieldCheck, UserRound, Users, X } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, Filter, Loader2, Mail, Pencil, ShieldCheck, UserRound, Users, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 interface UserRow {
@@ -231,6 +231,17 @@ export default function AdminUsuarios() {
     else { toast.success('Conta atualizada'); load() }
   }
 
+  const resendVerification = async (u: UserRow) => {
+    try {
+      const res = await fetch(`/api/admin/users/${u.id}`, { method: 'POST', credentials: 'include' })
+      const data = await res.json().catch(() => ({})) as { message?: string; error?: string }
+      if (!res.ok) throw new Error(data.error || 'Não foi possível reenviar o email.')
+      toast.success(data.message || 'Email de confirmação reenviado.')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Erro ao reenviar email.')
+    }
+  }
+
   const totalPages = data ? Math.max(1, Math.ceil(data.totalItems / data.perPage)) : 1
 
   const currentRoleInList = ROLE_CHOICES.some((o) => o.value === form.role)
@@ -324,6 +335,7 @@ export default function AdminUsuarios() {
                         <div className="mb-2 flex justify-end gap-1">
                           <button type="button" title={u.status === 'active' ? 'Inativar conta' : 'Ativar conta'} onClick={() => quickUpdate(u, { status: u.status === 'active' ? 'inactive' : 'active' })} className="rounded border border-slate-600 p-1.5 text-slate-300 hover:bg-slate-700">{u.status === 'active' ? 'Inativar' : 'Ativar'}</button>
                           <button type="button" title="Alternar verificação de email" onClick={() => quickUpdate(u, { verified: !u.verified })} className="rounded border border-slate-600 p-1.5 text-slate-300 hover:bg-slate-700">{u.verified ? 'Desverificar' : 'Verificar'}</button>
+                          {!u.verified && <button type="button" title="Reenviar email de confirmação" onClick={() => resendVerification(u)} className="rounded border border-slate-600 p-1.5 text-slate-300 hover:bg-slate-700"><Mail className="h-4 w-4" /></button>}
                         </div>
                         <button
                           type="button"

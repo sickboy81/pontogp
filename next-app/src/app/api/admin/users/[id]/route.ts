@@ -155,3 +155,27 @@ export async function PATCH(
     return Response.json({ error: 'Erro ao atualizar utilizador' }, { status: 500 })
   }
 }
+
+/** POST: reenvia o email de confirmação. Apenas admin. */
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const auth = await requireAdmin(request)
+  if (!auth) return Response.json({ error: 'Não autorizado' }, { status: 401 })
+  const { id } = await params
+  if (!id) return Response.json({ error: 'id obrigatório' }, { status: 400 })
+  const token = await getPbToken(auth.token)
+  try {
+    const userRes = await fetch(`${PB_URL}/api/collections/users/records/${id}?fields=id,email,verified`, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
+    if (!userRes.ok) return Response.json({ error: 'Utilizador não encontrado' }, { status: userRes.status })
+    const user = (await userRes.json()) as { email?: string; verified?: boolean }
+    if (user.verified) return Response.json({ error: 'Este email já está confirmado.' }, { status: 400 })
+    if (!user.email) return Response.json({ error: 'Utilizador sem email.' }, { status: 400 })
+    const resendRes = await fetch(`${PB_URL}/api/collections/users/request-verification`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ email: user.email }) })
+    if (!resendRes.ok) return Response.json({ error: 'Não foi possível reenviar o email.' }, { status: resendRes.status })
+    return Response.json({ message: 'Email de confirmação reenviado.' })
+  } catch {
+    return Response.json({ error: 'Erro ao reenviar email de confirmação.' }, { status: 500 })
+  }
+}

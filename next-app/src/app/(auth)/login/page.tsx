@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { getLoginErrorMessage, useAuthStore, isAdminRole } from '@/store/auth'
+import { getPb } from '@/lib/pb'
 import { Eye, EyeOff } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -16,6 +17,8 @@ function LoginForm() {
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [unverifiedEmail, setUnverifiedEmail] = useState('')
+  const [resending, setResending] = useState(false)
 
   useEffect(() => {
     refresh()
@@ -38,6 +41,7 @@ function LoginForm() {
     }
     try {
       setLoading(true)
+      setUnverifiedEmail('')
       await login(email.toLowerCase().trim(), password)
       toast.success('Login realizado com sucesso!')
       const { user } = useAuthStore.getState()
@@ -46,8 +50,22 @@ function LoginForm() {
       router.replace(isAdmin ? '/admin' : callbackUrl)
     } catch (err: unknown) {
       toast.error(getLoginErrorMessage(err))
+      if ((err as { status?: number })?.status === 403) setUnverifiedEmail(email.toLowerCase().trim())
     } finally {
       setLoading(false)
+    }
+  }
+
+  const resendVerification = async () => {
+    if (!unverifiedEmail || resending) return
+    try {
+      setResending(true)
+      await getPb().collection('users').requestVerification(unverifiedEmail)
+      toast.success('Email de confirmação reenviado. Verifique sua caixa de entrada.')
+    } catch {
+      toast.error('Não foi possível reenviar agora. Tente novamente em instantes.')
+    } finally {
+      setResending(false)
     }
   }
 
@@ -104,6 +122,12 @@ function LoginForm() {
           {loading ? 'Entrando...' : 'Entrar'}
         </button>
       </form>
+
+      {unverifiedEmail && (
+        <button type="button" onClick={resendVerification} disabled={resending} className="mt-4 w-full rounded-lg border border-primary-500/60 px-4 py-3 text-sm font-medium text-primary-300 hover:bg-primary-500/10 disabled:opacity-50">
+          {resending ? 'Reenviando...' : 'Reenviar email de confirmação'}
+        </button>
+      )}
 
       <p className="mt-6 text-center text-sm text-slate-400">
         Não tem conta?{' '}
