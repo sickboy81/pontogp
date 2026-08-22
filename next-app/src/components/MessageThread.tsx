@@ -31,6 +31,7 @@ export default function MessageThread({
   const [newMessage, setNewMessage] = useState('')
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
+  const [sendError, setSendError] = useState('')
   const [blocked, setBlocked] = useState(false)
   const [blockLoading, setBlockLoading] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -144,6 +145,7 @@ export default function MessageThread({
     if (!newMessage.trim() || sending) return
     try {
       setSending(true)
+      setSendError('')
       const res = await fetch('/api/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -156,10 +158,13 @@ export default function MessageThread({
         setNewMessage('')
       } else {
         const err = (await res.json()) as { error?: string }
-        toast.error(err?.error || 'Erro ao enviar')
+        const message = err?.error || 'Erro ao enviar'
+        setSendError(message)
+        toast.error(message)
       }
     } catch (e) {
       console.error('Error sending message:', e)
+      setSendError('Não foi possível enviar a mensagem. Tente novamente.')
       toast.error('Não foi possível enviar a mensagem. Tente novamente.')
     } finally {
       setSending(false)
@@ -273,6 +278,12 @@ export default function MessageThread({
         <p className="border-t border-slate-700 bg-amber-500/10 px-4 py-2 text-center text-sm text-amber-200">
           {messagesDisabledNotice || 'As mensagens internas estão temporariamente indisponíveis.'}
         </p>
+      )}
+      {sendError && (
+        <div role="alert" className="flex items-center justify-between gap-3 border-t border-red-500/30 bg-red-500/10 px-4 py-2 text-sm text-red-200">
+          <span>{sendError}</span>
+          <button type="button" onClick={() => { setSendError(''); void handleSend({ preventDefault: () => undefined } as React.FormEvent) }} className="font-semibold underline hover:text-white">Tentar novamente</button>
+        </div>
       )}
       <form onSubmit={handleSend} className="border-t border-slate-700 p-4">
         <div className="flex gap-2">
