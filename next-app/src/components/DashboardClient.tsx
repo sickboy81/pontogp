@@ -722,6 +722,13 @@ export default function DashboardClient() {
             <CreditCard className="h-5 w-5" />
             Alterar plano
           </Link>
+          <Link
+            href="/pagamentos"
+            className="flex flex-1 min-w-[120px] items-center justify-center gap-2 py-4 text-slate-300 transition hover:bg-slate-700/30 hover:text-white"
+          >
+            <CreditCard className="h-5 w-5" />
+            Pagamentos
+          </Link>
           <label className="flex flex-1 min-w-[120px] cursor-pointer items-center justify-center gap-2 py-4 text-slate-300 transition hover:bg-slate-700/30 hover:text-white">
             <input
               ref={storyFileInputRef}
