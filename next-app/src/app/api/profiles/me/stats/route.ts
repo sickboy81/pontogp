@@ -3,6 +3,7 @@ import { getAuthCookieFromHeader, getUserIdFromToken, isAuthTokenExpired } from 
 import { getProfileByUserId } from '@/lib/api/profiles'
 import { getAdminToken } from '@/lib/pocketbase-admin'
 import { analyticsLevelForPlan } from '@/lib/plan-entitlements.mjs'
+import { percentageChange, summarizeFullAnalytics } from '@/lib/profile-analytics.mjs'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
@@ -11,7 +12,7 @@ export const dynamic = 'force-dynamic'
 const CLICK_TYPES = ['whatsapp', 'telegram', 'phone', 'message', 'instagram', 'twitter', 'privacy', 'onlyfans'] as const
 
 type ClickType = (typeof CLICK_TYPES)[number]
-type CountRow = { created?: string; contact_type?: string }
+type CountRow = { created?: string; contact_type?: string; viewer_ip?: string }
 type StoryRow = { views?: number; created?: string }
 
 function toPBDate(d: Date): string {
@@ -101,12 +102,16 @@ export async function GET(request: NextRequest) {
   const since30 = new Date(now)
   since30.setDate(since30.getDate() - 29)
   since30.setHours(0, 0, 0, 0)
+  const previous7Start = new Date(since7)
+  previous7Start.setDate(previous7Start.getDate() - 7)
 
   const baseFilter = `profile="${profile.id}"`
   const views30Filter = `${baseFilter} && created >= "${toPBDate(since30)}"`
   const clicks30Filter = `${baseFilter} && created >= "${toPBDate(since30)}"`
   const views7Filter = `${baseFilter} && created >= "${toPBDate(since7)}"`
   const clicks7Filter = `${baseFilter} && created >= "${toPBDate(since7)}"`
+  const previousViews7Filter = `${baseFilter} && created >= "${toPBDate(previous7Start)}" && created < "${toPBDate(since7)}"`
+  const previousClicks7Filter = `${baseFilter} && created >= "${toPBDate(previous7Start)}" && created < "${toPBDate(since7)}"`
 
   const [
     totalViews,
@@ -115,6 +120,9 @@ export async function GET(request: NextRequest) {
     viewsLast30Days,
     clicksLast7Days,
     clicksLast30Days,
+    previousViews7Days,
+    previousClicks7Days,
+    messagesLast30Days,
     favoritesCount,
     viewRows30,
     clickRows30,
@@ -126,8 +134,11 @@ export async function GET(request: NextRequest) {
     fetchCount(adminToken, 'profile_views', views30Filter),
     fetchCount(adminToken, 'profile_clicks', clicks7Filter),
     fetchCount(adminToken, 'profile_clicks', clicks30Filter),
+    fetchCount(adminToken, 'profile_views', previousViews7Filter),
+    fetchCount(adminToken, 'profile_clicks', previousClicks7Filter),
+    fetchCount(adminToken, 'messages', `recipient="${userId}" && created >= "${toPBDate(since30)}"`),
     fetchCount(adminToken, 'favorites', baseFilter),
-    fetchRows<CountRow>(adminToken, 'profile_views', views30Filter, 'created'),
+    fetchRows<CountRow>(adminToken, 'profile_views', views30Filter, 'created,viewer_ip'),
     fetchRows<CountRow>(adminToken, 'profile_clicks', clicks30Filter, 'created,contact_type'),
     fetchRows<StoryRow>(adminToken, 'stories', baseFilter, 'views,created'),
   ])
@@ -177,6 +188,9 @@ export async function GET(request: NextRequest) {
     return Response.json({ analyticsLevel, totals: { views: totals.views, clicks: totals.clicks, favorites: totals.favorites } })
   }
 
+  const uniqueVisitors = new Set(viewRows30.map((row) => row.viewer_ip).filter(Boolean)).size
+  const insights = summarizeFullAnalytics({ views: totals.views, clicks: totals.clicks, messages: messagesLast30Days, uniqueVisitors })
+
   return Response.json({
     analyticsLevel,
     totals: {
@@ -195,5 +209,11 @@ export async function GET(request: NextRequest) {
       clicks: clicksByDay[key] ?? 0,
     })),
     peakHour: peak ? { hour: Number(peak[0]), events: Number(peak[1]) } : null,
+    insights: {
+      ...insights,
+      messagesLast30Days,
+      viewsChangeLast7Days: percentageChange(viewsLast7Days, previousViews7Days),
+      clicksChangeLast7Days: percentageChange(clicksLast7Days, previousClicks7Days),
+    },
   })
 }
