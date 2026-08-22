@@ -3,7 +3,7 @@ import crypto from 'crypto'
 import { getAdminToken } from '@/lib/pocketbase-admin'
 import { parseExpirationDurationsValue } from '@/lib/parse-expiration-settings'
 import { enforceIpRateLimit, RATE_LIMIT_POLICIES } from '@/lib/api-rate-limit.mjs'
-import { isPaymentFulfilled, renewalBaseDate } from '@/lib/plan-entitlements.mjs'
+import { isPaymentFulfilled, renewalBaseDate, shouldEnableVisualHighlight } from '@/lib/plan-entitlements.mjs'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 const PIXGO_URL = 'https://pixgo.org/api/v1'
@@ -168,6 +168,7 @@ export async function POST(request: NextRequest) {
       let searchDays = billingPeriod === 'weekly' ? 7 : 30
       let contactDays = billingPeriod === 'weekly' ? 7 : 30
       let autoBumpByDefault = false
+      let visualHighlight = false
       if (planId) {
         try {
           const planRes = await fetch(
@@ -176,7 +177,7 @@ export async function POST(request: NextRequest) {
           )
           let planSlug: string | undefined
           if (planRes.ok) {
-            const planJson = (await planRes.json()) as { slug?: string; subscription_days?: number; daily_bumps?: number }
+            const planJson = (await planRes.json()) as { slug?: string; subscription_days?: number; daily_bumps?: number; featured?: boolean }
             planSlug = planJson.slug
 
             if (planJson.slug === 'gratis') {
@@ -195,6 +196,7 @@ export async function POST(request: NextRequest) {
             }
 
             autoBumpByDefault = planJson.slug !== 'gratis' && Number(planJson.daily_bumps) > 0
+            visualHighlight = shouldEnableVisualHighlight(planJson)
 
             const settingsRes = await fetch(
               `${PB_URL}/api/collections/settings/records?filter=${encodeURIComponent('key = "expiration_durations"')}&perPage=1&fields=value`,
@@ -235,6 +237,8 @@ export async function POST(request: NextRequest) {
             search_expires_at: searchExpiresAt,
             contact_expires_at: contactExpiresAt,
             auto_bump: autoBumpByDefault,
+            featured: visualHighlight,
+            visual_highlight: visualHighlight,
           }),
         })
         if (!profilePatchRes.ok) {
@@ -251,7 +255,7 @@ export async function POST(request: NextRequest) {
         await fetch(`${PB_URL}/api/collections/profiles/records/${profileId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json', ...authHeader },
-          body: JSON.stringify({ plan: null, search_expires_at: '', contact_expires_at: '', auto_bump: false }),
+          body: JSON.stringify({ plan: null, search_expires_at: '', contact_expires_at: '', auto_bump: false, featured: false, visual_highlight: false }),
         })
       }
     }

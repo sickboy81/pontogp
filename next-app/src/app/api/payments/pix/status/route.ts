@@ -32,11 +32,13 @@ export async function GET(request: NextRequest) {
     const adminToken = await getAdminToken()
     if (!adminToken) return Response.json({ error: 'Serviço indisponível' }, { status: 503 })
     const paymentRes = await fetch(
-      `${PB_URL}/api/collections/payments/records?filter=${encodeURIComponent(`external_id="${paymentId.replace(/"/g, '\\"')}" && user="${userId}"`)}&perPage=1&fields=id,external_id,user`,
+      `${PB_URL}/api/collections/payments/records?filter=${encodeURIComponent(`external_id="${paymentId.replace(/"/g, '\\"')}" && user="${userId}"`)}&perPage=1&fields=id,external_id,user,status,fulfilled_at`,
       { headers: { Authorization: `Bearer ${adminToken}` }, cache: 'no-store' }
     )
-    const paymentData = (await paymentRes.json().catch(() => ({}))) as { items?: unknown[] }
+    const paymentData = (await paymentRes.json().catch(() => ({}))) as { items?: { status?: string; fulfilled_at?: string }[] }
     if (!paymentRes.ok || !paymentData.items?.length) return Response.json({ error: 'Pagamento não encontrado' }, { status: 404 })
+    const payment = paymentData.items[0]
+    if (payment.status === 'paid' && payment.fulfilled_at) return Response.json({ status: 'completed' })
     const res = await fetch(`${PIXGO_URL}/payment/${paymentId}/status`, {
       headers: { 'X-API-Key': PIXGO_API_KEY },
     })
@@ -51,7 +53,7 @@ export async function GET(request: NextRequest) {
     }
 
     const status = (json.data?.status || 'pending').toLowerCase()
-    return Response.json({ status })
+    return Response.json({ status: status === 'completed' ? 'processing' : status })
   } catch (e) {
     return Response.json({ status: 'erro', error: 'Erro ao consultar' }, { status: 500 })
   }

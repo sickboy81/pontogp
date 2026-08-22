@@ -46,6 +46,7 @@ export default function PlanPaymentModal({
   const [linkPagamento, setLinkPagamento] = useState<string | null>(null)
   const [externalRef, setExternalRef] = useState<string | null>(null)
   const [polling, setPolling] = useState(false)
+  const [activatingPlan, setActivatingPlan] = useState(false)
   const [receiverCpf, setReceiverCpf] = useState('')
   const [receiverCpfError, setReceiverCpfError] = useState<string | null>(null)
   const idempotencyKey = useRef<string | null>(null)
@@ -113,6 +114,7 @@ export default function PlanPaymentModal({
       setLinkPagamento(null)
       setExternalRef(null)
       setPolling(false)
+      setActivatingPlan(false)
       idempotencyKey.current = null
       setReceiverCpf('')
       setReceiverCpfError(null)
@@ -133,6 +135,8 @@ export default function PlanPaymentModal({
           setPolling(false)
           onSuccess(externalRef)
           onClose()
+        } else if (status === 'processing') {
+          setActivatingPlan(true)
         } else if (
           status === 'cancelled' ||
           status === 'expired' ||
@@ -285,7 +289,7 @@ export default function PlanPaymentModal({
               {polling && (
                 <p className="flex items-center justify-center gap-2 text-sm text-slate-500">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Aguardando pagamento...
+                  {activatingPlan ? 'Pagamento confirmado. Ativando seu plano...' : 'Aguardando pagamento...'}
                 </p>
               )}
             </div>

@@ -11,6 +11,16 @@ export function canAddMedia(plan, type, currentCount) {
   return currentCount < limit
 }
 
+export function analyticsLevelForPlan(plan) {
+  const level = plan?.analytics_level
+  if (level === 'views' || level === 'basic' || level === 'full') return level
+  return plan?.slug === 'ouro' ? 'full' : plan?.slug === 'gratis' ? 'views' : 'basic'
+}
+
+export function shouldEnableVisualHighlight(plan) {
+  return plan?.slug === 'ouro' && plan?.featured === true
+}
+
 export function isPaymentFulfilled(payment) {
   return payment?.status === 'paid' && typeof payment?.fulfilled_at === 'string' && payment.fulfilled_at.length > 0
 }

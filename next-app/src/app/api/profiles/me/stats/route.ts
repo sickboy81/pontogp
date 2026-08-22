@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { getAuthCookieFromHeader, getUserIdFromToken, isAuthTokenExpired } from '@/lib/auth-cookie'
 import { getProfileByUserId } from '@/lib/api/profiles'
 import { getAdminToken } from '@/lib/pocketbase-admin'
+import { analyticsLevelForPlan } from '@/lib/plan-entitlements.mjs'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
@@ -84,6 +85,15 @@ export async function GET(request: NextRequest) {
   const adminToken = await getAdminToken()
   if (!adminToken) return Response.json({ error: 'Serviço indisponível' }, { status: 503 })
 
+  let analyticsLevel = analyticsLevelForPlan({ slug: profile.plan_slug ?? profile.plan ?? 'gratis' })
+  if (profile.plan) {
+    const planRes = await fetch(`${PB_URL}/api/collections/plans/records/${profile.plan}?fields=slug,analytics`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+      cache: 'no-store',
+    })
+    if (planRes.ok) analyticsLevel = analyticsLevelForPlan(await planRes.json())
+  }
+
   const now = new Date()
   const since7 = new Date(now)
   since7.setDate(since7.getDate() - 6)
@@ -151,13 +161,26 @@ export async function GET(request: NextRequest) {
   const peak = Object.entries(hourly).sort((a, b) => b[1] - a[1])[0]
   const storyViews = stories.reduce((sum, story) => sum + (Number(story.views) || 0), 0)
 
+  const totals = {
+    views: totalViews || profile.views || 0,
+    clicks: totalClicks || profile.clicks || 0,
+    favorites: favoritesCount || profile.favorites_count || 0,
+    stories: stories.length,
+    storyViews,
+  }
+
+  if (analyticsLevel === 'views') {
+    return Response.json({ analyticsLevel, totals: { views: totals.views } })
+  }
+
+  if (analyticsLevel === 'basic') {
+    return Response.json({ analyticsLevel, totals: { views: totals.views, clicks: totals.clicks, favorites: totals.favorites } })
+  }
+
   return Response.json({
+    analyticsLevel,
     totals: {
-      views: totalViews || profile.views || 0,
-      clicks: totalClicks || profile.clicks || 0,
-      favorites: favoritesCount || profile.favorites_count || 0,
-      stories: stories.length,
-      storyViews,
+      ...totals,
     },
     periods: {
       viewsLast7Days,

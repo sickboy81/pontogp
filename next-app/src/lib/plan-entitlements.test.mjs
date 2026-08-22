@@ -1,6 +1,12 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { canAddMedia, isPaymentFulfilled, renewalBaseDate } from './plan-entitlements.mjs'
+import {
+  analyticsLevelForPlan,
+  canAddMedia,
+  isPaymentFulfilled,
+  renewalBaseDate,
+  shouldEnableVisualHighlight,
+} from './plan-entitlements.mjs'
 
 test('renovação preserva o maior vencimento existente', () => {
   const now = new Date('2026-08-22T12:00:00.000Z')
@@ -22,4 +28,18 @@ test('pagamento pago sem fulfillment pode ser processado novamente', () => {
   assert.equal(isPaymentFulfilled({ status: 'paid', fulfilled_at: '2026-08-22 12:00:00' }), true)
   assert.equal(isPaymentFulfilled({ status: 'paid', fulfilled_at: '' }), false)
   assert.equal(isPaymentFulfilled({ status: 'pending' }), false)
+})
+
+test('cada plano recebe apenas o nível de analytics contratado', () => {
+  assert.equal(analyticsLevelForPlan({ slug: 'gratis', analytics_level: 'views' }), 'views')
+  assert.equal(analyticsLevelForPlan({ slug: 'bronze', analytics_level: 'basic' }), 'basic')
+  assert.equal(analyticsLevelForPlan({ slug: 'prata', analytics_level: 'basic' }), 'basic')
+  assert.equal(analyticsLevelForPlan({ slug: 'ouro', analytics_level: 'full' }), 'full')
+})
+
+test('destaque visual é concedido somente ao plano Ouro', () => {
+  assert.equal(shouldEnableVisualHighlight({ slug: 'bronze', featured: true }), false)
+  assert.equal(shouldEnableVisualHighlight({ slug: 'prata', featured: true }), false)
+  assert.equal(shouldEnableVisualHighlight({ slug: 'ouro', featured: true }), true)
+  assert.equal(shouldEnableVisualHighlight({ slug: 'ouro', featured: false }), false)
 })

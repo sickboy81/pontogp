@@ -17,6 +17,7 @@
     "email:configure-resend": "node scripts/configure-resend-smtp.mjs",
     "auto-bump": "node scripts/auto_bump.mjs",
     "cleanup-profiles": "node scripts/cleanup_profiles.mjs",
+    "plans:sync": "node scripts/sync-plan-catalog.mjs",
     "smoke:critical": "node scripts/smoke-critical.mjs"
   },
   "dependencies": {

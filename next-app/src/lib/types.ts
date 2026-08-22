@@ -160,6 +160,12 @@ export interface Plan {
   price_monthly: number
   daily_bumps: number
   max_photos: number | 'unlimited'
+  max_videos?: number | 'unlimited'
+  max_audio?: number | 'unlimited'
+  /** Analytics completo somente no Ouro; planos pagos recebem o resumo simples. */
+  analytics?: boolean
+  /** Destaque visual é uma capacidade exclusiva do Ouro. */
+  featured?: boolean
   features: string[]
   target_type?: 'advertiser' | 'user'
   highlight_percentage?: number

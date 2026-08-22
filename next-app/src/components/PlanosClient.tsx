@@ -154,7 +154,7 @@ export default function PlanosClient() {
 
   const handlePaymentSuccess = async () => {
     if (!paymentModal) return
-    toast.success('Pagamento confirmado. O plano será ativado automaticamente.')
+    toast.success('Pagamento confirmado. Seu plano já está ativo.')
     setPaymentModal(null)
     router.push('/dashboard')
     router.refresh()

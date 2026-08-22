@@ -289,6 +289,7 @@ function profileToForm(p: Profile | null): FormData {
 type TabId = 'dados' | 'midia' | 'stats' | 'bio'
 
 type ProfileStats = {
+  analyticsLevel?: 'views' | 'basic' | 'full'
   totals: {
     views: number
     clicks: number
@@ -1961,8 +1962,9 @@ export default function DashboardPerfilForm() {
         )}
 
         {profile && activeTab === 'stats' && (() => {
-          const plan = (profile.plan_slug ?? profile.plan ?? 'gratis').toLowerCase()
-          const hasAdvancedStatsAccess = plan === 'prata' || plan === 'ouro'
+          const analyticsLevel = stats?.analyticsLevel ?? ((profile.plan_slug ?? profile.plan ?? 'gratis').toLowerCase() === 'ouro' ? 'full' : (profile.plan_slug ?? profile.plan ?? 'gratis').toLowerCase() === 'gratis' ? 'views' : 'basic')
+          const hasFullAnalyticsAccess = analyticsLevel === 'full'
+          const hasBasicAnalyticsAccess = analyticsLevel === 'basic' || hasFullAnalyticsAccess
           const views = stats?.totals.views ?? profile.views ?? 0
           const clicks = stats?.totals.clicks ?? profile.clicks ?? 0
           const favorites = stats?.totals.favorites ?? profile.favorites_count ?? 0
@@ -1989,33 +1991,28 @@ export default function DashboardPerfilForm() {
                 <div>
                   <h3 className="mb-1 font-medium text-white">Resumo do seu anúncio</h3>
                   <p className="text-sm text-slate-500">
-                    Disponível em <strong className="text-slate-400">todos os planos</strong>. Os dados detalhados usam
-                    registros reais de visualizações, cliques, Cereja Stories e favoritos.
+                    {analyticsLevel === 'views' ? 'O plano Grátis mostra as visualizações totais do perfil.' : 'Resumo simples com dados reais de visualizações, cliques e favoritos.'}
                   </p>
                 </div>
                 {statsLoading && <Loader2 className="h-5 w-5 animate-spin text-slate-500" />}
               </div>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div className={`grid gap-3 ${hasBasicAnalyticsAccess ? 'sm:grid-cols-3' : 'sm:grid-cols-1'}`}>
                 <div className="rounded-lg border border-slate-700/80 bg-slate-900/40 px-3 py-3 text-center">
                   <p className="text-2xl font-bold text-white">{views}</p>
                   <p className="text-xs uppercase tracking-wider text-slate-500">Visualizações</p>
                 </div>
-                <div className="rounded-lg border border-slate-700/80 bg-slate-900/40 px-3 py-3 text-center">
+                {hasBasicAnalyticsAccess && <div className="rounded-lg border border-slate-700/80 bg-slate-900/40 px-3 py-3 text-center">
                   <p className="text-2xl font-bold text-white">{clicks}</p>
                   <p className="text-xs uppercase tracking-wider text-slate-500">Cliques</p>
-                </div>
-                <div className="rounded-lg border border-slate-700/80 bg-slate-900/40 px-3 py-3 text-center">
+                </div>}
+                {hasBasicAnalyticsAccess && <div className="rounded-lg border border-slate-700/80 bg-slate-900/40 px-3 py-3 text-center">
                   <p className="text-2xl font-bold text-white">{favorites}</p>
                   <p className="text-xs uppercase tracking-wider text-slate-500">Favoritos</p>
-                </div>
-                <div className="rounded-lg border border-slate-700/80 bg-slate-900/40 px-3 py-3 text-center">
-                  <p className="text-2xl font-bold text-primary-400">{views > 0 ? `${ctr}%` : '—'}</p>
-                  <p className="text-xs uppercase tracking-wider text-slate-500">CTR</p>
-                </div>
+                </div>}
               </div>
-              <p className="mt-3 text-center text-sm text-slate-500">
+              {hasBasicAnalyticsAccess && <p className="mt-3 text-center text-sm text-slate-500">
                 Favoritos / visualizações: <strong className="text-slate-400">{favRate}%</strong>.
-              </p>
+              </p>}
             </div>
           )
 
@@ -2135,15 +2132,15 @@ export default function DashboardPerfilForm() {
             <div>
               {resumoBasico}
               <div className="relative">
-                <div className={hasAdvancedStatsAccess ? '' : 'select-none blur-md pointer-events-none'}>
+                <div className={hasFullAnalyticsAccess ? '' : 'select-none blur-md pointer-events-none'}>
                   {advancedContent}
                 </div>
-                {!hasAdvancedStatsAccess && (
+                {!hasFullAnalyticsAccess && (
                   <div className="absolute inset-0 flex min-h-[240px] flex-col items-center justify-center rounded-xl border border-slate-600 bg-slate-900/90 p-4 backdrop-blur-sm">
                     <p className="text-center text-lg font-medium text-white">Estatísticas avançadas</p>
                     <p className="mt-1 max-w-sm text-center text-sm text-slate-300">
                       Funil detalhado, tendência real, canais de clique e horário de pico estão incluídos nos
-                      planos <strong className="text-primary-400">Prata</strong> e <strong className="text-primary-400">Ouro</strong>.
+                      plano <strong className="text-primary-400">Ouro</strong>.
                     </p>
                     <Link
                       href="/planos"
