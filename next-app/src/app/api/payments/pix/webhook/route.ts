@@ -4,6 +4,7 @@ import { COUPONS_COLLECTION } from '@/lib/coupons-collection'
 import { getAdminToken } from '@/lib/pocketbase-admin'
 import { parseExpirationDurationsValue } from '@/lib/parse-expiration-settings'
 import { enforceIpRateLimit, RATE_LIMIT_POLICIES } from '@/lib/api-rate-limit.mjs'
+import { isPaymentFulfilled, renewalBaseDate } from '@/lib/plan-entitlements.mjs'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 const PIXGO_URL = 'https://pixgo.org/api/v1'
@@ -140,30 +141,25 @@ export async function POST(request: NextRequest) {
         headers: { Authorization: `Bearer ${token}` },
       }
     )
-    if (!listRes.ok) return Response.json({ received: true }, { status: 200 })
+    if (!listRes.ok) return Response.json({ error: 'Pagamento não localizado internamente' }, { status: event === 'payment.completed' ? 503 : 200 })
 
     const listJson = (await listRes.json()) as {
-      items?: { id: string; profile?: string; plan?: string; description?: string; status?: string }[]
+      items?: { id: string; profile?: string; plan?: string; description?: string; status?: string; fulfilled_at?: string }[]
     }
     const items = listJson.items || []
-    if (items.length === 0) return Response.json({ received: true }, { status: 200 })
+    if (items.length === 0) return Response.json({ error: 'Pagamento não localizado internamente' }, { status: event === 'payment.completed' ? 503 : 200 })
 
     const record = items[0]
-    if (event === 'payment.completed' && record.status === 'paid') {
+    if (event === 'payment.completed' && isPaymentFulfilled(record)) {
       return Response.json({ received: true, duplicate: true }, { status: 200 })
     }
     const profileMatch = record.description?.match(/\|\s*PROFILE:([a-z0-9]{15})(?:\s*\||\s*$)/i)
     const profileId = record.profile || profileMatch?.[1] || null
     const authHeader = { Authorization: `Bearer ${token}` }
 
-    const paymentPatchRes = await fetch(`${PB_URL}/api/collections/payments/records/${record.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', ...authHeader },
-      body: JSON.stringify({ status: newStatus }),
-    })
-    if (!paymentPatchRes.ok) {
-      console.error('[pix-webhook] Falha ao atualizar status do pagamento.', { paymentId, status: paymentPatchRes.status })
-      return Response.json({ error: 'Pagamento não atualizado' }, { status: 503 })
+    if (event === 'payment.completed' && !profileId) {
+      console.error('[pix-webhook] Cobrança sem perfil de destino.', { paymentId, recordId: record.id })
+      return Response.json({ error: 'Cobrança sem perfil de destino' }, { status: 503 })
     }
 
     if (newStatus === 'paid' && profileId) {
@@ -268,9 +264,11 @@ export async function POST(request: NextRequest) {
           // usa 30 dias
         }
         const now = new Date()
-        const searchExpires = new Date(now)
+        const currentProfileRes = await fetch(`${PB_URL}/api/collections/profiles/records/${profileId}?fields=plan,search_expires_at,contact_expires_at`, { headers: authHeader, cache: 'no-store' })
+        const currentProfile = currentProfileRes.ok ? await currentProfileRes.json() as { search_expires_at?: string; contact_expires_at?: string } : {}
+        const searchExpires = new Date(renewalBaseDate(currentProfile.search_expires_at, now))
         searchExpires.setDate(searchExpires.getDate() + searchDays)
-        const contactExpires = new Date(now)
+        const contactExpires = new Date(renewalBaseDate(currentProfile.contact_expires_at, now))
         contactExpires.setDate(contactExpires.getDate() + contactDays)
         const searchExpiresAt = searchExpires.toISOString().replace('T', ' ').slice(0, 19)
         const contactExpiresAt = contactExpires.toISOString().replace('T', ' ').slice(0, 19)
@@ -290,6 +288,30 @@ export async function POST(request: NextRequest) {
           return Response.json({ error: 'Plano não ativado' }, { status: 503 })
         }
       }
+    }
+
+    if (newStatus === 'refunded' && profileId) {
+      const profileRes = await fetch(`${PB_URL}/api/collections/profiles/records/${profileId}?fields=id,plan`, { headers: authHeader, cache: 'no-store' })
+      const profile = profileRes.ok ? await profileRes.json() as { plan?: string } : null
+      if (profile?.plan && profile.plan === record.plan) {
+        await fetch(`${PB_URL}/api/collections/profiles/records/${profileId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', ...authHeader },
+          body: JSON.stringify({ plan: null, search_expires_at: '', contact_expires_at: '', auto_bump: false }),
+        })
+      }
+    }
+
+    const paymentPatchRes = await fetch(`${PB_URL}/api/collections/payments/records/${record.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...authHeader },
+      body: JSON.stringify(newStatus === 'paid'
+        ? { status: newStatus, fulfilled_at: new Date().toISOString() }
+        : { status: newStatus }),
+    })
+    if (!paymentPatchRes.ok) {
+      console.error('[pix-webhook] Falha ao atualizar status do pagamento.', { paymentId, status: paymentPatchRes.status })
+      return Response.json({ error: 'Pagamento não atualizado' }, { status: 503 })
     }
 
     return Response.json({ received: true }, { status: 200 })

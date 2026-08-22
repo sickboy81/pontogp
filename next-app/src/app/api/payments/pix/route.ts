@@ -131,6 +131,7 @@ export async function POST(request: NextRequest) {
 
     const paymentRecord = {
       user: userId,
+      profile: body.profileId,
       plan: plan.id,
       amount,
       status: 'pending',

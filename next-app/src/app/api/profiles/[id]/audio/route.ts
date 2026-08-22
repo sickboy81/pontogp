@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { getAuthCookieFromHeader, getUserIdFromToken } from '@/lib/auth-cookie'
 import { enforceUserRateLimit, RATE_LIMIT_POLICIES } from '@/lib/api-rate-limit.mjs'
 import { maybeAudioToCompactM4a, pocketbaseAcceptsAudioMime, resolveAudioMime } from '@/lib/server/media-upload'
+import { canAddMedia } from '@/lib/plan-entitlements.mjs'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
@@ -15,16 +16,25 @@ function getToken(request: NextRequest): string | null {
 async function verifyProfileOwnership(
   profileId: string,
   token: string
-): Promise<{ ok: boolean }> {
+): Promise<{ ok: boolean; plan?: string }> {
   const res = await fetch(
-    `${PB_URL}/api/collections/profiles/records/${profileId}?fields=id,user`,
+    `${PB_URL}/api/collections/profiles/records/${profileId}?fields=id,user,plan`,
     { headers: { Authorization: `Bearer ${token}` } }
   )
   if (!res.ok) return { ok: false }
-  const record = (await res.json()) as { user?: string }
+  const record = (await res.json()) as { user?: string; plan?: string }
   const userId = getUserIdFromToken(token)
   if (!userId || record.user !== userId) return { ok: false }
-  return { ok: true }
+  return { ok: true, plan: record.plan }
+}
+
+async function loadPlan(planRef?: string) {
+  if (!planRef) return null
+  const byId = await fetch(`${PB_URL}/api/collections/plans/records/${planRef}`, { cache: 'no-store' })
+  if (byId.ok) return await byId.json()
+  const bySlug = await fetch(`${PB_URL}/api/collections/plans/records?filter=${encodeURIComponent(`slug="${planRef.replace(/"/g, '\\"')}"`)}&perPage=1`, { cache: 'no-store' })
+  if (!bySlug.ok) return null
+  return (await bySlug.json()).items?.[0] || null
 }
 
 /** POST: adiciona ou substitui áudio do perfil. Multipart/form-data com campo "file". */
@@ -45,6 +55,11 @@ export async function POST(
   const ownership = await verifyProfileOwnership(profileId, token)
   if (!ownership.ok) {
     return Response.json({ error: 'Perfil não encontrado ou sem permissão' }, { status: 404 })
+  }
+
+  const plan = await loadPlan(ownership.plan)
+  if (!canAddMedia(plan, 'audio', 0)) {
+    return Response.json({ error: 'Seu plano não permite áudio.' }, { status: 400 })
   }
 
   try {

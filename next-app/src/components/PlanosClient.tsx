@@ -53,10 +53,9 @@ export default function PlanosClient() {
         ])
         if (cancelled) return
         const plansData = (await plansRes.json()) as Plan[]
-        const filter = (p: Plan) =>
-          user?.role === 'user' || user?.role === '1'
-            ? p.target_type === 'user'
-            : (p.target_type === 'advertiser' || !p.target_type)
+        // A compra atual é vinculada a um perfil anunciante e ao webhook PIX.
+        // Não exibir planos de usuário até existir um fluxo de cobrança próprio para eles.
+        const filter = (p: Plan) => p.target_type === 'advertiser' || !p.target_type
         const sorted = plansData.filter(filter).sort((a, b) => {
           const ai = PLAN_ORDER.indexOf(a.slug)
           const bi = PLAN_ORDER.indexOf(b.slug)

@@ -3,6 +3,7 @@ import { getAuthCookieFromHeader, getUserIdFromToken } from '@/lib/auth-cookie'
 import { enforceUserRateLimit, RATE_LIMIT_POLICIES } from '@/lib/api-rate-limit.mjs'
 import { imageFileToWatermarkedWebp, isRasterImageMime, resolveImageMime } from '@/lib/server/media-upload'
 import { mapProfile } from '@/lib/api/profiles'
+import { canAddMedia } from '@/lib/plan-entitlements.mjs'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
@@ -16,16 +17,25 @@ function getToken(request: NextRequest): string | null {
 async function verifyProfileOwnership(
   profileId: string,
   token: string
-): Promise<{ ok: boolean; photos?: string[] }> {
+): Promise<{ ok: boolean; photos?: string[]; plan?: string }> {
   const res = await fetch(
-    `${PB_URL}/api/collections/profiles/records/${profileId}?fields=id,user,photos`,
+    `${PB_URL}/api/collections/profiles/records/${profileId}?fields=id,user,photos,plan`,
     { headers: { Authorization: `Bearer ${token}` } }
   )
   if (!res.ok) return { ok: false }
-  const record = (await res.json()) as { user?: string; photos?: string[] }
+  const record = (await res.json()) as { user?: string; photos?: string[]; plan?: string }
   const userId = getUserIdFromToken(token)
   if (!userId || record.user !== userId) return { ok: false }
-  return { ok: true, photos: Array.isArray(record.photos) ? record.photos : [] }
+  return { ok: true, photos: Array.isArray(record.photos) ? record.photos : [], plan: record.plan }
+}
+
+async function loadPlan(planRef?: string) {
+  if (!planRef) return null
+  const byId = await fetch(`${PB_URL}/api/collections/plans/records/${planRef}`, { cache: 'no-store' })
+  if (byId.ok) return await byId.json()
+  const bySlug = await fetch(`${PB_URL}/api/collections/plans/records?filter=${encodeURIComponent(`slug="${planRef.replace(/"/g, '\\"')}"`)}&perPage=1`, { cache: 'no-store' })
+  if (!bySlug.ok) return null
+  return (await bySlug.json()).items?.[0] || null
 }
 
 /** POST: adiciona foto ao perfil. Multipart/form-data com campo "file". */
@@ -46,6 +56,11 @@ export async function POST(
   const ownership = await verifyProfileOwnership(profileId, token)
   if (!ownership.ok) {
     return Response.json({ error: 'Perfil não encontrado ou sem permissão' }, { status: 404 })
+  }
+
+  const plan = await loadPlan(ownership.plan)
+  if (!canAddMedia(plan, 'photos', ownership.photos?.length || 0)) {
+    return Response.json({ error: 'Seu plano atingiu o limite de fotos.' }, { status: 400 })
   }
 
   try {
@@ -182,4 +197,5 @@ export async function PATCH(
   } catch {
     return Response.json({ error: 'Não foi possível salvar a ordem das fotos.' }, { status: 500 })
   }
+
 }

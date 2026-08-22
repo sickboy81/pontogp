@@ -93,7 +93,7 @@ export async function GET(request: NextRequest) {
       fetchCount(token, 'messages', 'read = false'),
       fetchCount(token, 'verification_requests', 'status = "pending"'),
       fetchCount(token, 'contacts', 'read = false'),
-      fetchCount(token, 'subscriptions', 'status = "active"'),
+      fetchCount(token, 'profiles', `status = "active" && plan != "" && plan != "gratis" && search_expires_at > "${new Date().toISOString()}"`),
       fetchRevenue(token),
       fetchCount(token, 'payments', 'status = "pending"'),
       fetchCount(token, 'profiles', 'status = "active"'),
