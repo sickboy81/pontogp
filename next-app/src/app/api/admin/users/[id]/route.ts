@@ -30,6 +30,9 @@ function mapUserPublic(r: Record<string, unknown>) {
     id: r.id as string,
     email: r.email as string,
     name: (r.name as string) || '',
+    full_name: (r.full_name as string) || '',
+    display_name: (r.display_name as string) || (r.name as string) || '',
+    age: Number(r.age) || null,
     first_name: (r.first_name as string) || '',
     last_name: (r.last_name as string) || '',
     phone: (r.phone as string) || '',
@@ -38,11 +41,15 @@ function mapUserPublic(r: Record<string, unknown>) {
     verified: !!(r.verified as boolean),
     document_verified: !!(r.document_verified as boolean),
     created: (r.created as string) || null,
+    plan: (r.plan as string) || 'gratis',
   }
 }
 
 const ALLOWED_PATCH = new Set([
   'name',
+  'full_name',
+  'display_name',
+  'age',
   'first_name',
   'last_name',
   'phone',
@@ -50,6 +57,7 @@ const ALLOWED_PATCH = new Set([
   'status',
   'verified',
   'document_verified',
+  'plan',
 ])
 
 /** GET: detalhe do utilizador. Apenas admin. */
@@ -102,6 +110,10 @@ export async function PATCH(
       const v = body[key]
       if (key === 'verified' || key === 'document_verified') {
         update[key] = !!v
+      } else if (key === 'age') {
+        const age = Number(v)
+        if (!Number.isInteger(age) || age < 18 || age > 100) return Response.json({ error: 'A idade deve estar entre 18 e 100 anos.' }, { status: 400 })
+        update[key] = age
       } else if (key === 'phone' || typeof v === 'string') {
         update[key] = v === '' ? null : v
       }
@@ -134,6 +146,20 @@ export async function PATCH(
   }
 
   try {
+    if (update.plan != null) {
+      const requestedPlan = String(update.plan).trim().toLowerCase()
+      const planRes = await fetch(`${PB_URL}/api/collections/plans/records?filter=${encodeURIComponent(`slug = "${requestedPlan}" || id = "${requestedPlan}"`)}&perPage=1&fields=id,slug`, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
+      if (!planRes.ok) return Response.json({ error: 'Não foi possível validar o plano.' }, { status: 502 })
+      const planData = await planRes.json() as { items?: { id: string; slug?: string }[] }
+      const plan = planData.items?.[0]
+      if (!plan) return Response.json({ error: 'Plano não encontrado.' }, { status: 400 })
+      update.plan = plan.slug || requestedPlan
+      const profilesRes = await fetch(`${PB_URL}/api/collections/profiles/records?filter=${encodeURIComponent(`user = "${id}"`)}&perPage=50&fields=id`, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
+      if (profilesRes.ok) {
+        const profiles = await profilesRes.json() as { items?: { id: string }[] }
+        for (const profile of profiles.items || []) await fetch(`${PB_URL}/api/collections/profiles/records/${profile.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ plan: plan.id }) })
+      }
+    }
     const res = await fetch(`${PB_URL}/api/collections/users/records/${id}`, {
       method: 'PATCH',
       headers: {
@@ -154,6 +180,30 @@ export async function PATCH(
   } catch {
     return Response.json({ error: 'Erro ao atualizar utilizador' }, { status: 500 })
   }
+}
+
+/** DELETE: remove uma conta e o seu perfil, apenas por ação administrativa explícita. */
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const auth = await requireAdmin(request)
+  if (!auth) return Response.json({ error: 'Não autorizado' }, { status: 401 })
+  const { id } = await params
+  if (!id) return Response.json({ error: 'id obrigatório' }, { status: 400 })
+  if (id === auth.userId) return Response.json({ error: 'Não é possível excluir a própria conta administrativa.' }, { status: 400 })
+  const token = await getPbToken(auth.token)
+  try {
+    const currentRes = await fetch(`${PB_URL}/api/collections/users/records/${id}?fields=id,role`, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
+    if (!currentRes.ok) return Response.json({ error: 'Utilizador não encontrado' }, { status: 404 })
+    const current = await currentRes.json() as { role?: string }
+    if (isAdminRole(current.role) && await countAdminUsers(token) <= 1) return Response.json({ error: 'Não é possível excluir o último administrador.' }, { status: 400 })
+    const profileRes = await fetch(`${PB_URL}/api/collections/profiles/records?filter=${encodeURIComponent(`user = "${id}"`)}&perPage=50&fields=id`, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
+    if (profileRes.ok) {
+      const profiles = await profileRes.json() as { items?: { id: string }[] }
+      for (const profile of profiles.items || []) await fetch(`${PB_URL}/api/collections/profiles/records/${profile.id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } })
+    }
+    const res = await fetch(`${PB_URL}/api/collections/users/records/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } })
+    if (!res.ok) return Response.json({ error: 'Não foi possível excluir a conta.' }, { status: res.status })
+    return Response.json({ ok: true })
+  } catch { return Response.json({ error: 'Erro ao excluir conta.' }, { status: 500 }) }
 }
 
 /** POST: reenvia o email de confirmação. Apenas admin. */

@@ -37,7 +37,9 @@ function RegisterPageContent() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [name, setName] = useState('')
+  const [fullName, setFullName] = useState('')
+  const [displayName, setDisplayName] = useState('')
+  const [age, setAge] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
   const [acceptedTerms, setAcceptedTerms] = useState(false)
@@ -66,15 +68,24 @@ function RegisterPageContent() {
       toast.error('A senha deve ter no mínimo 6 caracteres')
       return
     }
+    const parsedAge = Number(age)
+    if (!Number.isInteger(parsedAge) || parsedAge < 18 || parsedAge > 100) {
+      toast.error('Informe uma idade válida entre 18 e 100 anos')
+      return
+    }
+    if (!fullName.trim() || !displayName.trim()) {
+      toast.error('Informe o nome completo e o nome que aparecerá no perfil')
+      return
+    }
     if (!acceptedTerms) {
       toast.error('Aceite os termos de uso para criar uma conta')
       return
     }
     try {
       setLoading(true)
-      const firstName = name.trim().split(' ')[0] || ''
-      const lastName = name.trim().split(' ').slice(1).join(' ') || ''
-      await register(email.trim().toLowerCase(), password, firstName, lastName, role)
+      const firstName = fullName.trim().split(' ')[0] || ''
+      const lastName = fullName.trim().split(' ').slice(1).join(' ') || ''
+      await register(email.trim().toLowerCase(), password, firstName, lastName, role, { fullName, displayName, age: parsedAge })
       try {
         await fetch('/api/auth/registration-ip', {
           method: 'POST',
@@ -127,14 +138,25 @@ function RegisterPageContent() {
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-4">
         <div>
-          <label className="block text-sm font-medium text-slate-300">Nome</label>
+          <label className="block text-sm font-medium text-slate-300">Nome completo</label>
           <input
             type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
             className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-4 py-3 text-white placeholder-slate-500 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-            placeholder="Seu nome"
+            placeholder="Seu nome completo"
+            required
           />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-300">Nome no perfil</label>
+          <input type="text" value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-4 py-3 text-white placeholder-slate-500 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" placeholder="Como aparecerá publicamente" maxLength={100} required />
+          <p className="mt-1 text-xs text-slate-500">Este nome será exibido no seu anúncio.</p>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-300">Idade</label>
+          <input type="text" inputMode="numeric" autoComplete="bday-year" maxLength={3} value={age} onChange={(e) => setAge(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-4 py-3 text-white placeholder-slate-500 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" placeholder="Digite sua idade" required />
+          <p className="mt-1 text-xs text-slate-500">A plataforma é exclusiva para maiores de 18 anos.</p>
         </div>
         <div>
           <label className="block text-sm font-medium text-slate-300">Email</label>

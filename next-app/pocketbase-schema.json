@@ -1,5 +1,5 @@
 {
-  "exportedAt": "2026-08-22T23:38:05.514Z",
+  "exportedAt": "2026-08-23T18:43:40.561Z",
   "baseUrl": "https://pocketbase.cerejavip.com",
   "collections": [
     {
@@ -784,7 +784,7 @@
       "type": "base",
       "listRule": "",
       "viewRule": "",
-      "createRule": "@request.auth.role = \"admin\"",
+      "createRule": "@request.auth.id != \"\"",
       "updateRule": "@request.auth.id != \"\"",
       "deleteRule": "@request.auth.id != \"\"",
       "schema": [

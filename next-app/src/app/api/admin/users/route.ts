@@ -51,6 +51,8 @@ export async function GET(request: NextRequest) {
       id: r.id,
       email: r.email,
       name: r.name,
+      display_name: r.display_name || r.name,
+      plan: r.plan || 'gratis',
       role: r.role,
       status: r.status,
       verified: r.verified,

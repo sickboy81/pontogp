@@ -13,7 +13,7 @@ interface AuthState {
   isAuthenticated: boolean
   login: (email: string, password: string) => Promise<void>
   logout: () => Promise<void>
-  register: (email: string, password: string, firstName?: string, lastName?: string, role?: string) => Promise<void>
+    register: (email: string, password: string, firstName?: string, lastName?: string, role?: string, details?: { fullName?: string; displayName?: string; age?: number }) => Promise<void>
   refresh: () => Promise<void>
 }
 
@@ -83,7 +83,8 @@ export const useAuthStore = create<AuthState>()(
         password: string,
         firstName?: string,
         lastName?: string,
-        role: string = 'user'
+        role: string = 'user',
+        details?: { fullName?: string; displayName?: string; age?: number }
       ) => {
         const pb = getPb()
         const normalizedEmail = email.toLowerCase().trim()
@@ -93,7 +94,10 @@ export const useAuthStore = create<AuthState>()(
           emailVisibility: true,
           password,
           passwordConfirm: password,
-          name: [firstName, lastName].filter(Boolean).join(' ').trim(),
+          name: details?.displayName?.trim() || [firstName, lastName].filter(Boolean).join(' ').trim(),
+          full_name: details?.fullName?.trim() || [firstName, lastName].filter(Boolean).join(' ').trim(),
+          display_name: details?.displayName?.trim() || [firstName, lastName].filter(Boolean).join(' ').trim(),
+          age: details?.age,
           first_name: firstName,
           last_name: lastName,
           verified: false,

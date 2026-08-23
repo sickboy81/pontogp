@@ -503,9 +503,9 @@ export default function DashboardPerfilForm() {
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
     if (files.length === 0 || !profile) return
-    const oversized = files.find((file) => file.size > 5 * 1024 * 1024)
+    const oversized = files.find((file) => file.size > 15 * 1024 * 1024)
     if (oversized) {
-      setError(`A foto “${oversized.name}” ultrapassa o limite de 5 MB.`)
+      setError(`A foto “${oversized.name}” ultrapassa o limite de 15 MB.`)
       e.target.value = ''
       return
     }
@@ -533,7 +533,7 @@ export default function DashboardPerfilForm() {
         setPhotoUploadProgress({ current: index + 1, total: files.length })
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao enviar foto')
+      setError(err instanceof Error ? err.message : 'Não foi possível enviar a foto. Verifique o formato e tente novamente.')
     } finally {
       setPhotoUploading(false)
       setPhotoUploadProgress({ current: 0, total: 0 })
@@ -1744,16 +1744,14 @@ export default function DashboardPerfilForm() {
           <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
             <h3 className="font-medium text-slate-300">Preços (R$)</h3>
             <p className="max-w-md text-xs leading-relaxed text-slate-500 sm:text-right">
-              Em cada linha escreva <span className="text-slate-400">o que é a tarifa</span> e o{' '}
-              <span className="text-slate-400">valor</span>. Ex.: «1 hora» + 350 · «Pernoite» + 1200 · «Videochamada 15
-              min» + 80 · «Pacote dia inteiro» + 2500
+              Informe apenas o nome do serviço e o preço em reais. Ex.: <span className="text-slate-400">1 hora</span> e <span className="text-slate-400">350</span>. Você pode usar vírgula ou ponto nos centavos.
             </p>
           </div>
           <div className="space-y-3">
             {form.price_rows.map((row, idx) => (
               <div key={idx} className="flex flex-col gap-2 sm:flex-row sm:items-end">
                 <div className="min-w-0 flex-1">
-                  <label className="mb-1 block text-xs text-slate-500">O que inclui / nome da tarifa</label>
+                  <label className="mb-1 block text-xs text-slate-500">Serviço / período</label>
                   <input
                     type="text"
                     value={row.description}
@@ -1764,12 +1762,12 @@ export default function DashboardPerfilForm() {
                         return { ...f, price_rows }
                       })
                     }
-                    placeholder="Ex.: 30 minutos, Diária, Só massagem…"
+                    placeholder="Ex.: 1 hora"
                     className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white placeholder-slate-600 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
                   />
                 </div>
                 <div className="w-full sm:w-36">
-                  <label className="mb-1 block text-xs text-slate-500">Valor (R$)</label>
+                  <label className="mb-1 block text-xs text-slate-500">Preço em reais</label>
                   <input
                     type="text"
                     inputMode="decimal"
@@ -1781,7 +1779,7 @@ export default function DashboardPerfilForm() {
                         return { ...f, price_rows }
                       })
                     }
-                    placeholder="0 ou 150"
+                    placeholder="Ex.: 350 ou 350,50"
                     className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white placeholder-slate-600 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
                   />
                 </div>

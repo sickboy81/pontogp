@@ -2,13 +2,15 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, CheckCircle2, Filter, Loader2, Mail, Pencil, ShieldCheck, UserRound, Users, X } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, Filter, Loader2, Mail, Pencil, ShieldCheck, Trash2, UserRound, Users, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 interface UserRow {
   id: string
   email?: string
   name?: string
+  display_name?: string
+  plan?: string
   role?: string
   status?: string
   verified?: boolean
@@ -18,6 +20,10 @@ interface UserRow {
 
 type EditForm = {
   name: string
+  full_name: string
+  display_name: string
+  age: string
+  plan: string
   first_name: string
   last_name: string
   phone: string
@@ -36,6 +42,10 @@ const GROUPS: { key: GroupKey; label: string; icon: typeof Users }[] = [
 
 const EMPTY: EditForm = {
   name: '',
+  full_name: '',
+  display_name: '',
+  age: '',
+  plan: 'gratis',
   first_name: '',
   last_name: '',
   phone: '',
@@ -55,12 +65,17 @@ const ROLE_CHOICES: { value: string; label: string }[] = [
 const STATUS_CHOICES = [
   { value: 'active', label: 'Ativo' },
   { value: 'inactive', label: 'Inativo' },
+  { value: 'suspended', label: 'Bloqueado' },
 ]
 
 function rowToForm(u: UserRow, detail?: Record<string, unknown> | null): EditForm {
   if (detail) {
     return {
       name: (detail.name as string) || '',
+      full_name: (detail.full_name as string) || '',
+      display_name: (detail.display_name as string) || (detail.name as string) || '',
+      age: detail.age ? String(detail.age) : '',
+      plan: (detail.plan as string) || 'gratis',
       first_name: (detail.first_name as string) || '',
       last_name: (detail.last_name as string) || '',
       phone: (detail.phone as string) || '',
@@ -72,6 +87,10 @@ function rowToForm(u: UserRow, detail?: Record<string, unknown> | null): EditFor
   }
   return {
     name: u.name || '',
+    full_name: '',
+    display_name: u.display_name || u.name || '',
+    age: '',
+    plan: u.plan || 'gratis',
     first_name: '',
     last_name: '',
     phone: '',
@@ -201,6 +220,9 @@ export default function AdminUsuarios() {
         credentials: 'include',
         body: JSON.stringify({
           name: form.name.trim() || null,
+          full_name: form.full_name.trim() || null,
+          display_name: form.display_name.trim() || null,
+          age: form.age ? Number(form.age) : null,
           first_name: form.first_name.trim() || null,
           last_name: form.last_name.trim() || null,
           phone: form.phone.trim() || null,
@@ -208,6 +230,7 @@ export default function AdminUsuarios() {
           status: form.status,
           verified: form.verified,
           document_verified: form.document_verified,
+          plan: form.plan,
         }),
       })
       const json = await res.json().catch(() => ({}))
@@ -240,6 +263,14 @@ export default function AdminUsuarios() {
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Erro ao reenviar email.')
     }
+  }
+
+  const deleteUser = async (u: UserRow) => {
+    if (!window.confirm(`Excluir definitivamente a conta ${u.email || u.name || ''}? O perfil também será removido.`)) return
+    const res = await fetch(`/api/admin/users/${u.id}`, { method: 'DELETE', credentials: 'include' })
+    const json = await res.json().catch(() => ({})) as { error?: string }
+    if (!res.ok) toast.error(json.error || 'Não foi possível excluir a conta.')
+    else { toast.success('Conta excluída.'); load() }
   }
 
   const totalPages = data ? Math.max(1, Math.ceil(data.totalItems / data.perPage)) : 1
@@ -333,9 +364,10 @@ export default function AdminUsuarios() {
                       <td className="p-4">{u.document_verified ? <CheckCircle2 className="h-4 w-4 text-green-400" /> : <span className="text-slate-500">Não</span>}</td>
                       <td className="p-4 text-right">
                         <div className="mb-2 flex justify-end gap-1">
-                          <button type="button" title={u.status === 'active' ? 'Inativar conta' : 'Ativar conta'} onClick={() => quickUpdate(u, { status: u.status === 'active' ? 'inactive' : 'active' })} className="rounded border border-slate-600 p-1.5 text-slate-300 hover:bg-slate-700">{u.status === 'active' ? 'Inativar' : 'Ativar'}</button>
+                          <button type="button" title={u.status === 'active' ? 'Bloquear conta' : 'Ativar conta'} onClick={() => quickUpdate(u, { status: u.status === 'active' ? 'suspended' : 'active' })} className="rounded border border-slate-600 p-1.5 text-slate-300 hover:bg-slate-700">{u.status === 'active' ? 'Bloquear' : 'Ativar'}</button>
                           <button type="button" title="Alternar verificação de email" onClick={() => quickUpdate(u, { verified: !u.verified })} className="rounded border border-slate-600 p-1.5 text-slate-300 hover:bg-slate-700">{u.verified ? 'Desverificar' : 'Verificar'}</button>
                           {!u.verified && <button type="button" title="Reenviar email de confirmação" onClick={() => resendVerification(u)} className="rounded border border-slate-600 p-1.5 text-slate-300 hover:bg-slate-700"><Mail className="h-4 w-4" /></button>}
+                          <button type="button" title="Excluir conta" onClick={() => deleteUser(u)} className="rounded border border-red-800 p-1.5 text-red-300 hover:bg-red-950"><Trash2 className="h-4 w-4" /></button>
                         </div>
                         <button
                           type="button"
@@ -432,6 +464,11 @@ export default function AdminUsuarios() {
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
+                  <div><label className="mb-1 block text-xs text-slate-500">Nome civil completo</label><input className="w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-white" value={form.full_name} onChange={(e) => setForm((f) => ({ ...f, full_name: e.target.value }))} /></div>
+                  <div><label className="mb-1 block text-xs text-slate-500">Nome no perfil</label><input className="w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-white" value={form.display_name} onChange={(e) => setForm((f) => ({ ...f, display_name: e.target.value }))} /></div>
+                </div>
+                <div><label className="mb-1 block text-xs text-slate-500">Idade</label><input type="number" min={18} max={100} className="w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-white" value={form.age} onChange={(e) => setForm((f) => ({ ...f, age: e.target.value }))} /></div>
+                <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="mb-1 block text-xs text-slate-500">Primeiro nome</label>
                     <input
@@ -498,6 +535,7 @@ export default function AdminUsuarios() {
                     ))}
                   </select>
                 </div>
+                <div><label className="mb-1 block text-xs text-slate-500">Plano da conta</label><select className="w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-white" value={form.plan} onChange={(e) => setForm((f) => ({ ...f, plan: e.target.value }))}><option value="gratis">Grátis</option><option value="bronze">Bronze</option><option value="prata">Prata</option><option value="ouro">Ouro</option></select><p className="mt-1 text-xs text-amber-400">A alteração manual não cria pagamento nem altera automaticamente datas de validade.</p></div>
 
                 <label className="flex cursor-pointer items-center gap-2 text-slate-200">
                   <input

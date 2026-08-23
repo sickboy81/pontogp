@@ -14,6 +14,8 @@
     "schema:check": "node scripts/check-schema-contracts.mjs",
     "schema:apply-profile-publication": "node scripts/apply-profile-publication-rules.mjs",
     "schema:ensure-profile-contact-visibility": "node scripts/ensure-profile-contact-visibility.mjs",
+    "schema:ensure-user-registration-fields": "node scripts/ensure-user-registration-fields.mjs",
+    "schema:ensure-user-file-upload": "node scripts/ensure-user-file-upload.mjs",
     "email:configure-resend": "node scripts/configure-resend-smtp.mjs",
     "auto-bump": "node scripts/auto_bump.mjs",
     "cleanup-profiles": "node scripts/cleanup_profiles.mjs",
