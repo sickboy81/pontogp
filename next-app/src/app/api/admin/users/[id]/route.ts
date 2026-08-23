@@ -111,6 +111,10 @@ export async function PATCH(
       if (key === 'verified' || key === 'document_verified') {
         update[key] = !!v
       } else if (key === 'age') {
+        if (v === null || v === '') {
+          update[key] = null
+          continue
+        }
         const age = Number(v)
         if (!Number.isInteger(age) || age < 18 || age > 100) return Response.json({ error: 'A idade deve estar entre 18 e 100 anos.' }, { status: 400 })
         update[key] = age
@@ -200,8 +204,14 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
       const profiles = await profileRes.json() as { items?: { id: string }[] }
       for (const profile of profiles.items || []) await fetch(`${PB_URL}/api/collections/profiles/records/${profile.id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } })
     }
-    const res = await fetch(`${PB_URL}/api/collections/users/records/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } })
-    if (!res.ok) return Response.json({ error: 'Não foi possível excluir a conta.' }, { status: res.status })
+    const res = await fetch(`${PB_URL}/api/collections/users/records/${encodeURIComponent(id)}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } })
+    if (!res.ok) {
+      const detail = await res.json().catch(() => ({})) as { message?: string; data?: unknown }
+      return Response.json({
+        error: detail.message || 'Não foi possível excluir a conta.',
+        details: detail.data,
+      }, { status: res.status })
+    }
     return Response.json({ ok: true })
   } catch { return Response.json({ error: 'Erro ao excluir conta.' }, { status: 500 }) }
 }
