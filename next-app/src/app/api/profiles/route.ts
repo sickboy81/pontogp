@@ -223,8 +223,14 @@ export async function POST(request: NextRequest) {
     })
     if (!res.ok) {
       const err = await res.json().catch(() => ({}))
+      const fieldErrors = typeof err === 'object' && err !== null && typeof (err as { data?: unknown }).data === 'object'
+        ? (err as { data?: unknown }).data
+        : undefined
       return Response.json(
-        { error: (err as { message?: string }).message || 'Erro ao criar perfil' },
+        {
+          error: (err as { message?: string }).message || 'Erro ao criar perfil',
+          ...(fieldErrors ? { fields: fieldErrors } : {}),
+        },
         { status: res.status }
       )
     }
