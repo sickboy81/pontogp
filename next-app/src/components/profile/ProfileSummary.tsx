@@ -74,7 +74,7 @@ export default function ProfileSummary({
           <div className="flex flex-wrap items-center justify-between gap-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
             <div className="flex flex-wrap items-center gap-2">
               {profile.verified && (
-                <span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1 text-emerald-200">
+                <span className="profile-verification-badge inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1 text-emerald-200">
                   <BadgeCheck className="h-3.5 w-3.5" />
                   Perfil verificado
                 </span>

@@ -47,6 +47,9 @@ for (const status of ['pending', 'paid', 'failed', 'refunded']) {
 
 const profiles = collections.get('profiles')
 const users = collections.get('users')
+if (users?.authRule !== 'verified = true') {
+  failures.push('users.authRule deve exigir email confirmado para todas as contas')
+}
 const protectedUserFields = ['role', 'status', 'verified', 'document_verified', 'plan', 'chat_blocked']
 const expectedUserUpdateRule =
   `(id = @request.auth.id && ${protectedUserFields.map((field) => `@request.body.${field}:changed = false`).join(' && ')}) || @request.auth.role = 'admin'`

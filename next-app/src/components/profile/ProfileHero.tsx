@@ -54,7 +54,7 @@ export default function ProfileHero({
           <div className="absolute inset-x-0 bottom-0 p-5 text-left">
             <div className="flex flex-wrap items-center gap-2">
               {profile.verified && (
-                <span className="rounded-full border border-emerald-400/30 bg-emerald-500/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-200">
+                <span className="profile-verification-badge rounded-full border border-emerald-400/30 bg-emerald-500/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-200">
                   Verificado
                 </span>
               )}

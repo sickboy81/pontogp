@@ -382,15 +382,40 @@ html.light select option {
   @apply bg-white text-slate-900;
 }
 
-/* Selects dentro do header: não usar o estilo “formulário claro” global */
-html.light .site-header select {
-  background-color: #1e293b !important;
-  color: #f8fafc !important;
-  border-color: #64748b !important;
+/* Controles do cabeçalho ficam claros e legíveis sobre a barra escura. */
+html.light .site-header .header-filter-select {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #94a3b8 !important;
 }
-html.light .site-header select option {
-  background-color: #1e293b !important;
-  color: #f8fafc !important;
+html.light .site-header .header-filter-select option {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+/* O menu aberto não deve parecer uma camada escura/transparente sobre o conteúdo. */
+html.light .site-header .header-account-menu {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.18) !important;
+}
+html.light .site-header .header-account-menu a,
+html.light .site-header .header-account-menu button {
+  color: #1e293b !important;
+}
+html.light .site-header .header-account-menu a:hover,
+html.light .site-header .header-account-menu button:hover {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+html.light .site-header .header-account-menu .border-t {
+  border-color: #d8e1ec !important;
+}
+html.light .site-header .header-account-menu .header-menu-cta {
+  color: #be123c !important;
+}
+html.light .site-header .header-account-menu .header-menu-admin {
+  color: #a16207 !important;
 }
 
 /* Gradientes de fundo (hero / secções) */
@@ -540,6 +565,58 @@ html.light .profile-detail-page .bg-slate-800\/60 {
 }
 html.light .profile-detail-page .text-slate-500 {
   color: #52657d !important;
+}
+
+/* Cartões do perfil: bordas perceptíveis para preservar a hierarquia no claro. */
+html.light .profile-detail-page > .relative {
+  border-color: #c5d1df !important;
+  box-shadow: 0 18px 44px rgba(15, 23, 42, 0.11) !important;
+}
+html.light .profile-detail-page section.rounded-\[1\.75rem\],
+html.light .profile-detail-page .rounded-\[1\.75rem\] {
+  border-color: #c5d1df !important;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.07) !important;
+}
+html.light .profile-detail-page .rounded-2xl.border,
+html.light .profile-detail-page .rounded-xl.border {
+  border-color: #cbd5e1 !important;
+}
+html.light .profile-detail-page .border-slate-700\/70,
+html.light .profile-detail-page .border-slate-700 {
+  border-color: #c5d1df !important;
+}
+html.light .profile-detail-page .border-slate-600 {
+  border-color: #aebed0 !important;
+}
+
+/* A verificação é um sinal de confiança e não pode se perder no fundo claro. */
+html.light .profile-detail-page .profile-verification-badge {
+  background-color: #dcfce7 !important;
+  border-color: #34d399 !important;
+  color: #047857 !important;
+  box-shadow: inset 0 0 0 1px rgba(5, 150, 105, 0.08) !important;
+}
+html.light .profile-detail-page .profile-verification-badge svg {
+  color: #059669 !important;
+}
+
+/* Painel administrativo no claro: alertas e cards precisam manter hierarquia. */
+html.light .admin-dashboard .admin-dashboard-card {
+  background-color: #ffffff !important;
+  border-color: #c5d1df !important;
+  box-shadow: 0 5px 16px rgba(15, 23, 42, 0.055);
+}
+html.light .admin-dashboard .admin-dashboard-card:hover {
+  background-color: #f8fafc !important;
+  border-color: #94a3b8 !important;
+}
+html.light .admin-dashboard .admin-queue-alert {
+  background-color: #fffbeb !important;
+  border-color: #fbbf24 !important;
+  color: #92400e !important;
+}
+html.light .admin-dashboard .admin-queue-alert strong {
+  color: #78350f !important;
 }
 
 .profile-reveal {

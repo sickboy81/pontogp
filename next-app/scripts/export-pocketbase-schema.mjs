@@ -59,6 +59,7 @@ async function main() {
         id: c.id,
         name: c.name,
         type: c.type,
+        authRule: c.authRule ?? null,
         listRule: c.listRule ?? null,
         viewRule: c.viewRule ?? null,
         createRule: c.createRule ?? null,

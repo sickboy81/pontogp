@@ -67,7 +67,7 @@ export default function AdminDashboard() {
 
   if (loading) {
     return (
-      <div>
+      <div className="admin-dashboard">
         <h1 className="mb-6 text-2xl font-bold text-white">Centro de controle</h1>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3, 4, 5, 6].map((i) => (
@@ -175,7 +175,7 @@ export default function AdminDashboard() {
   ]
 
   return (
-    <div>
+    <div className="admin-dashboard">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-white">Centro de controle</h1>
         <p className="mt-2 max-w-3xl text-sm leading-relaxed text-slate-400">
@@ -184,7 +184,7 @@ export default function AdminDashboard() {
           continua acessível pelo menu <span className="text-slate-300">Admin</span> no canto superior.
         </p>
         {queueCount > 0 && (
-          <p className="mt-3 inline-flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
+          <p className="admin-queue-alert mt-3 inline-flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
             <AlertTriangle className="h-4 w-4 shrink-0" />
             {queueCount} itens na fila (mensagens, contatos, denúncias, verificação, PIX pendentes). Confira a seção
             <strong className="mx-1 text-amber-100">Fila</strong> abaixo.
@@ -209,7 +209,7 @@ export default function AdminDashboard() {
                 <Link
                   key={card.title}
                   href={card.href}
-                  className={`rounded-xl border border-slate-700 bg-slate-800/50 p-5 transition hover:border-slate-600 hover:bg-slate-800/70 ${ring}`}
+                  className={`admin-dashboard-card rounded-xl border border-slate-700 bg-slate-800/50 p-5 transition hover:border-slate-600 hover:bg-slate-800/70 ${ring}`}
                 >
                   <div className="flex items-center justify-between gap-2">
                     <span className={`${card.color} shrink-0`}>

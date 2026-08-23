@@ -163,7 +163,7 @@ export default function SiteHeader() {
         id="header-category"
         value={validCategory}
         onChange={(e) => applyFilters(e.target.value as CategoryValue, validGender)}
-        className="rounded-lg border border-slate-600 bg-slate-800/80 px-3 py-1.5 text-sm text-white focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+        className="header-filter-select rounded-lg border border-slate-600 bg-slate-800/80 px-3 py-1.5 text-sm text-white focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
       >
         {CATEGORIES.map((c) => (
           <option key={c.value} value={c.value}>{c.label}</option>
@@ -174,7 +174,7 @@ export default function SiteHeader() {
         id="header-gender"
         value={validGender}
         onChange={(e) => applyFilters(validCategory, e.target.value as GenderValue)}
-        className="rounded-lg border border-slate-600 bg-slate-800/80 px-3 py-1.5 text-sm text-white focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+        className="header-filter-select rounded-lg border border-slate-600 bg-slate-800/80 px-3 py-1.5 text-sm text-white focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
       >
         {GENDERS.map((g) => (
           <option key={g.value} value={g.value}>{g.label}</option>
@@ -380,17 +380,17 @@ export default function SiteHeader() {
               {mobileOpen || menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
             {!isMobile && menuOpen && (
-              <div className="absolute right-0 top-full z-50 mt-1 min-w-[180px] rounded-lg border border-slate-700 bg-slate-800 py-1 shadow-xl">
+              <div className="header-account-menu absolute right-0 top-full z-50 mt-1 min-w-[180px] rounded-lg border border-slate-700 bg-slate-800 py-1 shadow-xl">
                 <Link href="/" className="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-700 hover:text-white" onClick={closeAll}>Início</Link>
                 <Link href="/anunciantes" className="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-700 hover:text-white" onClick={closeAll}>Anunciantes</Link>
                 <Link href="/planos" className="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-700 hover:text-white" onClick={closeAll}>Planos</Link>
                 <div className="my-1 border-t border-slate-600" />
                 {isAuthenticated ? (
                   <>
-                    <Link href="/register?tipo=advertiser" className="block px-4 py-2 text-sm font-semibold text-primary-400 hover:bg-slate-700 hover:text-primary-300" onClick={closeAll}>Anunciar grátis</Link>
+                    <Link href="/register?tipo=advertiser" className="header-menu-cta block px-4 py-2 text-sm font-semibold text-primary-400 hover:bg-slate-700 hover:text-primary-300" onClick={closeAll}>Anunciar grátis</Link>
                     <Link href="/dashboard" className="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-700 hover:text-white" onClick={closeAll}>Dashboard</Link>
                     {isAdmin && (
-                      <Link href="/admin" className="block px-4 py-2 text-sm text-amber-400 hover:bg-slate-700 hover:text-amber-300" onClick={closeAll}>Admin</Link>
+                      <Link href="/admin" className="header-menu-admin block px-4 py-2 text-sm text-amber-400 hover:bg-slate-700 hover:text-amber-300" onClick={closeAll}>Admin</Link>
                     )}
                     <button type="button" className="w-full px-4 py-2 text-left text-sm text-slate-400 hover:bg-slate-700 hover:text-white" onClick={() => { logout(); closeAll() }}>Sair</button>
                   </>
@@ -413,7 +413,7 @@ export default function SiteHeader() {
       </div>
 
       {isMobile && mobileOpen && (
-        <nav className="border-t border-slate-700/50 bg-slate-900 px-4 py-4 md:hidden">
+        <nav className="header-mobile-menu border-t border-slate-700/50 bg-slate-900 px-4 py-4 md:hidden">
           <div className="mb-4 flex flex-col gap-2">
             <span className="text-xs font-medium uppercase tracking-wider text-slate-500">Filtrar</span>
             <div className="grid grid-cols-2 gap-2">
@@ -422,7 +422,7 @@ export default function SiteHeader() {
                 <select
                   value={validCategory}
                   onChange={(e) => { applyFilters(e.target.value as CategoryValue, validGender); closeAll() }}
-                  className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white"
+                  className="header-filter-select w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white"
                 >
                   {CATEGORIES.map((c) => (
                     <option key={c.value} value={c.value}>{c.label}</option>
@@ -434,7 +434,7 @@ export default function SiteHeader() {
                 <select
                   value={validGender}
                   onChange={(e) => { applyFilters(validCategory, e.target.value as GenderValue); closeAll() }}
-                  className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white"
+                  className="header-filter-select w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white"
                 >
                   {GENDERS.map((g) => (
                     <option key={g.value} value={g.value}>{g.label}</option>
