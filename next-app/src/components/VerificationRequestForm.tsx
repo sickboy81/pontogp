@@ -66,7 +66,7 @@ export default function VerificationRequestForm({ profile, onSuccess }: Verifica
 
   if (profile.verified) {
     return (
-      <div className="flex items-center gap-2 rounded-lg border border-green-500/30 bg-green-500/10 p-4 text-green-300">
+      <div className="advertiser-verification-status flex items-center gap-2 rounded-lg border border-green-500/30 bg-green-500/10 p-4 text-green-300">
         <ShieldCheck className="h-5 w-5 shrink-0" />
         <span>Perfil verificado</span>
       </div>

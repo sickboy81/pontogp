@@ -562,7 +562,7 @@ export default function DashboardClient() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl">
+    <div className="advertiser-dashboard mx-auto max-w-2xl">
       <h1 className="mb-6 text-2xl font-bold text-white">Dashboard</h1>
 
       {storyDraft && (
@@ -781,7 +781,7 @@ export default function DashboardClient() {
         </div>
         {myStories.length > 0 && (
           <div className="mb-4 grid gap-2 sm:grid-cols-3">
-            <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2">
+            <div className="advertiser-active-stat rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2">
               <p className="text-lg font-bold text-emerald-200">{activeStories.length}</p>
               <p className="text-xs uppercase tracking-wider text-emerald-300/80">Ativas agora</p>
             </div>

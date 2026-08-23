@@ -231,7 +231,7 @@ export default function PlanosClient() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-12">
+    <div className="pricing-page mx-auto max-w-5xl px-4 py-12">
       <h1 className="mb-2 text-3xl font-bold text-white">Planos e Preços</h1>
       <p className="mb-8 text-slate-400">
         Escolha o plano ideal. Comece grátis ou assine para mais visibilidade.
@@ -244,7 +244,7 @@ export default function PlanosClient() {
         )
         const currentPlanExpired = hasExpired(currentProfile?.search_expires_at) || hasExpired(currentProfile?.contact_expires_at)
         return (
-          <div className={`mb-6 rounded-xl p-4 ${currentPlanExpired ? 'border border-amber-500/50 bg-amber-500/10' : 'border border-primary-500/40 bg-primary-500/10'}`}>
+          <div className={`pricing-current-plan mb-6 rounded-xl p-4 ${currentPlanExpired ? 'border border-amber-500/50 bg-amber-500/10' : 'border border-primary-500/40 bg-primary-500/10'}`}>
             <p className="text-sm text-slate-400">Seu plano atual</p>
             <p className="text-lg font-semibold text-white">
               {currentPlan?.name ?? (currentProfile?.plan_slug || 'Grátis')}
@@ -259,7 +259,7 @@ export default function PlanosClient() {
       })()}
 
       {isAuthenticated && profiles.length > 0 && (
-        <div className="mb-6 flex flex-wrap items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-800/50 p-4">
+        <div className="pricing-coupon-panel mb-6 flex flex-wrap items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-800/50 p-4">
           <span className="text-sm text-slate-400">Tem um cupom?</span>
           <input
             type="text"
@@ -301,7 +301,7 @@ export default function PlanosClient() {
         </div>
       )}
 
-      <div className="mb-8 flex justify-center gap-2">
+      <div className="pricing-period-toggle mb-8 flex justify-center gap-2">
         <button
           type="button"
           onClick={() => setBillingPeriod('weekly')}
@@ -338,7 +338,7 @@ export default function PlanosClient() {
           return (
             <div
               key={plan.id}
-              className={`flex flex-col rounded-xl border p-6 transition ${
+              className={`pricing-plan-card flex flex-col rounded-xl border p-6 transition ${
                 isCurrentPlan
                   ? 'border-primary-500 bg-primary-500/10 ring-2 ring-primary-500/50'
                   : 'border-slate-700 bg-slate-800/50 hover:border-primary-500/50'

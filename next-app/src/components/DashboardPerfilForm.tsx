@@ -946,7 +946,7 @@ export default function DashboardPerfilForm() {
   const completionPercent = Math.round((completionItems.filter((item) => item.done).length / completionItems.length) * 100)
 
   return (
-    <div className="mx-auto max-w-2xl">
+    <div className="advertiser-profile-editor mx-auto max-w-2xl">
       <Link
         href="/dashboard"
         className="mb-6 inline-flex items-center gap-2 text-slate-400 transition hover:text-white"
@@ -2103,7 +2103,7 @@ export default function DashboardPerfilForm() {
                   {views > 0 ? `${ctr}% de CTR` : 'Sem dados suficientes'}
                 </p>
                 <p className="text-sm text-slate-400">
-                  {stats ? `${stats.periods.viewsLast30Days} visualizações e ${stats.periods.clicksLast30Days} cliques nos últimos 30 dias.` : 'Carregando dados reais do período.'}
+                  {stats ? `${stats.periods?.viewsLast30Days ?? 0} visualizações e ${stats.periods?.clicksLast30Days ?? 0} cliques nos últimos 30 dias.` : 'Carregando dados reais do período.'}
                 </p>
               </div>
 
@@ -2562,7 +2562,7 @@ export default function DashboardPerfilForm() {
                         )}
                         {socialLinks.length > 0 && (
                           <div className="mt-4 w-full">
-                            <p className="mb-2 text-center text-[10px] font-semibold uppercase tracking-wider text-slate-500">Redes sociais</p>
+                            <p className={`mb-2 text-center text-[10px] font-semibold uppercase tracking-wider ${initialColor}`}>Redes sociais</p>
                             <div className="grid grid-cols-2 gap-2">
                               {socialLinks.map((l) => (
                                 <div key={l.label} className={`rounded-xl border py-2.5 text-center text-xs font-medium ${linkBtnClass}`} style={linkBtnStyle}>{l.label}</div>

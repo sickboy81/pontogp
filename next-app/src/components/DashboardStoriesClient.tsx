@@ -123,7 +123,7 @@ export default function DashboardStoriesClient() {
   const totalViews = stories.reduce((sum, s) => sum + (Number(s.views) || 0), 0)
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="advertiser-dashboard mx-auto max-w-3xl">
       <Link href="/dashboard" className="mb-4 inline-flex items-center gap-2 text-sm text-slate-400 hover:text-white">
         <ArrowLeft className="h-4 w-4" />
         Voltar ao dashboard
@@ -148,7 +148,7 @@ export default function DashboardStoriesClient() {
       </div>
 
       <div className="mb-6 grid gap-3 sm:grid-cols-3">
-        <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-4">
+        <div className="advertiser-active-stat rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-4">
           <p className="text-2xl font-bold text-emerald-200">{activeCount}</p>
           <p className="text-xs uppercase tracking-wider text-emerald-300/80">Ativas agora</p>
         </div>
@@ -203,7 +203,7 @@ export default function DashboardStoriesClient() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2 text-xs">
-                    <span className={`rounded px-2 py-0.5 font-medium ${s.active ? 'bg-emerald-500/20 text-emerald-300' : 'bg-slate-600 text-slate-300'}`}>
+                    <span className={`advertiser-story-status rounded px-2 py-0.5 font-medium ${s.active ? 'bg-emerald-500/20 text-emerald-300' : 'bg-slate-600 text-slate-300'}`}>
                       {s.active ? 'Ativa' : 'Expirada / inativa'}
                     </span>
                     <span className="text-slate-500">{s.type === 'video' ? 'Vídeo' : 'Imagem'}</span>

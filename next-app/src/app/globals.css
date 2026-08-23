@@ -599,6 +599,15 @@ html.light .profile-detail-page .profile-verification-badge {
 html.light .profile-detail-page .profile-verification-badge svg {
   color: #059669 !important;
 }
+html.light .profile-detail-page .profile-report-button {
+  background-color: #fffbeb !important;
+  border-color: #f59e0b !important;
+  color: #92400e !important;
+}
+html.light .profile-detail-page .profile-report-button:hover {
+  background-color: #fef3c7 !important;
+  color: #78350f !important;
+}
 
 /* Painel administrativo no claro: alertas e cards precisam manter hierarquia. */
 html.light .admin-dashboard .admin-dashboard-card {
@@ -617,6 +626,86 @@ html.light .admin-dashboard .admin-queue-alert {
 }
 html.light .admin-dashboard .admin-queue-alert strong {
   color: #78350f !important;
+}
+
+/* Dashboard do anunciante: verde funcional precisa continuar legível no claro. */
+html.light .advertiser-dashboard .advertiser-active-stat {
+  background-color: #ecfdf5 !important;
+  border-color: #6ee7b7 !important;
+}
+html.light .advertiser-dashboard .advertiser-active-stat .text-emerald-200 {
+  color: #047857 !important;
+}
+html.light .advertiser-dashboard .advertiser-active-stat .text-emerald-300\/80 {
+  color: #047857 !important;
+}
+html.light .advertiser-dashboard .advertiser-story-status {
+  background-color: #d1fae5 !important;
+  color: #047857 !important;
+}
+html.light .advertiser-dashboard .advertiser-verification-status {
+  background-color: #ecfdf5 !important;
+  border-color: #6ee7b7 !important;
+  color: #047857 !important;
+}
+
+/* Editor de perfil do anunciante: campos, divisores e estados claros. */
+html.light .advertiser-profile-editor .bg-slate-800\/50,
+html.light .advertiser-profile-editor .bg-slate-800\/40,
+html.light .advertiser-profile-editor .bg-slate-900\/50,
+html.light .advertiser-profile-editor .bg-slate-900\/40,
+html.light .advertiser-profile-editor .bg-slate-900\/30 {
+  background-color: #f8fafc !important;
+}
+html.light .advertiser-profile-editor .border-slate-700,
+html.light .advertiser-profile-editor .border-slate-700\/80 {
+  border-color: #c5d1df !important;
+}
+html.light .advertiser-profile-editor .border-slate-600 {
+  border-color: #aebed0 !important;
+}
+html.light .advertiser-profile-editor .text-emerald-300,
+html.light .advertiser-profile-editor .text-emerald-500 {
+  color: #047857 !important;
+}
+html.light .advertiser-profile-editor [disabled] {
+  color: #64748b !important;
+  opacity: 0.82 !important;
+}
+html.light .advertiser-profile-editor .bg-emerald-500 {
+  background-color: #059669 !important;
+}
+
+/* Página de planos: reforça cartões, cupom e recursos no tema claro. */
+html.light .pricing-page .pricing-plan-card {
+  background-color: #ffffff !important;
+  border-color: #c5d1df !important;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.06);
+}
+html.light .pricing-page .pricing-plan-card:hover {
+  border-color: #94a3b8 !important;
+}
+html.light .pricing-page .pricing-current-plan {
+  background-color: #fff1f2 !important;
+  border-color: #fda4af !important;
+}
+html.light .pricing-page .pricing-coupon-panel {
+  background-color: #f1f5f9 !important;
+  border-color: #c5d1df !important;
+}
+html.light .pricing-page .pricing-period-toggle button:not(.bg-primary-600) {
+  background-color: #e2e8f0 !important;
+  color: #334155 !important;
+}
+html.light .pricing-page .text-green-500 {
+  color: #15803d !important;
+}
+html.light .pricing-page .text-amber-400 {
+  color: #a16207 !important;
+}
+html.light .pricing-page .bg-primary-600\/80.text-white {
+  background-color: #be123c !important;
+  color: #ffffff !important;
 }
 
 .profile-reveal {

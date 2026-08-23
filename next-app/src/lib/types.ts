@@ -183,7 +183,7 @@ export interface Message {
   read: boolean
   created_at: string
   expand?: {
-    sender?: { id: string; name?: string; email?: string; avatar?: string }
-    recipient?: { id: string; name?: string; email?: string; avatar?: string }
+    sender?: { id: string; name?: string; email?: string; avatar?: string; role?: string }
+    recipient?: { id: string; name?: string; email?: string; avatar?: string; role?: string }
   }
 }

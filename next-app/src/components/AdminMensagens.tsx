@@ -30,6 +30,10 @@ type Thread = {
   rightId: string
 }
 
+function threadIsForAdmin(t: Thread) {
+  return t.lastMessage.expand?.sender?.role === 'admin' || t.lastMessage.expand?.recipient?.role === 'admin'
+}
+
 function displayNameForUser(messages: Message[], userId: string) {
   for (const m of messages) {
     if ((m.sender_id ?? m.sender) === userId) {
@@ -121,6 +125,7 @@ export default function AdminMensagens() {
   const [rawMessages, setRawMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'unread_thread'>('all')
+  const [audience, setAudience] = useState<'admin' | 'users'>('admin')
   const [selected, setSelected] = useState<Thread | null>(null)
   const [threadMsgs, setThreadMsgs] = useState<Message[]>([])
   const [threadLoading, setThreadLoading] = useState(false)
@@ -152,11 +157,9 @@ export default function AdminMensagens() {
   }, [rawMessages])
 
   const visibleThreads = useMemo(() => {
-    if (filter === 'unread_thread') {
-      return threads.filter((t) => t.unreadInThread > 0)
-    }
-    return threads
-  }, [threads, filter])
+    const byAudience = threads.filter((t) => (audience === 'admin' ? threadIsForAdmin(t) : !threadIsForAdmin(t)))
+    return filter === 'unread_thread' ? byAudience.filter((t) => t.unreadInThread > 0) : byAudience
+  }, [threads, filter, audience])
 
   const openThread = useCallback(
     async (t: Thread) => {
@@ -207,6 +210,25 @@ export default function AdminMensagens() {
       <div className="mb-6 flex flex-wrap gap-2">
         <button
           type="button"
+          onClick={() => { setAudience('admin'); setSelected(null); setThreadMsgs([]) }}
+          className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+            audience === 'admin' ? 'bg-primary-500 text-white' : 'bg-slate-700 text-slate-400 hover:bg-slate-600 hover:text-white'
+          }`}
+        >
+          Mensagens para o admin
+        </button>
+        <button
+          type="button"
+          onClick={() => { setAudience('users'); setSelected(null); setThreadMsgs([]) }}
+          className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+            audience === 'users' ? 'bg-primary-500 text-white' : 'bg-slate-700 text-slate-400 hover:bg-slate-600 hover:text-white'
+          }`}
+        >
+          Conversas entre usuários
+        </button>
+        <span className="basis-full" />
+        <button
+          type="button"
           onClick={() => setFilter('all')}
           className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
             filter === 'all'
@@ -245,7 +267,7 @@ export default function AdminMensagens() {
         <div className="grid min-h-[480px] gap-4 lg:grid-cols-[minmax(280px,340px)_1fr]">
           <div className="overflow-hidden rounded-xl border border-slate-700 bg-slate-800/50">
             <div className="border-b border-slate-700 px-3 py-2 text-xs text-slate-500">
-              {threads.length} conversa{threads.length !== 1 ? 's' : ''} (últimas {THREAD_FETCH} mensagens)
+              {visibleThreads.length} conversa{visibleThreads.length !== 1 ? 's' : ''} nesta aba (últimas {THREAD_FETCH} mensagens)
             </div>
             <div className="max-h-[min(70vh,720px)] overflow-y-auto">
               {visibleThreads.length === 0 ? (

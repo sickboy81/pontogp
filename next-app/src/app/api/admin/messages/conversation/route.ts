@@ -23,21 +23,24 @@ export async function GET(request: NextRequest) {
   }
 
   const perPage = Math.min(500, Math.max(1, Number(request.nextUrl.searchParams.get('perPage')) || 500))
-  const filter = `((sender = "${a}" && recipient = "${b}") || (sender = "${b}" && recipient = "${a}"))`
-
   try {
-    const url = `${PB_URL}/api/collections/messages/records?perPage=${perPage}&page=1&filter=${encodeURIComponent(
-      filter
-    )}&sort=created&expand=sender,recipient`
+    // O PocketBase rejeita filtros de relação nesta coleção em algumas versões
+    // (HTTP 400), embora a listagem administrativa funcione. Buscamos o mesmo
+    // lote moderável usado pela lista e filtramos pelos IDs no servidor.
+    const url = `${PB_URL}/api/collections/messages/records?perPage=${perPage}&page=1&sort=-created_at&expand=sender,recipient`
     const res = await fetch(url, {
       headers: { Authorization: `Bearer ${auth.token}` },
       cache: 'no-store',
     })
-    if (!res.ok) {
-      return Response.json({ error: 'Erro ao carregar conversa' }, { status: res.status })
-    }
+    if (!res.ok) return Response.json({ error: 'Erro ao carregar conversa' }, { status: res.status })
     const data = await res.json()
-    const items = ((data.items || []) as Record<string, unknown>[]).map((r) => mapMessage(r)) as Message[]
+    const rows = ((data.items || []) as Record<string, unknown>[]).filter((row) => {
+      const sender = String(row.sender || '')
+      const recipient = String(row.recipient || '')
+      return (sender === a && recipient === b) || (sender === b && recipient === a)
+    })
+    rows.sort((left, right) => String(left.created_at || left.created || '').localeCompare(String(right.created_at || right.created || '')))
+    const items = rows.map((r) => mapMessage(r)) as Message[]
     return Response.json({ items, total: items.length })
   } catch {
     return Response.json({ error: 'Erro ao carregar conversa' }, { status: 500 })

@@ -10,6 +10,12 @@ const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cer
 export const dynamic = 'force-dynamic'
 
 const CLICK_TYPES = ['whatsapp', 'telegram', 'phone', 'message', 'instagram', 'twitter', 'privacy', 'onlyfans'] as const
+const EMPTY_PERIODS = {
+  viewsLast7Days: 0,
+  viewsLast30Days: 0,
+  clicksLast7Days: 0,
+  clicksLast30Days: 0,
+}
 
 type ClickType = (typeof CLICK_TYPES)[number]
 type CountRow = { created?: string; contact_type?: string; viewer_ip?: string }
@@ -115,7 +121,7 @@ export async function GET(request: NextRequest) {
 
   if (analyticsLevel === 'views') {
     const views = await fetchCount(adminToken, 'profile_views', baseFilter)
-    return Response.json({ analyticsLevel, totals: { views: views || profile.views || 0 } })
+    return Response.json({ analyticsLevel, totals: { views: views || profile.views || 0 }, periods: EMPTY_PERIODS })
   }
 
   if (analyticsLevel === 'basic') {
@@ -131,6 +137,7 @@ export async function GET(request: NextRequest) {
         clicks: clicks || profile.clicks || 0,
         favorites: favorites || profile.favorites_count || 0,
       },
+      periods: EMPTY_PERIODS,
     })
   }
 

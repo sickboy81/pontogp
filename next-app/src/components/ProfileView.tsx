@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { Eye, Heart, ImageIcon, MessageCircle, Phone, Send, X } from 'lucide-react'
+import { Eye, Flag, Heart, ImageIcon, MessageCircle, Phone, Send, X } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
 import { useFavoritesStore } from '@/store/favorites'
 import type { Profile } from '@/lib/types'
@@ -254,8 +254,6 @@ export default function ProfileView({
               unavailable={isUnavailable}
               tagChipClass={tagChipClass}
               priceItems={priceItems}
-              canReport={!!canReport}
-              onOpenReport={() => setReportOpen(true)}
             />
             <ProfileActions
               profile={profile}
@@ -295,6 +293,19 @@ export default function ProfileView({
                 </div>
               </div>
             </div>
+            {canReport && (
+              <div className="mt-3 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setReportOpen(true)}
+                  className="profile-report-button inline-flex items-center gap-2 rounded-full border border-amber-400/40 bg-amber-500/10 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-amber-200 transition hover:bg-amber-500/20 hover:text-amber-100"
+                  aria-label="Denunciar perfil"
+                >
+                  <Flag className="h-3.5 w-3.5" />
+                  Denunciar perfil
+                </button>
+              </div>
+            )}
           </div>
         </div>
         <ProfileSections

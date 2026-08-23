@@ -7,12 +7,12 @@ function avatarUrl(userId: string, filename: string | undefined): string | undef
   return `${PB_URL}/api/files/users/${userId}/${filename}`
 }
 
-function mapUserExpand(record: Record<string, unknown> | undefined): { id: string; name?: string; email?: string; avatar?: string } | undefined {
+function mapUserExpand(record: Record<string, unknown> | undefined): { id: string; name?: string; email?: string; avatar?: string; role?: string } | undefined {
   if (!record || typeof record !== 'object') return undefined
   const id = record.id as string
   const name = (record.name as string) || (record.first_name as string) || (record.email as string) || ''
   const avatar = record.avatar ? avatarUrl(id, record.avatar as string) : undefined
-  return { id, name, email: record.email as string | undefined, avatar }
+  return { id, name, email: record.email as string | undefined, avatar, role: record.role as string | undefined }
 }
 
 export function mapMessage(record: Record<string, unknown> & { expand?: Record<string, unknown> }): Message {
