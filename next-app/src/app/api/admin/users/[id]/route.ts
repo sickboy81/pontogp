@@ -186,6 +186,17 @@ export async function PATCH(
   }
 }
 
+async function deleteRelatedRecords(token: string, collection: string, fields: string[], userId: string) {
+  const res = await fetch(`${PB_URL}/api/collections/${collection}/records?perPage=500&page=1`, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
+  if (!res.ok) return
+  const data = await res.json() as { items?: Record<string, unknown>[] }
+  for (const record of data.items || []) {
+    if (fields.some((field) => record[field] === userId || (Array.isArray(record[field]) && (record[field] as unknown[]).includes(userId)))) {
+      await fetch(`${PB_URL}/api/collections/${collection}/records/${encodeURIComponent(String(record.id))}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } })
+    }
+  }
+}
+
 /** DELETE: remove uma conta e o seu perfil, apenas por ação administrativa explícita. */
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireAdmin(request)
@@ -199,10 +210,27 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     if (!currentRes.ok) return Response.json({ error: 'Utilizador não encontrado' }, { status: 404 })
     const current = await currentRes.json() as { role?: string }
     if (isAdminRole(current.role) && await countAdminUsers(token) <= 1) return Response.json({ error: 'Não é possível excluir o último administrador.' }, { status: 400 })
-    const profileRes = await fetch(`${PB_URL}/api/collections/profiles/records?filter=${encodeURIComponent(`user = "${id}"`)}&perPage=50&fields=id`, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
+    // Apaga primeiro os registros que mantêm relações obrigatórias com a conta.
+    await deleteRelatedRecords(token, 'messages', ['sender', 'recipient'], id)
+    await deleteRelatedRecords(token, 'notifications', ['recipient'], id)
+    await deleteRelatedRecords(token, 'favorites', ['user'], id)
+    await deleteRelatedRecords(token, 'subscriptions', ['user'], id)
+    await deleteRelatedRecords(token, 'verification_requests', ['user'], id)
+    await deleteRelatedRecords(token, 'verification_tokens', ['user_id'], id)
+    await deleteRelatedRecords(token, 'message_blocks', ['user_a', 'user_b'], id)
+    await deleteRelatedRecords(token, 'story_comments', ['user'], id)
+    await deleteRelatedRecords(token, 'story_likes', ['user'], id)
+    await deleteRelatedRecords(token, 'comment_likes', ['user'], id)
+    await deleteRelatedRecords(token, 'payments', ['user'], id)
+    await deleteRelatedRecords(token, 'push_subscriptions', ['user'], id)
+    await deleteRelatedRecords(token, 'reports', ['reported_by'], id)
+    const profileRes = await fetch(`${PB_URL}/api/collections/profiles/records?perPage=500&page=1`, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
     if (profileRes.ok) {
-      const profiles = await profileRes.json() as { items?: { id: string }[] }
-      for (const profile of profiles.items || []) await fetch(`${PB_URL}/api/collections/profiles/records/${profile.id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } })
+      const profiles = await profileRes.json() as { items?: { id: string; user?: string }[] }
+      for (const profile of (profiles.items || []).filter((profile) => profile.user === id)) {
+        await deleteRelatedRecords(token, 'stories', ['profile'], profile.id)
+        await fetch(`${PB_URL}/api/collections/profiles/records/${encodeURIComponent(profile.id)}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } })
+      }
     }
     const res = await fetch(`${PB_URL}/api/collections/users/records/${encodeURIComponent(id)}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } })
     if (!res.ok) {
