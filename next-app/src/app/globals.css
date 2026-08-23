@@ -451,6 +451,63 @@ html.light .animate-pulse .bg-slate-700 {
   background-color: #cbd5e1 !important;
 }
 
+/* Perfil público no tema claro: cards leves, contraste alto e hierarquia nítida. */
+html.light .profile-detail-page > .relative {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.12) !important;
+}
+html.light .profile-detail-page .bg-slate-900\/70,
+html.light .profile-detail-page .bg-slate-900\/65,
+html.light .profile-detail-page .bg-slate-900\/60 {
+  background-color: #ffffff !important;
+}
+html.light .profile-detail-page .bg-slate-800\/65,
+html.light .profile-detail-page .bg-slate-800\/60,
+html.light .profile-detail-page .bg-slate-800\/50,
+html.light .profile-detail-page .bg-slate-800\/40 {
+  background-color: #f8fafc !important;
+}
+html.light .profile-detail-page .bg-slate-900\/40,
+html.light .profile-detail-page .bg-slate-700 {
+  background-color: #e2e8f0 !important;
+}
+html.light .profile-detail-page .border-slate-700\/70,
+html.light .profile-detail-page .border-slate-700 {
+  border-color: #e2e8f0 !important;
+}
+html.light .profile-detail-page .border-slate-600 {
+  border-color: #cbd5e1 !important;
+}
+html.light .profile-detail-page .text-white {
+  color: #0f172a !important;
+}
+html.light .profile-detail-page .text-slate-200,
+html.light .profile-detail-page .text-slate-300 {
+  color: #334155 !important;
+}
+html.light .profile-detail-page .text-slate-400,
+html.light .profile-detail-page .text-slate-500 {
+  color: #64748b !important;
+}
+html.light .profile-detail-page .text-slate-600 {
+  color: #475569 !important;
+}
+html.light .profile-detail-page .bg-primary-600.text-white,
+html.light .profile-detail-page .bg-green-600.text-white,
+html.light .profile-detail-page .bg-sky-600.text-white,
+html.light .profile-detail-page .bg-pink-600.text-white,
+html.light .profile-detail-page .bg-orange-500.text-white,
+html.light .profile-detail-page .bg-cyan-500.text-white {
+  color: #ffffff !important;
+}
+html.light .profile-detail-page .hover\:bg-slate-700:hover {
+  background-color: #e2e8f0 !important;
+}
+html.light .profile-detail-page .profile-gallery-scroll {
+  scrollbar-color: #cbd5e1 transparent;
+}
+
 .profile-reveal {
   animation: profile-reveal-up 0.55s ease both;
 }

@@ -230,7 +230,7 @@ export default function ProfileView({
   }, [shouldLoadMessagesSettings])
 
   return (
-    <div className={`mx-auto max-w-7xl px-4 py-8 ${hasMobileContactBar ? 'pb-28 md:pb-8' : ''}`}>
+    <div className={`profile-detail-page mx-auto max-w-7xl px-4 py-8 ${hasMobileContactBar ? 'pb-28 md:pb-8' : ''}`}>
       <div className="relative overflow-hidden rounded-[2rem] border border-slate-700/70 bg-slate-900/70 p-4 shadow-[0_30px_80px_rgba(2,6,23,0.45)] sm:p-6 lg:p-8">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(190,24,93,0.16),transparent_32%),radial-gradient(circle_at_bottom_right,rgba(249,115,22,0.12),transparent_24%)]" />
         <div className="relative mb-8 flex flex-col gap-6 lg:flex-row lg:items-start">
