@@ -508,6 +508,40 @@ html.light .profile-detail-page .profile-gallery-scroll {
   scrollbar-color: #cbd5e1 transparent;
 }
 
+/* A mídia do perfil precisa manter contraste próprio: o overlay não pode ficar claro. */
+html.light .profile-detail-page .profile-media-hover .from-slate-950 {
+  --tw-gradient-from: rgba(15, 23, 42, 0.96) var(--tw-gradient-from-position);
+  --tw-gradient-to: rgba(15, 23, 42, 0) var(--tw-gradient-to-position);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+html.light .profile-detail-page .profile-media-hover .via-slate-950\/25 {
+  --tw-gradient-via: rgba(15, 23, 42, 0.25) var(--tw-gradient-via-position);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-via), var(--tw-gradient-to);
+}
+html.light .profile-detail-page .profile-media-hover .text-white,
+html.light .profile-detail-page .profile-media-hover .text-slate-200 {
+  color: #ffffff !important;
+}
+html.light .profile-detail-page .profile-media-hover .text-primary-300 {
+  color: #fda4af !important;
+}
+html.light .profile-detail-page .profile-media-hover .bg-white\/10 {
+  background-color: rgba(255, 255, 255, 0.16) !important;
+}
+
+/* Separação perceptível entre níveis de conteúdo, sem o aspecto lavado. */
+html.light .profile-detail-page section.rounded-\[1\.75rem\],
+html.light .profile-detail-page .rounded-\[1\.75rem\] {
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.045);
+}
+html.light .profile-detail-page .bg-slate-800\/65,
+html.light .profile-detail-page .bg-slate-800\/60 {
+  background-color: #f1f5f9 !important;
+}
+html.light .profile-detail-page .text-slate-500 {
+  color: #52657d !important;
+}
+
 .profile-reveal {
   animation: profile-reveal-up 0.55s ease both;
 }
