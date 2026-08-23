@@ -126,7 +126,8 @@ export default function LinkBioView({ profile, profileUrl }: LinkBioViewProps) {
       : 0
   const thumbnail = photos[avatarIndex] || profile.thumbnail || profile.photos?.[0]
   const description = profile.short_description?.trim() || profile.bio_title?.trim() || (profile.bio ? profile.bio.slice(0, 120) + (profile.bio.length > 120 ? '...' : '') : '')
-  const theme = profile.bio_theme === 'light' ? 'light' : profile.bio_theme === 'minimal' ? 'minimal' : profile.bio_theme === 'sunset' ? 'sunset' : profile.bio_theme === 'cherry' ? 'cherry' : 'dark'
+  const theme = ['light', 'minimal', 'sunset', 'cherry', 'ocean', 'lavender', 'emerald'].includes(profile.bio_theme || '') ? profile.bio_theme as string : 'dark'
+  const richTheme = ['sunset', 'cherry', 'ocean', 'lavender', 'emerald'].includes(theme)
   const bioLinks = Array.isArray(profile.bio_links) ? profile.bio_links.filter((l) => l?.label && l?.url) : []
   const visibleBioLinks = showCustomBioLinks ? bioLinks : []
   const bioLinkUrls = new Set(visibleBioLinks.map((link) => normalizeLinkUrl(bioLinkHref(link.url))).filter(Boolean))
@@ -154,7 +155,7 @@ export default function LinkBioView({ profile, profileUrl }: LinkBioViewProps) {
   const linkButtonStyle = buttonColor ? { backgroundColor: buttonColor, borderColor: buttonColor, color: '#fff' } : undefined
   const defaultLinkButtonClass = theme === 'dark'
     ? 'border-slate-600 bg-slate-800 text-slate-200 hover:bg-slate-700'
-    : theme === 'sunset' || theme === 'cherry'
+    : ['sunset', 'cherry', 'ocean', 'lavender', 'emerald'].includes(theme)
       ? 'border-white/40 bg-white/20 text-white hover:bg-white/30'
       : 'border-slate-300 bg-slate-100 text-slate-800 hover:bg-slate-200'
   const linkButtonClass = linkButtonStyle ? 'border text-white' : defaultLinkButtonClass
@@ -200,12 +201,15 @@ export default function LinkBioView({ profile, profileUrl }: LinkBioViewProps) {
       theme === 'minimal' ? 'bg-white' :
       theme === 'sunset' ? 'bg-gradient-to-br from-orange-400/90 via-rose-500/90 to-rose-700' :
       theme === 'cherry' ? 'bg-gradient-to-br from-rose-800 to-red-950' :
+      theme === 'ocean' ? 'bg-gradient-to-br from-cyan-700 to-blue-950' :
+      theme === 'lavender' ? 'bg-gradient-to-br from-violet-500 to-fuchsia-800' :
+      theme === 'emerald' ? 'bg-gradient-to-br from-emerald-500 to-teal-900' :
       'bg-gradient-to-b from-slate-900 to-slate-950'
     }`}>
       <div className="mx-auto flex max-w-sm flex-col items-center">
         <div className={`mb-6 h-32 w-32 overflow-hidden rounded-full border-4 shadow-xl ${
           theme === 'light' ? 'border-slate-300 bg-slate-200' : theme === 'minimal' ? 'border-slate-200 bg-slate-100' :
-          theme === 'sunset' || theme === 'cherry' ? 'border-white/30 bg-white/20' : 'border-slate-600 bg-slate-700'
+          ['sunset', 'cherry', 'ocean', 'lavender', 'emerald'].includes(theme) ? 'border-white/30 bg-white/20' : 'border-slate-600 bg-slate-700'
         }`}>
           {thumbnail ? (
             <div className="relative h-full w-full">
@@ -218,24 +222,24 @@ export default function LinkBioView({ profile, profileUrl }: LinkBioViewProps) {
               />
             </div>
           ) : (
-            <div className={`flex h-full w-full items-center justify-center text-3xl font-bold ${theme === 'dark' ? 'text-slate-500' : theme === 'sunset' || theme === 'cherry' ? 'text-white/70' : 'text-slate-400'}`}>
+            <div className={`flex h-full w-full items-center justify-center text-3xl font-bold ${theme === 'dark' ? 'text-slate-500' : richTheme ? 'text-white/70' : 'text-slate-400'}`}>
               {profile.name?.charAt(0) || '?'}
             </div>
           )}
         </div>
         <h1 className={`text-center text-2xl font-bold ${
-          theme === 'dark' || theme === 'sunset' || theme === 'cherry' ? 'text-white' : 'text-slate-900'
+          theme === 'dark' || richTheme ? 'text-white' : 'text-slate-900'
         }`}>{profile.name}</h1>
         {(profile.city || profile.state) && (
           <p className={`mt-1 text-sm ${
-            theme === 'dark' ? 'text-slate-400' : theme === 'sunset' || theme === 'cherry' ? 'text-white/80' : 'text-slate-600'
+            theme === 'dark' ? 'text-slate-400' : richTheme ? 'text-white/80' : 'text-slate-600'
           }`}>
             {[profile.city, profile.state].filter(Boolean).join(', ')}
           </p>
         )}
         {(profile.short_description?.trim() || description) && (
           <p className={`mt-3 max-w-sm text-center text-sm ${
-            theme === 'dark' ? 'text-slate-300' : theme === 'sunset' || theme === 'cherry' ? 'text-white/90' : 'text-slate-600'
+            theme === 'dark' ? 'text-slate-300' : richTheme ? 'text-white/90' : 'text-slate-600'
           }`}>{profile.short_description?.trim() || description}</p>
         )}
         <div className="mt-2 flex flex-wrap justify-center gap-2">

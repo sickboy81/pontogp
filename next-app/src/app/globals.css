@@ -669,9 +669,24 @@ html.light .advertiser-profile-editor .text-emerald-500 {
   color: #047857 !important;
 }
 html.light .advertiser-profile-editor [disabled] {
-  color: #64748b !important;
-  opacity: 0.82 !important;
-}
+    color: #64748b !important;
+    opacity: 0.82 !important;
+  }
+
+  /* Prefixos das redes sociais não podem perder contraste no tema claro. */
+  html.light .advertiser-profile-editor .bg-slate-900\/80 {
+    background-color: #e2e8f0 !important;
+    color: #334155 !important;
+    border-color: #aebed0 !important;
+  }
+  html.light .advertiser-profile-editor .text-slate-600 {
+    color: #475569 !important;
+  }
+  html.light .advertiser-profile-editor .bio-theme-preview[data-theme="dark"] { background: linear-gradient(to bottom, #0f172a, #020617) !important; }
+  html.light .advertiser-profile-editor .bio-theme-preview[data-theme="cherry"] { background: linear-gradient(135deg, #9f1239, #450a0a) !important; }
+  html.light .advertiser-profile-editor .bio-theme-preview[data-theme="ocean"] { background: linear-gradient(135deg, #0e7490, #172554) !important; }
+  html.light .advertiser-profile-editor .bio-theme-preview[data-theme="lavender"] { background: linear-gradient(135deg, #8b5cf6, #86198f) !important; }
+  html.light .advertiser-profile-editor .bio-theme-preview[data-theme="emerald"] { background: linear-gradient(135deg, #10b981, #134e4a) !important; }
 html.light .advertiser-profile-editor .bg-emerald-500 {
   background-color: #059669 !important;
 }

@@ -1155,13 +1155,16 @@ export default function DashboardPerfilForm() {
         <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-300">Peso</label>
-            <input
-              type="text"
-              value={form.weight}
-              onChange={(e) => setForm((f) => ({ ...f, weight: e.target.value }))}
-              placeholder="Ex: 60kg"
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white placeholder-slate-500 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-            />
+            <div className="flex items-center rounded-lg border border-slate-600 bg-slate-800 focus-within:border-primary-500 focus-within:ring-1 focus-within:ring-primary-500">
+              <input
+                type="text"
+                value={form.weight}
+                onChange={(e) => setForm((f) => ({ ...f, weight: e.target.value.replace(/\s*kg\s*$/i, '') }))}
+                placeholder="Ex: 60"
+                className="min-w-0 flex-1 border-0 bg-transparent px-3 py-2 text-white placeholder-slate-500 focus:outline-none"
+              />
+              <span className="pr-3 text-sm font-medium text-slate-400">Kg</span>
+            </div>
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-300">Cor dos olhos</label>
@@ -1530,9 +1533,9 @@ export default function DashboardPerfilForm() {
           />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-300">Bio</label>
+          <label className="mb-1 block text-sm font-medium text-slate-300">Descrição do perfil</label>
           <textarea
-            rows={4}
+            rows={8}
             value={form.bio}
             onChange={(e) => setForm((f) => ({ ...f, bio: e.target.value }))}
             className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
@@ -1560,16 +1563,16 @@ export default function DashboardPerfilForm() {
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-300">Slug (link bio)</label>
+          <label className="mb-1 block text-sm font-medium text-slate-300">@usuário (link da bio)</label>
           <input
             type="text"
             value={form.slug}
-            onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value.replace(/\s+/g, '-').toLowerCase() }))}
+            onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value.replace(/^@+/, '').replace(/\s+/g, '-').toLowerCase() }))}
             placeholder="seu-nome"
             className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white placeholder-slate-500 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
           />
           {form.slug && (
-            <p className="mt-1 text-xs text-slate-500">Seu link: /{form.slug}</p>
+            <p className="mt-1 text-xs text-slate-500">Seu link: /@{form.slug.replace(/^@/, '')}</p>
           )}
         </div>
 
@@ -2320,6 +2323,9 @@ export default function DashboardPerfilForm() {
                       { id: 'minimal', name: 'Mínimo', bg: 'bg-white' },
                       { id: 'sunset', name: 'Sunset Vibes', bg: 'bg-gradient-to-br from-orange-400 to-rose-600' },
                       { id: 'cherry', name: 'Cereja', bg: 'bg-gradient-to-br from-rose-700 to-red-900' },
+                      { id: 'ocean', name: 'Oceano', bg: 'bg-gradient-to-br from-cyan-700 to-blue-950' },
+                      { id: 'lavender', name: 'Lavanda', bg: 'bg-gradient-to-br from-violet-500 to-fuchsia-800' },
+                      { id: 'emerald', name: 'Esmeralda', bg: 'bg-gradient-to-br from-emerald-500 to-teal-900' },
                     ].map((t) => (
                       <button
                         key={t.id}
@@ -2500,15 +2506,16 @@ export default function DashboardPerfilForm() {
 
                 {previewBio && profile && (() => {
                   const theme = form.bio_theme || 'dark'
-                  const previewBg = theme === 'light' ? 'bg-gradient-to-b from-slate-100 to-slate-200' : theme === 'minimal' ? 'bg-white' : theme === 'sunset' ? 'bg-gradient-to-br from-orange-400/90 via-rose-500/90 to-rose-700' : theme === 'cherry' ? 'bg-gradient-to-br from-rose-800 to-red-950' : 'bg-gradient-to-b from-slate-900 to-slate-950'
-                  const avatarBorder = theme === 'light' ? 'border-slate-300 bg-slate-200' : theme === 'minimal' ? 'border-slate-200 bg-slate-100' : theme === 'sunset' || theme === 'cherry' ? 'border-white/30 bg-white/20' : 'border-slate-600 bg-slate-700'
-                  const nameColor = theme === 'dark' || theme === 'sunset' || theme === 'cherry' ? 'text-white' : 'text-slate-900'
-                  const descColor = theme === 'dark' ? 'text-slate-400' : theme === 'sunset' || theme === 'cherry' ? 'text-white/90' : 'text-slate-600'
-                  const defaultLinkBtnClass = theme === 'dark' ? 'bg-slate-800 border-slate-600 text-slate-200' : theme === 'sunset' || theme === 'cherry' ? 'bg-white/20 border-white/40 text-white' : 'bg-slate-100 border-slate-300 text-slate-800'
+                  const darkTheme = ['dark', 'sunset', 'cherry', 'ocean', 'lavender', 'emerald'].includes(theme)
+                  const previewBg = theme === 'light' ? 'bg-gradient-to-b from-slate-100 to-slate-200' : theme === 'minimal' ? 'bg-white' : theme === 'sunset' ? 'bg-gradient-to-br from-orange-400/90 via-rose-500/90 to-rose-700' : theme === 'cherry' ? 'bg-gradient-to-br from-rose-800 to-red-950' : theme === 'ocean' ? 'bg-gradient-to-br from-cyan-700 to-blue-950' : theme === 'lavender' ? 'bg-gradient-to-br from-violet-500 to-fuchsia-800' : theme === 'emerald' ? 'bg-gradient-to-br from-emerald-500 to-teal-900' : 'bg-gradient-to-b from-slate-900 to-slate-950'
+                  const avatarBorder = darkTheme ? 'border-white/30 bg-white/20' : theme === 'light' ? 'border-slate-300 bg-slate-200' : 'border-slate-200 bg-slate-100'
+                  const nameColor = darkTheme ? 'text-white' : 'text-slate-900'
+                  const descColor = darkTheme ? 'text-white/85' : 'text-slate-600'
+                  const defaultLinkBtnClass = darkTheme ? 'bg-white/20 border-white/40 text-white' : 'bg-slate-100 border-slate-300 text-slate-800'
                   const buttonColor = form.bio_button_color?.trim()
                   const linkBtnStyle = buttonColor ? { backgroundColor: buttonColor, borderColor: buttonColor, color: '#fff' } : undefined
                   const linkBtnClass = linkBtnStyle ? 'border text-white' : defaultLinkBtnClass
-                  const initialColor = theme === 'dark' ? 'text-slate-500' : theme === 'sunset' || theme === 'cherry' ? 'text-white/70' : 'text-slate-400'
+                  const initialColor = darkTheme ? 'text-white/70' : 'text-slate-400'
                   const photos = profile.photos?.length ? profile.photos : (profile.thumbnail ? [profile.thumbnail] : [])
                   const avatarIndex =
                     form.bio_avatar_index >= 0 && form.bio_avatar_index < photos.length
@@ -2537,7 +2544,7 @@ export default function DashboardPerfilForm() {
                   return (
                   <div className="rounded-xl border border-slate-600 bg-slate-800/30 p-4">
                     <p className="mb-2 text-xs font-semibold uppercase text-slate-500">Pré-visualização</p>
-                    <div className={`mx-auto max-w-[280px] overflow-hidden rounded-2xl border border-slate-600 shadow-xl ${previewBg}`}>
+                    <div data-theme={theme} className={`bio-theme-preview mx-auto max-w-[280px] overflow-hidden rounded-2xl border border-slate-600 shadow-xl ${previewBg}`}>
                       <div className="flex flex-col items-center p-6">
                         {previewAvatar ? (
                           <img src={previewAvatar} alt="" className={`mb-3 h-20 w-20 rounded-full border-2 object-cover ${avatarBorder}`} />
