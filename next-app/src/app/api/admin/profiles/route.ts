@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server'
 import { requireAdmin } from '@/lib/api/admin-auth'
+import { getAdminToken } from '@/lib/pocketbase-admin'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
@@ -17,7 +18,7 @@ export async function GET(request: NextRequest) {
     const res = await fetch(
       `${PB_URL}/api/collections/profiles/records?page=${page}&perPage=${perPage}&sort=-created&expand=photos`,
       {
-        headers: { Authorization: `Bearer ${auth.token}` },
+        headers: { Authorization: `Bearer ${(await getAdminToken()) || auth.token}` },
         cache: 'no-store',
       }
     )
