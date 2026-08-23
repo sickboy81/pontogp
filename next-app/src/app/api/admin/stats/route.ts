@@ -25,6 +25,22 @@ async function fetchCount(
   }
 }
 
+async function fetchUnreadAdminMessages(token: string): Promise<number> {
+  try {
+    const url = `${PB_URL}/api/collections/messages/records?perPage=500&page=1&sort=-created_at&filter=${encodeURIComponent('read = false')}&expand=recipient`
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
+    if (!res.ok) return 0
+    const data = await res.json()
+    return ((data.items || []) as Record<string, unknown>[]).filter((item) => {
+      const expand = item.expand as Record<string, unknown> | undefined
+      const recipient = expand?.recipient as Record<string, unknown> | undefined
+      return recipient?.role === 'admin'
+    }).length
+  } catch {
+    return 0
+  }
+}
+
 function dateFilterSinceDays(days: number): string {
   const d = new Date()
   d.setDate(d.getDate() - days)
@@ -90,7 +106,7 @@ export async function GET(request: NextRequest) {
       fetchCount(token, 'users'),
       fetchCount(token, 'profiles'),
       fetchCount(token, 'reports', 'status = "pending"'),
-      fetchCount(token, 'messages', 'read = false'),
+      fetchUnreadAdminMessages(token),
       fetchCount(token, 'verification_requests', 'status = "pending"'),
       fetchCount(token, 'contacts', 'read = false'),
       fetchCount(token, 'profiles', `status = "active" && plan != "" && plan != "gratis" && search_expires_at > "${new Date().toISOString()}"`),

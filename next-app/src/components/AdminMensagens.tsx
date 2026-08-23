@@ -175,7 +175,14 @@ export default function AdminMensagens() {
         )
         if (!res.ok) throw new Error('conv')
         const data = (await res.json()) as { items: Message[] }
-        setThreadMsgs(data.items || [])
+        const items = data.items || []
+        setThreadMsgs(items)
+        const unreadIds = threadIsForAdmin(t) ? items.filter((message) => !message.read).map((message) => message.id) : []
+        if (unreadIds.length > 0) {
+          await Promise.all(unreadIds.map((id) => fetch(`/api/admin/messages/${encodeURIComponent(id)}`, { method: 'PATCH', credentials: 'include' })))
+          setRawMessages((current) => current.map((message) => unreadIds.includes(message.id) ? { ...message, read: true } : message))
+          setThreadMsgs((current) => current.map((message) => unreadIds.includes(message.id) ? { ...message, read: true } : message))
+        }
       } catch {
         setThreadMsgs([])
       } finally {
@@ -202,9 +209,8 @@ export default function AdminMensagens() {
       </Link>
       <h1 className="mb-1 text-2xl font-bold text-white">Chat interno</h1>
       <p className="mb-4 text-sm text-slate-500">
-        Mensagens trocadas entre utilizadores (moderação invisível). O que o admin vê aqui{' '}
-        <strong className="text-slate-300">não marca nada como lida</strong> no PocketBase: quem
-        recebe só vê &quot;lida&quot; quando abre a conversa no site. As APIs de admin usam só GET.
+        Mensagens trocadas entre utilizadores. Apenas mensagens dirigidas ao admin entram na fila e são
+        marcadas como lidas ao abrir; conversas entre usuários ficam fora da contagem administrativa.
       </p>
 
       <div className="mb-6 flex flex-wrap gap-2">
