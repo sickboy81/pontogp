@@ -29,7 +29,7 @@ function LoginForm() {
       const { user } = useAuthStore.getState()
       const role = user?.role
       const isAdmin = isAdminRole(role)
-      router.replace(isAdmin ? '/admin' : callbackUrl)
+      router.replace(isAdmin ? '/admin' : role === 'advertiser' ? '/dashboard' : callbackUrl)
     }
   }, [isAuthenticated, callbackUrl, router])
 
@@ -47,7 +47,7 @@ function LoginForm() {
       const { user } = useAuthStore.getState()
       const role = user?.role
       const isAdmin = isAdminRole(role)
-      router.replace(isAdmin ? '/admin' : callbackUrl)
+      router.replace(isAdmin ? '/admin' : role === 'advertiser' ? '/dashboard' : callbackUrl)
     } catch (err: unknown) {
       toast.error(getLoginErrorMessage(err))
       if ((err as { status?: number })?.status === 403) setUnverifiedEmail(email.toLowerCase().trim())

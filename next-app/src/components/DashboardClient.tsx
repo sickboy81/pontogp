@@ -562,7 +562,7 @@ export default function DashboardClient() {
   }
 
   return (
-    <div className="advertiser-dashboard mx-auto max-w-2xl">
+    <div className="advertiser-dashboard mx-auto w-full max-w-4xl">
       <h1 className="mb-6 text-2xl font-bold text-white">Dashboard</h1>
 
       {storyDraft && (
@@ -668,7 +668,7 @@ export default function DashboardClient() {
       )}
 
       <div className="rounded-xl border border-slate-700 bg-slate-800/50 overflow-hidden">
-        <div className="flex items-center gap-4 p-6">
+        <div className="flex flex-col items-start gap-4 p-4 sm:flex-row sm:items-center sm:p-6">
           {profile.thumbnail ? (
             <Image
               src={profile.thumbnail}
@@ -676,10 +676,10 @@ export default function DashboardClient() {
               width={96}
               height={96}
               sizes="96px"
-              className="h-24 w-24 rounded-xl object-cover"
+              className="h-20 w-20 rounded-xl object-cover sm:h-24 sm:w-24"
             />
           ) : (
-            <div className="flex h-24 w-24 items-center justify-center rounded-xl bg-slate-700 text-3xl font-bold text-slate-400">
+            <div className="flex h-20 w-20 items-center justify-center rounded-xl bg-slate-700 text-3xl font-bold text-slate-400 sm:h-24 sm:w-24">
               {profile.name.charAt(0).toUpperCase()}
             </div>
           )}
@@ -693,7 +693,7 @@ export default function DashboardClient() {
             )}
           </div>
         </div>
-        <div className="flex flex-wrap border-t border-slate-700">
+        <div className="grid grid-cols-2 border-t border-slate-700 sm:flex sm:flex-wrap">
           <Link
             href={`/perfil/${encodeURIComponent(profile.id)}`}
             className="flex flex-1 min-w-[120px] items-center justify-center gap-2 border-r border-slate-700 py-4 text-slate-300 transition hover:bg-slate-700/30 hover:text-white"

@@ -769,6 +769,22 @@ html.light .pricing-page .bg-primary-600\/80.text-white {
   scrollbar-color: rgba(148, 163, 184, 0.6) transparent;
 }
 
+/* Atalhos do anunciante: duas colunas legíveis no celular, sem largura mínima
+   herdada dos botões de desktop. */
+@media (max-width: 640px) {
+  .advertiser-dashboard .min-w-\[120px\] {
+    min-width: 0;
+  }
+
+  .advertiser-dashboard .grid > a,
+  .advertiser-dashboard .grid > label {
+    min-width: 0;
+    padding-inline: 0.5rem;
+    text-align: center;
+    overflow-wrap: anywhere;
+  }
+}
+
 @keyframes profile-reveal-up {
   from {
     opacity: 0;
