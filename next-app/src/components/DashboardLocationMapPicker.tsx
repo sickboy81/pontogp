@@ -133,7 +133,7 @@ export default function DashboardLocationMapPicker({
   const [isSearching, setIsSearching] = useState(false)
   const [mapReady, setMapReady] = useState(false)
   const [mapError, setMapError] = useState<string | null>(null)
-  const zoom = approximate ? 13 : 15
+  const zoom = approximate ? 14 : 16
   const hasCoords = lat != null && lng != null
 
   useEffect(() => {

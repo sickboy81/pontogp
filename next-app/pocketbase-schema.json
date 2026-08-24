@@ -1,5 +1,5 @@
 {
-  "exportedAt": "2026-08-24T16:01:11.144Z",
+  "exportedAt": "2026-08-24T16:40:10.510Z",
   "baseUrl": "https://pocketbase.cerejavip.com",
   "collections": [
     {
@@ -815,7 +815,7 @@
           "hidden": false,
           "id": "file2359244304",
           "maxSelect": 1,
-          "maxSize": 52428800,
+          "maxSize": 104857600,
           "mimeTypes": [
             "image/jpeg",
             "image/png",
@@ -825,7 +825,12 @@
             "audio/mp4",
             "video/webm",
             "video/quicktime",
-            "audio/mpeg"
+            "video/x-matroska",
+            "audio/mpeg",
+            "audio/aac",
+            "audio/wav",
+            "audio/ogg",
+            "audio/webm"
           ],
           "name": "file",
           "presentable": false,
