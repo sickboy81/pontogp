@@ -745,6 +745,23 @@ html.light .pricing-page .bg-primary-600\/80.text-white {
   color: #ffffff !important;
 }
 
+/* Landing de anunciantes: superfícies claras sem o overlay slate do tema escuro. */
+html.light .anunciantes-page section .bg-white\/\[\.06\] {
+  background-color: rgba(255, 255, 255, 0.82) !important;
+  border-color: #d7e0eb !important;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.045) !important;
+}
+html.light .anunciantes-page section .text-white {
+  color: #0f172a !important;
+}
+html.light .anunciantes-page section .text-slate-400,
+html.light .anunciantes-page section .text-slate-300 {
+  color: #475569 !important;
+}
+html.light .anunciantes-page section .bg-white\/\[\.03\] {
+  background-color: rgba(248, 250, 252, 0.9) !important;
+}
+
 .profile-reveal {
   animation: profile-reveal-up 0.55s ease both;
 }

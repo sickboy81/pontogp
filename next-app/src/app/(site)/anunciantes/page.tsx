@@ -66,7 +66,7 @@ const breadcrumbJsonLd = {
 
 export default function AnunciantesPage() {
   return (
-    <div className="min-h-screen overflow-x-hidden bg-slate-950 text-white">
+    <div className="anunciantes-page min-h-screen overflow-x-hidden bg-slate-950 text-white">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
@@ -142,7 +142,7 @@ export default function AnunciantesPage() {
             {steps.map((step) => {
               const Icon = step.icon
               return (
-                <div key={step.number} className="flex flex-col items-center rounded-2xl border border-white/10 bg-slate-900/60 p-6 text-center lg:rounded-none lg:border-y-0 lg:border-l-0 lg:last:border-r">
+                <div key={step.number} className="flex flex-col items-center rounded-2xl border border-white/10 bg-white/[.06] p-6 text-center lg:rounded-none lg:border-y-0 lg:border-l-0 lg:last:border-r">
                   <div className="relative mb-6">
                     <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary-600 to-primary-800 flex items-center justify-center">
                       <Icon className="w-9 h-9 text-white" />
