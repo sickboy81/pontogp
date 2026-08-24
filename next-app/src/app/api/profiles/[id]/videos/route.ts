@@ -79,10 +79,10 @@ export async function POST(
       )
     }
 
-    const maxSize = 100 * 1024 * 1024
+    const maxSize = 50 * 1024 * 1024
     if (file.size > maxSize) {
       return Response.json(
-        { error: 'Arquivo muito grande. Máximo 100 MB.' },
+        { error: 'Arquivo muito grande. Máximo 50 MB.' },
         { status: 400 }
       )
     }
@@ -90,7 +90,7 @@ export async function POST(
     const fileForPb = await maybeVideoToCompactMp4(file)
     if (fileForPb.size > maxSize) {
       return Response.json(
-        { error: 'Vídeo após compressão ainda excede 100 MB.' },
+        { error: 'Vídeo após compressão ainda excede 50 MB.' },
         { status: 400 }
       )
     }

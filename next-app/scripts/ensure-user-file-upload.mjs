@@ -26,12 +26,12 @@ const desiredMimeTypes = [
 const changes = {}
 if (files.createRule !== '@request.auth.id != ""') changes.createRule = '@request.auth.id != ""'
 if (files.updateRule !== '@request.auth.id != ""') changes.updateRule = '@request.auth.id != ""'
-if (fileField && (fileField.maxSize || 0) < 100 * 1024 * 1024) {
+if (fileField && (fileField.maxSize || 0) !== 50 * 1024 * 1024) {
   changes.schema = fileSchema.map((field) => field.name === 'file'
-    ? { ...field, maxSize: 100 * 1024 * 1024, mimeTypes: desiredMimeTypes }
+    ? { ...field, maxSize: 50 * 1024 * 1024, mimeTypes: desiredMimeTypes }
     : field)
 }
 if (Object.keys(changes).length) {
   await pb.collections.update(files.id, changes)
-  console.log('[user-file-upload] Limite de 100 MB, MIME types e regras de upload corrigidos.')
+  console.log('[user-file-upload] Limite de 50 MB, MIME types e regras de upload corrigidos.')
 } else console.log('[user-file-upload] Regras e limites de upload já estavam configurados.')
