@@ -66,7 +66,7 @@ const breadcrumbJsonLd = {
 
 export default function AnunciantesPage() {
   return (
-    <div className="min-h-screen bg-slate-900 text-white overflow-x-hidden">
+    <div className="min-h-screen overflow-x-hidden bg-slate-950 text-white">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
@@ -77,44 +77,55 @@ export default function AnunciantesPage() {
       />
 
       {/* Hero */}
-      <section className="relative px-4 pt-8 pb-16 md:px-8 md:pt-12 md:pb-24">
-        <div className="absolute inset-0 bg-gradient-to-b from-primary-600/10 via-transparent to-transparent pointer-events-none" />
-        <div className="relative mx-auto max-w-6xl">
+      <section className="relative isolate overflow-hidden px-4 pb-20 pt-10 md:px-8 md:pb-28 md:pt-16">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_75%_20%,rgba(225,29,72,.24),transparent_35%),radial-gradient(circle_at_10%_80%,rgba(14,165,233,.12),transparent_30%)]" />
+        <div className="relative mx-auto grid max-w-6xl items-center gap-14 lg:grid-cols-[1.05fr_.95fr]">
           <div className="mb-8">
             <span className="inline-flex items-center gap-2 text-xs font-bold tracking-widest uppercase text-primary-400 bg-primary-500/10 border border-primary-500/20 px-4 py-2">
               <Sparkles className="w-4 h-4" />
               Crie e publique seu perfil gratuitamente
             </span>
           </div>
-          <h1 className="text-4xl md:text-6xl lg:text-7xl leading-tight font-black tracking-tight mb-6">
+          <h1 className="mb-6 text-4xl font-black leading-[.98] tracking-tight md:text-6xl lg:text-7xl">
             <span className="text-white">SEU PERFIL, </span>
             <span className="bg-gradient-to-r from-primary-500 to-primary-600 bg-clip-text text-transparent">DO SEU JEITO.</span>
           </h1>
-          <div className="flex flex-col md:flex-row gap-8 md:gap-12 items-start md:items-end justify-between mt-8">
-            <p className="text-lg md:text-xl text-slate-400 max-w-xl font-light leading-relaxed">
+          <div className="mt-8">
+            <p className="max-w-xl text-lg font-light leading-relaxed text-slate-300 md:text-xl">
               Apresente seu trabalho com fotos, descrição, valores, localização aproximada e os contatos que você escolher. Tenha também <span className="text-white font-medium">Stories, Link na Bio e um painel para cuidar do anúncio</span> em um só lugar.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4">
+            <div className="mt-8 flex flex-col gap-4 sm:flex-row">
               <Link
                 href="/register?tipo=advertiser"
-                className="group inline-flex h-14 items-center justify-center bg-white px-8 font-medium text-black transition-all hover:bg-primary-600 hover:text-white hover:scale-105"
+                className="group inline-flex h-14 items-center justify-center rounded-xl bg-primary-600 px-8 font-bold text-white shadow-xl shadow-primary-950/40 transition-all hover:-translate-y-0.5 hover:bg-primary-500"
               >
                 <span className="mr-2 text-sm uppercase tracking-widest">Anunciar Grátis</span>
                 <Zap className="w-5 h-5 transition-transform group-hover:rotate-12" />
               </Link>
               <Link
                 href="/planos"
-                className="inline-flex h-14 items-center justify-center border border-slate-600 px-8 text-sm uppercase tracking-widest text-slate-300 hover:bg-slate-800 hover:border-slate-500 transition-all"
+                className="inline-flex h-14 items-center justify-center rounded-xl border border-white/15 bg-white/5 px-8 text-sm uppercase tracking-widest text-slate-200 transition-all hover:bg-white/10"
               >
                 Ver Planos
               </Link>
+            </div>
+          </div>
+          <div className="relative mx-auto w-full max-w-md">
+            <div className="absolute -inset-5 rounded-[2rem] bg-primary-600/20 blur-3xl" />
+            <div className="relative rounded-[2rem] border border-white/15 bg-white/[.08] p-3 shadow-2xl backdrop-blur-xl">
+              <div className="rounded-[1.5rem] bg-slate-900 p-5">
+                <div className="flex items-center justify-between border-b border-white/10 pb-4"><div className="flex items-center gap-3"><div className="h-11 w-11 rounded-full bg-gradient-to-br from-primary-400 to-primary-700" /><div><p className="font-bold">Seu perfil</p><p className="text-xs text-slate-400">cerejavip.com/@usuario</p></div></div><BadgeCheck className="h-5 w-5 text-emerald-400" /></div>
+                <div className="mt-5 grid grid-cols-3 gap-2"><div className="h-24 rounded-xl bg-gradient-to-br from-primary-500/80 to-slate-700" /><div className="h-24 rounded-xl bg-gradient-to-br from-amber-400/70 to-slate-700" /><div className="h-24 rounded-xl bg-gradient-to-br from-cyan-400/60 to-slate-700" /></div>
+                <div className="mt-5 rounded-xl border border-white/10 bg-white/5 p-4"><div className="mb-3 flex items-center justify-between"><span className="text-sm font-semibold">Seu Link na Bio</span><span className="text-xs text-primary-300">personalizável</span></div><div className="space-y-2"><div className="rounded-lg bg-primary-600 px-3 py-2 text-center text-sm font-bold">WhatsApp</div><div className="rounded-lg border border-white/10 px-3 py-2 text-center text-sm">Ver perfil completo</div></div></div>
+                <div className="mt-4 flex items-center justify-between text-xs text-slate-400"><span><Eye className="mr-1 inline h-3.5 w-3.5" /> visitas do perfil</span><span className="font-bold text-white">+ analytics</span></div>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
       {/* Como funciona */}
-      <section className="py-16 md:py-24 px-4 md:px-8 border-t border-slate-800">
+      <section className="border-t border-white/10 bg-white/[.03] px-4 py-16 md:px-8 md:py-24">
         <div className="max-w-5xl mx-auto">
           <p className="text-primary-500 tracking-widest uppercase text-sm font-bold mb-4">Simples e rápido</p>
           <h2 className="text-3xl md:text-5xl font-bold mb-16">
@@ -124,7 +135,7 @@ export default function AnunciantesPage() {
             {steps.map((step) => {
               const Icon = step.icon
               return (
-                <div key={step.number} className="flex flex-col items-center text-center">
+                <div key={step.number} className="flex flex-col items-center rounded-2xl border border-white/10 bg-slate-900/60 p-6 text-center lg:rounded-none lg:border-y-0 lg:border-l-0 lg:last:border-r">
                   <div className="relative mb-6">
                     <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary-600 to-primary-800 flex items-center justify-center">
                       <Icon className="w-9 h-9 text-white" />
@@ -143,7 +154,7 @@ export default function AnunciantesPage() {
       </section>
 
       {/* Funcionalidades */}
-      <section className="py-16 md:py-24 px-4 md:px-8 border-t border-slate-800">
+      <section className="border-t border-white/10 px-4 py-16 md:px-8 md:py-24">
         <div className="max-w-6xl mx-auto">
           <p className="text-primary-500 tracking-widest uppercase text-sm font-bold mb-4">Tudo que você precisa</p>
           <h2 className="text-3xl md:text-5xl font-bold mb-6">
@@ -158,7 +169,7 @@ export default function AnunciantesPage() {
               return (
                 <div
                   key={index}
-                  className={`bg-slate-800/50 border ${feature.borderColor} p-6 h-full hover:bg-slate-800 transition-all group`}
+                  className={`group h-full rounded-2xl border ${feature.borderColor} bg-white/[.04] p-6 transition-all hover:-translate-y-1 hover:bg-white/[.08] hover:shadow-xl hover:shadow-black/20`}
                 >
                   <div className={`w-12 h-12 ${feature.bgColor} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
                     <Icon className={`w-6 h-6 ${feature.color}`} />
@@ -173,7 +184,7 @@ export default function AnunciantesPage() {
       </section>
 
       {/* Link na Bio */}
-      <section className="border-t border-slate-800 px-4 py-16 md:px-8 md:py-24">
+      <section className="border-t border-white/10 bg-gradient-to-br from-cyan-950/30 via-slate-950 to-primary-950/20 px-4 py-16 md:px-8 md:py-24">
         <div className="mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-[1fr_0.8fr]">
           <div>
             <p className="mb-4 text-sm font-bold uppercase tracking-widest text-cyan-500">Link na Bio</p>
@@ -192,7 +203,7 @@ export default function AnunciantesPage() {
               ].map((item) => {
                 const Icon = item.icon
                 return (
-                  <div key={item.title} className="rounded-2xl border border-slate-700 bg-slate-800/50 p-5">
+                  <div key={item.title} className="rounded-2xl border border-white/10 bg-slate-900/70 p-5 shadow-lg shadow-black/10">
                     <Icon className="mb-3 h-6 w-6 text-cyan-500" />
                     <h3 className="font-bold text-white">{item.title}</h3>
                     <p className="mt-1 text-sm leading-relaxed text-slate-400">{item.text}</p>
@@ -216,7 +227,7 @@ export default function AnunciantesPage() {
       </section>
 
       {/* Planos */}
-      <section className="py-16 md:py-24 px-4 md:px-8 border-t border-slate-800">
+      <section className="border-t border-white/10 bg-white/[.03] px-4 py-16 md:px-8 md:py-24">
         <div className="max-w-6xl mx-auto">
           <p className="text-primary-500 tracking-widest uppercase text-sm font-bold mb-4">Investimento</p>
           <h2 className="text-3xl md:text-5xl font-bold mb-6">
@@ -277,8 +288,8 @@ export default function AnunciantesPage() {
       </section>
 
       {/* CTA Final */}
-      <section className="py-16 md:py-24 px-4 md:px-8 border-t border-slate-800 bg-slate-950 relative">
-        <div className="max-w-4xl mx-auto text-center">
+      <section className="relative overflow-hidden border-t border-white/10 bg-gradient-to-br from-primary-950 via-slate-950 to-slate-950 px-4 py-20 md:px-8 md:py-28">
+        <div className="relative mx-auto max-w-4xl text-center">
           <span className="inline-flex items-center gap-2 text-xs font-bold tracking-widest uppercase text-primary-400 bg-primary-500/10 border border-primary-500/20 px-4 py-2 mb-8">
             <Zap className="w-4 h-4" />
             Comece pelo plano grátis
@@ -292,14 +303,14 @@ export default function AnunciantesPage() {
           <div className="flex flex-col sm:flex-row justify-center gap-4">
             <Link
               href="/register?tipo=advertiser"
-              className="group inline-flex items-center justify-center gap-2 bg-primary-600 text-white px-10 py-5 text-lg font-bold uppercase tracking-widest hover:bg-primary-500 transition-all hover:scale-105"
+              className="group inline-flex items-center justify-center gap-2 rounded-xl bg-primary-600 px-10 py-5 text-lg font-bold uppercase tracking-widest text-white shadow-xl shadow-primary-950/50 transition-all hover:-translate-y-0.5 hover:bg-primary-500"
             >
               <span>Criar Perfil Grátis</span>
               <Zap className="w-5 h-5 transition-transform group-hover:rotate-12" />
             </Link>
             <Link
               href="/planos"
-              className="inline-flex items-center justify-center border border-slate-600 text-white px-10 py-5 text-lg font-bold uppercase tracking-widest hover:bg-slate-800 hover:border-slate-500 transition-all"
+              className="inline-flex items-center justify-center rounded-xl border border-white/15 bg-white/5 px-10 py-5 text-lg font-bold uppercase tracking-widest text-white transition-all hover:bg-white/10"
             >
               Ver Todos os Planos
             </Link>
