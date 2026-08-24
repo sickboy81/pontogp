@@ -291,11 +291,20 @@ export async function getProfiles(options: {
   if (filters.min_price != null) parts.push(`price_1h >= ${Number(filters.min_price)}`)
   if (filters.max_price != null) parts.push(`price_1h <= ${Number(filters.max_price)}`)
   if (filters.location) {
-    const q = escapeDoubleQuotes(String(filters.location))
-    parts.push(`(city ~ "${q}" || state ~ "${q}" || neighborhoods ~ "${q}")`)
+    const locationQuery = String(filters.location).trim().slice(0, 80)
+    if (locationQuery.length >= 2) {
+      const q = escapeDoubleQuotes(locationQuery)
+      parts.push(`(city ~ "${q}" || state ~ "${q}" || neighborhoods ~ "${q}")`)
+    }
   }
   if (filters.content || filters.search) {
-    const terms = String(filters.content || filters.search).split(/[,\s]+/).map((term) => term.trim()).filter(Boolean).slice(0, 8)
+    const ignoredTerms = new Set(['a', 'o', 'os', 'as', 'de', 'da', 'do', 'em', 'com', 'para', 'por'])
+    const terms = String(filters.content || filters.search)
+      .slice(0, 240)
+      .split(/[,\s]+/)
+      .map((term) => term.trim().toLocaleLowerCase('pt-BR'))
+      .filter((term) => term.length >= 3 && !ignoredTerms.has(term))
+      .slice(0, 6)
     const termFilters = terms.map((term) => {
       const alternatives = expandContentTerm(term).map((value) => {
         const q = escapeDoubleQuotes(value)
