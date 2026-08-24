@@ -1,4 +1,4 @@
-export const MIN_PROFILE_BIO_LENGTH = 700
+export const MIN_PROFILE_BIO_LENGTH = 400
 export const MIN_PROFILE_PHOTOS = 3
 
 function normalizeBioLength(bio) {

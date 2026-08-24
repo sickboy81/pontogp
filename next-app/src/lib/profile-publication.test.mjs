@@ -14,7 +14,7 @@ import {
 
 test('uses the current bio while deciding whether the draft is ready to publish', () => {
   assert.equal(
-    canPublishProfileDraft(3, 'a'.repeat(700), {
+    canPublishProfileDraft(3, 'a'.repeat(400), {
       whatsapp: '11999999999',
       show_whatsapp: true,
     }),
@@ -51,10 +51,10 @@ test('reports the first missing field required to create a profile draft', () =>
   )
 })
 
-test('requires 700 characters in the saved bio before publication', () => {
-  assert.equal(profilePublication.hasPublishableProfileBio?.('a'.repeat(699)), false)
-  assert.equal(profilePublication.hasPublishableProfileBio?.('a'.repeat(700)), true)
-  assert.equal(profilePublication.getMissingProfileBioCharacters?.('a'.repeat(650)), 50)
+test('requires 400 characters in the saved bio before publication', () => {
+  assert.equal(profilePublication.hasPublishableProfileBio?.('a'.repeat(399)), false)
+  assert.equal(profilePublication.hasPublishableProfileBio?.('a'.repeat(400)), true)
+  assert.equal(profilePublication.getMissingProfileBioCharacters?.('a'.repeat(350)), 50)
 })
 
 test('detects contact changes that must be saved before publication', () => {
