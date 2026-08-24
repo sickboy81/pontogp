@@ -1,11 +1,16 @@
 import { ImageResponse } from 'next/og'
+import { readFileSync } from 'node:fs'
+import path from 'node:path'
 
 export const alt = 'CerejaVIP - Acompanhantes Brasil'
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
 export const revalidate = false
 
-const logoUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://cerejavip.com'}/logo-header.png`
+const logoData = readFileSync(
+  path.join(process.cwd(), 'public', 'logo-header.png')
+).toString('base64')
+const logoUrl = `data:image/png;base64,${logoData}`
 
 export default function Image() {
   return new ImageResponse(
