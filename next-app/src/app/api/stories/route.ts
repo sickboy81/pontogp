@@ -54,7 +54,9 @@ export async function GET(request: NextRequest) {
         file: fileUrl,
         type: r.type || 'image',
         text: r.text || '',
-        created: (r.created as string) || (r.updated as string) || '',
+        // O PocketBase sempre fornece `created`; o fallback mantém a informação
+        // útil mesmo para registros legados importados sem esse campo.
+        created: String(r.created || r.updated || ''),
         expires_at: r.expires_at,
       }
     })
