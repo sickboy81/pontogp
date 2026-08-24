@@ -40,7 +40,7 @@ import { resolveProtectedAccess } from '@/lib/protected-access.mjs'
 
 type FormData = {
   name: string
-  age: number
+  age: number | string
   city: string
   state: string
   bio_title: string
@@ -747,6 +747,13 @@ export default function DashboardPerfilForm() {
     setError(null)
     setSaving(true)
     try {
+      const age = Number(String(form.age).trim())
+      if (!Number.isInteger(age) || age < 18) {
+        setError('A idade deve ser um número inteiro igual ou maior que 18.')
+        setSaving(false)
+        return
+      }
+
       const draftValidationError = getProfileDraftValidationError(form)
       if (draftValidationError) {
         setError(draftValidationError)
@@ -799,7 +806,7 @@ export default function DashboardPerfilForm() {
 
       const body = {
         name: toTrimmed(form.name),
-        age: Number(form.age) || 18,
+        age,
         city: toTrimmed(form.city),
         state: toTrimmed(form.state),
         bio_title: toTrimmed(form.bio_title) || null,
@@ -975,6 +982,26 @@ export default function DashboardPerfilForm() {
         </section>
       )}
 
+      {profile?.status === 'inactive' && (
+        <section
+          aria-labelledby="profile-draft-notice"
+          className="mb-6 rounded-xl border-2 border-amber-400/70 bg-amber-500/10 p-4 shadow-[0_0_0_1px_rgba(251,191,36,0.12)]"
+        >
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-300" aria-hidden="true" />
+            <div>
+              <h2 id="profile-draft-notice" className="font-semibold text-amber-100">Seu perfil ainda não está público</h2>
+              <p className="mt-1 text-sm leading-6 text-amber-50/90">
+                Este perfil está salvo como rascunho e só aparecerá na busca depois que você salvar todas as alterações e clicar em <strong>Publicar perfil</strong> na aba Mídia.
+              </p>
+              {!canPublish && (
+                <p className="mt-2 text-xs font-medium text-amber-200">Complete as pendências indicadas acima para liberar a publicação.</p>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
+
       {profile && (
         <p className="mb-4 text-slate-400">Editando: {profile.name}</p>
       )}
@@ -1026,11 +1053,11 @@ export default function DashboardPerfilForm() {
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-300">Idade *</label>
             <input
-              type="number"
-              min={18}
-              max={120}
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
               value={form.age}
-              onChange={(e) => setForm((f) => ({ ...f, age: Number(e.target.value) || 18 }))}
+              onChange={(e) => setForm((f) => ({ ...f, age: e.target.value.replace(/\D/g, '') }))}
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
             />
           </div>
@@ -2603,8 +2630,20 @@ export default function DashboardPerfilForm() {
             className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-6 py-2.5 font-semibold text-white transition hover:bg-primary-500 disabled:opacity-50"
           >
             <Save className="h-4 w-4" />
-            {saving ? 'Salvando...' : profile ? 'Salvar alterações' : 'Salvar rascunho'}
+            {saving ? 'Salvando...' : 'Salvar como rascunho'}
           </button>
+          {profile?.status === 'inactive' && (
+            <button
+              type="button"
+              onClick={handlePublish}
+              disabled={saving || publishing || !canPublish}
+              title={!canPublish ? 'Complete e salve as pendências antes de publicar.' : 'Publicar perfil'}
+              className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-6 py-2.5 font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {publishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+              {publishing ? 'Publicando...' : 'Publicar perfil'}
+            </button>
+          )}
           <Link
             href="/dashboard"
             className="rounded-lg border border-slate-600 px-6 py-2.5 text-slate-300 transition hover:bg-slate-700/50"
@@ -2612,6 +2651,14 @@ export default function DashboardPerfilForm() {
             Cancelar
           </Link>
         </div>
+        {profile?.status === 'inactive' && !canPublish && (
+          <p className="mt-3 rounded-lg border border-amber-400/40 bg-amber-500/10 px-3 py-2 text-sm leading-6 text-amber-100">
+            Para liberar a publicação, falta:{' '}
+            {publicationPendingMessages.length > 0
+              ? publicationPendingMessages.join('; ')
+              : 'salvar as alterações pendentes do perfil'}.
+          </p>
+        )}
       </form>
     </div>
   )

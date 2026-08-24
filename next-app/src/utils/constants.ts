@@ -258,6 +258,5 @@ export const SMOKER_OPTIONS = [
   { value: 'ocasionalmente', label: 'Ocasionalmente' },
 ]
 
-const AGE_OPTIONS = [18, 20, 25, 30, 35, 40, 45, 50, 60]
-export const AGE_OPTIONS_MIN = AGE_OPTIONS
-export const AGE_OPTIONS_MAX = AGE_OPTIONS
+export const AGE_OPTIONS_MIN = [18, 20, 25, 30, 35, 40, 45, 50, 60]
+export const AGE_OPTIONS_MAX = [18, 20, 25, 30, 35, 40, 45, 50, 60, 65, 70, 75, 80, 85]
