@@ -29,6 +29,7 @@ export default function ProfileSections({
               lng={profile.location_lng}
               city={profile.city}
               state={profile.state}
+              neighborhoods={profile.neighborhoods}
               approximate={profile.location_approximate}
             />
           </section>

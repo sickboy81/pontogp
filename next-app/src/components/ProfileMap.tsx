@@ -10,11 +10,12 @@ interface ProfileMapProps {
   lng: number
   city?: string
   state?: string
+  neighborhoods?: string[]
   approximate?: boolean
   className?: string
 }
 
-export default function ProfileMap({ lat, lng, city, state, approximate, className = '' }: ProfileMapProps) {
+export default function ProfileMap({ lat, lng, city, state, neighborhoods = [], approximate, className = '' }: ProfileMapProps) {
   const delta = approximate ? 0.05 : 0.02
   const bbox = `${lng - delta},${lat - delta},${lng + delta},${lat + delta}`
   const embedUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${encodeURIComponent(bbox)}&layer=mapnik&marker=${lat},${lng}`
@@ -39,9 +40,10 @@ export default function ProfileMap({ lat, lng, city, state, approximate, classNa
           tabIndex={-1}
           aria-hidden="true"
         />
-        {city && state && (
+        {(city || state || neighborhoods[0]) && (
           <p className="border-t border-slate-200 bg-slate-100 px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-300">
-            {city}, {state}
+            {neighborhoods[0] ? `${neighborhoods[0]}${city || state ? ' — ' : ''}` : ''}
+            {[city, state].filter(Boolean).join(', ')}
           </p>
         )}
       </div>
