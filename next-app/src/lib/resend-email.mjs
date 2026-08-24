@@ -34,6 +34,25 @@ export function buildContactEmail(contact, config) {
   }
 }
 
+export function buildLoginAlertEmail(user, ip, occurredAt = new Date(), config) {
+  const email = String(user?.email ?? '').trim()
+  const safeIp = escapeHtml(ip || 'Não identificado')
+  const occurred = new Intl.DateTimeFormat('pt-BR', {
+    dateStyle: 'short',
+    timeStyle: 'medium',
+    timeZone: 'America/Sao_Paulo',
+  }).format(occurredAt)
+  const safeOccurred = escapeHtml(occurred)
+  const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0;background:#0b1224;color:#dbe4f3;font-family:Arial,Helvetica,sans-serif"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#0b1224;padding:32px 12px"><tr><td align="center"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;background:#111b31;border:1px solid #283957;border-radius:20px;overflow:hidden"><tr><td style="background:#e31e24;padding:26px 32px;color:#fff;font-size:24px;font-weight:800">Cereja<span style="color:#ffd3d3">VIP</span></td></tr><tr><td style="padding:36px 32px"><div style="display:inline-block;background:#3a2e1d;color:#ffd38a;border-radius:999px;padding:7px 12px;font-size:11px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase">Alerta de segurança</div><h1 style="margin:20px 0 14px;color:#fff;font-size:28px">Novo login detectado</h1><p style="color:#dbe4f3;font-size:16px;line-height:1.7">Identificamos um novo acesso na sua conta CerejaVIP.</p><div style="margin:24px 0;padding:18px;background:#1b2943;border-radius:12px;color:#b7c4d8;font-size:14px;line-height:1.8"><strong style="color:#fff">Data e hora:</strong> ${safeOccurred}<br><strong style="color:#fff">Endereço IP:</strong> ${safeIp}</div><p style="color:#8fa1bb;font-size:13px;line-height:1.6">Se esse acesso não foi seu, altere sua senha imediatamente e entre em contato conosco.</p></td></tr><tr><td style="border-top:1px solid #283957;padding:22px 32px;color:#71839d;font-size:12px">CerejaVIP - conexões com mais confiança.</td></tr></table></td></tr></table></body></html>`
+  return {
+    from: config.from,
+    to: [email],
+    subject: 'Novo acesso detectado na sua conta CerejaVIP',
+    html,
+    text: `Novo login detectado na sua conta CerejaVIP.\n\nData e hora: ${occurred}\nEndereço IP: ${ip || 'Não identificado'}\n\nSe esse acesso não foi seu, altere sua senha imediatamente e entre em contato conosco.`,
+  }
+}
+
 export async function sendResendEmail(payload, apiKey, fetchImpl = fetch) {
   const response = await fetchImpl(RESEND_API_URL, {
     method: 'POST',
@@ -117,6 +136,7 @@ export function buildPocketBaseEmailTemplates(appUrl = 'https://cerejavip.com') 
       },
     },
     authAlert: {
+      enabled: false,
       emailTemplate: {
         subject: 'Novo acesso detectado na sua conta CerejaVIP',
         body: `<!doctype html><html lang="pt-BR"><body style="margin:0;background-color:#0b1224;color:#dbe4f3;font-family:Arial,Helvetica,sans-serif"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#0b1224;padding:32px 12px"><tr><td align="center"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;background-color:#111b31;border:1px solid #283957;border-radius:20px;overflow:hidden"><tr><td style="background-color:#e31e24;padding:26px 32px;color:#fff;font-size:24px;font-weight:800">Cereja<span style="color:#ffd3d3">VIP</span></td></tr><tr><td style="padding:36px 32px"><div style="display:inline-block;background-color:#3a2e1d;color:#ffd38a;border-radius:999px;padding:7px 12px;font-size:11px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase">Alerta de seguranca</div><h1 style="margin:20px 0 14px;color:#fff;font-size:28px">Novo login detectado</h1><p style="color:#dbe4f3;font-size:16px;line-height:1.7">Identificamos um novo acesso na sua conta CerejaVIP.</p><div style="margin:24px 0;padding:18px;background-color:#1b2943;border-radius:12px;color:#b7c4d8;font-size:14px;line-height:1.8"><strong style="color:#fff">Data e hora:</strong> {{ACTION_TIME}}<br><strong style="color:#fff">Endereco IP:</strong> {{ACTION_IP}}</div><p style="color:#8fa1bb;font-size:13px;line-height:1.6">Se esse acesso nao foi seu, altere sua senha imediatamente e entre em contato conosco.</p></td></tr><tr><td style="border-top:1px solid #283957;padding:22px 32px;color:#71839d;font-size:12px">CerejaVIP - conexoes com mais confianca.</td></tr></table></td></tr></table></body></html>`,

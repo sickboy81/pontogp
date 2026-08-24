@@ -46,6 +46,10 @@ export function hasPublicProfileContact(profile) {
   ].some(([value, visible]) => visible !== false && String(value ?? '').trim().length > 0)
 }
 
+export function canPublishProfileDraft(photoCount, bio, profile) {
+  return canPublishProfile(photoCount) && hasPublishableProfileBio(bio) && hasPublicProfileContact(profile)
+}
+
 export function hasUnsavedProfileContactChanges(savedProfile, currentProfile) {
   return ['whatsapp', 'telegram', 'phone'].some((field) =>
     String(savedProfile?.[field] ?? '').trim() !== String(currentProfile?.[field] ?? '').trim()

@@ -26,13 +26,12 @@ import {
 import {
   MIN_PROFILE_BIO_LENGTH,
   MIN_PROFILE_PHOTOS,
-  canPublishProfile,
+  canPublishProfileDraft,
   canRemoveProfilePhoto,
   canSaveProfileContacts,
   getMissingProfileBioCharacters,
   getMissingProfilePhotos,
   getProfileDraftValidationError,
-  hasPublishableProfileBio,
   hasPublicProfileContact,
   hasUnsavedProfileContactChanges,
 } from '@/lib/profile-publication.mjs'
@@ -440,30 +439,21 @@ export default function DashboardPerfilForm() {
   const missingPhotoCount = getMissingProfilePhotos(photoCount)
   const bioLength = form.bio.trim().length
   const persistedBio = profile?.bio ?? ''
-  const missingPersistedBioCharacters = getMissingProfileBioCharacters(persistedBio)
-  const hasPersistedPublishableBio = hasPublishableProfileBio(persistedBio)
+  const missingBioCharacters = getMissingProfileBioCharacters(form.bio)
   const hasUnsavedBioChanges = Boolean(profile) && form.bio.trim() !== persistedBio.trim()
   const hasPublicContact = hasPublicProfileContact(form)
-  const hasPersistedPublicContact = hasPublicProfileContact(profile ?? {})
   const hasUnsavedContactChanges = profile
     ? hasUnsavedProfileContactChanges(profile, form)
     : false
-  const canPublish =
-    canPublishProfile(photoCount) &&
-    hasPersistedPublishableBio &&
-    hasPersistedPublicContact &&
-    !hasUnsavedBioChanges &&
-    !hasUnsavedContactChanges
+  const canPublish = canPublishProfileDraft(photoCount, form.bio, form)
   const publicationPendingMessages = [
     missingPhotoCount > 0
       ? `${missingPhotoCount} ${missingPhotoCount === 1 ? 'foto' : 'fotos'}`
       : null,
-    missingPersistedBioCharacters > 0
-      ? `${missingPersistedBioCharacters} ${missingPersistedBioCharacters === 1 ? 'caractere na bio salva' : 'caracteres na bio salva'}`
+    missingBioCharacters > 0
+      ? `${missingBioCharacters} ${missingBioCharacters === 1 ? 'caractere na bio' : 'caracteres na bio'}`
       : null,
-    hasUnsavedBioChanges ? 'salvar as alterações da bio' : null,
-    !hasPersistedPublicContact ? 'um contato público salvo' : null,
-    hasUnsavedContactChanges ? 'salvar as alterações de contato' : null,
+    !hasPublicContact ? 'um contato público' : null,
   ].filter((message): message is string => Boolean(message))
   const canRemovePhoto = profile
     ? canRemoveProfilePhoto(profile.status, photoCount)
@@ -617,6 +607,26 @@ export default function DashboardPerfilForm() {
     setPublishing(true)
     setError(null)
     try {
+      if (hasUnsavedBioChanges || hasUnsavedContactChanges) {
+        const saveRes = await fetch(`/api/profiles/${profile.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            bio: form.bio.trim(),
+            whatsapp: form.whatsapp.trim() || null,
+            telegram: form.telegram.trim() || null,
+            phone: form.phone.trim() || null,
+            show_whatsapp: form.show_whatsapp,
+            show_telegram: form.show_telegram,
+            show_phone: form.show_phone,
+          }),
+        })
+        if (!saveRes.ok) {
+          const data = await saveRes.json().catch(() => ({}))
+          throw new Error((data as { error?: string }).error || 'Não foi possível salvar a bio antes de publicar.')
+        }
+      }
       const res = await fetch(`/api/profiles/${profile.id}/publish`, {
         method: 'POST',
         credentials: 'include',
@@ -1590,7 +1600,7 @@ export default function DashboardPerfilForm() {
             {bioLength < MIN_PROFILE_BIO_LENGTH
               ? ` Faltam ${MIN_PROFILE_BIO_LENGTH - bioLength} para publicar; o rascunho pode ser salvo agora.`
               : ' Bio pronta para publicação.'}
-            {hasUnsavedBioChanges ? ' Salve as alterações antes de publicar.' : ''}
+            {hasUnsavedBioChanges ? ' Ao publicar, esta alteração será salva automaticamente.' : ''}
           </p>
         </div>
         <div>

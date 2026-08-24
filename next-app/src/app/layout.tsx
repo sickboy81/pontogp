@@ -108,7 +108,7 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://pocketbase.cerejavip.com" />
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){var k='cerejavip_theme';try{var v=localStorage.getItem(k);if(v){var j=JSON.parse(v);var t=j&&j.state&&j.state.theme;}var theme=(typeof t==='string'&&(t==='light'||t==='dark'))?t:'dark';document.documentElement.classList.add(theme);}catch(e){document.documentElement.classList.add('dark');}})();`,
+            __html: `(function(){var k='cerejavip_theme';try{var v=localStorage.getItem(k);if(v){var j=JSON.parse(v);var t=j&&j.state&&j.state.theme;}var theme=(typeof t==='string'&&(t==='light'||t==='dark'))?t:'light';document.documentElement.classList.add(theme);}catch(e){document.documentElement.classList.add('light');}})();`,
           }}
         />
       </head>

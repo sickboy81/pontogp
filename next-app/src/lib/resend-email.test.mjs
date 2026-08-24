@@ -2,10 +2,25 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
   buildContactEmail,
+  buildLoginAlertEmail,
   buildPocketBaseEmailTemplates,
   buildPocketBaseResendSettings,
   getResendEmailConfig,
 } from './resend-email.mjs'
+
+test('builds a login alert with the real IP and timestamp', () => {
+  const email = buildLoginAlertEmail(
+    { email: 'user@example.com' },
+    '203.0.113.10',
+    new Date('2026-08-24T15:30:00.000Z'),
+    { from: 'CerejaVIP <no-reply@cerejavip.com>' }
+  )
+
+  assert.deepEqual(email.to, ['user@example.com'])
+  assert.match(email.html, /203\.0\.113\.10/)
+  assert.match(email.text, /203\.0\.113\.10/)
+  assert.doesNotMatch(email.html, /ACTION_(TIME|IP)/)
+})
 
 test('requires the Resend key, sender and contact recipient', () => {
   assert.equal(getResendEmailConfig({}), null)

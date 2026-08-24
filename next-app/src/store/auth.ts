@@ -72,6 +72,9 @@ export const useAuthStore = create<AuthState>()(
         const user = mapPbUser(authData.record as Record<string, unknown>)
         set({ user, token: authData.token, isAuthenticated: true })
         setAuthCookie(authData.token)
+        // O alerta nativo do PocketBase não expõe IP/data no template; o endpoint
+        // customizado envia esses dados reais depois que a sessão foi estabelecida.
+        await fetch('/api/auth/login-alert', { method: 'POST', credentials: 'include' }).catch(() => {})
       },
 
       logout: async () => {

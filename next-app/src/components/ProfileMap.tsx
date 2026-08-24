@@ -33,7 +33,7 @@ export default function ProfileMap({ lat, lng, city, state, approximate, classNa
         <iframe
           title="Mapa de localização"
           src={embedUrl}
-          className="h-64 w-full border-0 pointer-events-none"
+          className="h-48 w-full border-0 pointer-events-none sm:h-56"
           loading="lazy"
           referrerPolicy="no-referrer-when-downgrade"
           tabIndex={-1}

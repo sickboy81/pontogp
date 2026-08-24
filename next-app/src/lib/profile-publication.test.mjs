@@ -4,12 +4,23 @@ import * as profilePublication from './profile-publication.mjs'
 import {
   MIN_PROFILE_PHOTOS,
   canPublishProfile,
+  canPublishProfileDraft,
   canSaveProfileContacts,
   canRemoveProfilePhoto,
   getMissingProfilePhotos,
   hasPublicProfileContact,
   isPublicProfileStatus,
 } from './profile-publication.mjs'
+
+test('uses the current bio while deciding whether the draft is ready to publish', () => {
+  assert.equal(
+    canPublishProfileDraft(3, 'a'.repeat(700), {
+      whatsapp: '11999999999',
+      show_whatsapp: true,
+    }),
+    true
+  )
+})
 
 test('allows saving a complete draft before contact and bio are ready for publication', () => {
   assert.equal(

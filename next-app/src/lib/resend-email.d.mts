@@ -9,6 +9,12 @@ export declare function buildContactEmail(
   contact: { name: unknown; email: unknown; subject: unknown; message: unknown },
   config: Pick<ResendEmailConfig, 'from' | 'contactTo'>,
 ): Record<string, unknown>
+export declare function buildLoginAlertEmail(
+  user: { email?: unknown },
+  ip: string,
+  occurredAt: Date,
+  config: Pick<ResendEmailConfig, 'from'>,
+): Record<string, unknown>
 export declare function sendResendEmail(
   payload: Record<string, unknown>,
   apiKey: string,

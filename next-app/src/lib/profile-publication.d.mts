@@ -3,6 +3,18 @@ export declare const MIN_PROFILE_PHOTOS: number
 export declare function canPublishProfile(photoCount: number): boolean
 export declare function hasPublishableProfileBio(bio: unknown): boolean
 export declare function getMissingProfileBioCharacters(bio: unknown): number
+export declare function canPublishProfileDraft(
+  photoCount: number,
+  bio: unknown,
+  profile: {
+    whatsapp?: unknown
+    telegram?: unknown
+    phone?: unknown
+    show_whatsapp?: unknown
+    show_telegram?: unknown
+    show_phone?: unknown
+  }
+): boolean
 export declare function getProfileDraftValidationError(profile: {
   name?: unknown
   state?: unknown
