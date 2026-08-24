@@ -808,8 +808,8 @@ export default function StoryViewer({
 
         {/* Sheet comentários (de baixo, estilo mobile) */}
         {showComments && (
-          <div className="absolute inset-x-0 bottom-0 z-50 flex max-h-[58vh] flex-col rounded-t-2xl border border-white/10 bg-zinc-950/95 shadow-[0_-8px_40px_rgba(0,0,0,0.6)] backdrop-blur-md">
-            <div className="flex shrink-0 items-center justify-between border-b border-white/10 px-4 py-3">
+          <div className="absolute inset-x-0 bottom-0 z-50 flex max-h-[58vh] flex-col rounded-t-2xl border border-white/20 bg-zinc-950/98 shadow-[0_-8px_40px_rgba(0,0,0,0.7)] backdrop-blur-md">
+            <div className="flex shrink-0 items-center justify-between border-b border-white/20 bg-white/[0.06] px-4 py-3">
               <span className="text-sm font-semibold text-white">Comentários</span>
               <button
                 type="button"
@@ -839,16 +839,16 @@ export default function StoryViewer({
                 <p className="py-6 text-center text-sm text-white/50">Nenhum comentário ainda.</p>
               ) : (
                 comments.map((c) => (
-                  <div key={c.id} className="rounded-xl bg-white/5 px-3 py-2.5 text-sm">
+                  <div key={c.id} className="rounded-xl border border-white/15 bg-white/[0.1] px-3 py-2.5 text-sm shadow-sm">
                     <div className="flex items-baseline justify-between gap-2">
-                      <p className="font-medium text-primary-300">{c.userName}</p>
+                      <p className="font-semibold text-white">{c.userName}</p>
                       {c.created && (
-                        <span className="shrink-0 text-[10px] text-white/40">
+                        <span className="shrink-0 text-[10px] text-white/70">
                           {formatRelativeTime(c.created) || new Date(c.created).toLocaleString('pt-BR')}
                         </span>
                       )}
                     </div>
-                    <p className="text-white/90">{c.content}</p>
+                    <p className="mt-1 whitespace-pre-wrap break-words text-white">{c.content}</p>
                   </div>
                 ))
               )}
@@ -862,12 +862,13 @@ export default function StoryViewer({
                     onChange={(e) => setCommentInput(e.target.value)}
                     placeholder="Adicionar comentário..."
                     maxLength={500}
-                    className="min-w-0 flex-1 rounded-xl border border-white/15 bg-white/5 px-3 py-2.5 text-sm text-white placeholder:text-white/40 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                    aria-label="Adicionar comentário"
+                    className="min-w-0 flex-1 rounded-xl border border-white/30 bg-black/35 px-3 py-2.5 text-sm text-white placeholder:text-white/65 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50"
                   />
                   <button
                     type="submit"
                     disabled={commentSending || !commentInput.trim()}
-                    className="shrink-0 rounded-xl bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-500 disabled:opacity-45"
+                    className="shrink-0 rounded-xl bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 disabled:opacity-45"
                   >
                     {commentSending ? '…' : 'Enviar'}
                   </button>
