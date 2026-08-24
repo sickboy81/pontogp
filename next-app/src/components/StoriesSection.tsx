@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import Link from 'next/link'
 import Image from 'next/image'
+import StoryViewer from './StoryViewer'
 
 interface Story {
   id: string
@@ -23,6 +23,7 @@ interface ProfileStories {
 export default function StoriesSection() {
   const [grouped, setGrouped] = useState<ProfileStories[]>([])
   const [loading, setLoading] = useState(true)
+  const [activeStories, setActiveStories] = useState<ProfileStories | null>(null)
 
   useEffect(() => {
     fetch('/api/stories')
@@ -58,10 +59,12 @@ export default function StoriesSection() {
       <h2 className="mb-4 text-lg font-semibold text-white">Cereja Stories</h2>
       <div className="flex gap-4 overflow-x-auto pb-2">
         {grouped.map((g) => (
-          <Link
+          <button
             key={g.profileId}
-            href={`/perfil/${g.profileId}?stories=1`}
+            type="button"
+            onClick={() => setActiveStories(g)}
             className="group flex shrink-0 flex-col items-center"
+            aria-label={`Abrir Stories de ${g.profileName}`}
           >
             <div className="relative">
               <div className="h-16 w-16 overflow-hidden rounded-full border-2 border-primary-500 p-0.5">
@@ -88,9 +91,16 @@ export default function StoriesSection() {
             <span className="mt-2 max-w-[70px] truncate text-xs text-slate-400 group-hover:text-white">
               {g.profileName}
             </span>
-          </Link>
+          </button>
         ))}
       </div>
+      {activeStories && (
+        <StoryViewer
+          key={activeStories.profileId}
+          stories={activeStories.stories}
+          onClose={() => setActiveStories(null)}
+        />
+      )}
     </div>
   )
 }

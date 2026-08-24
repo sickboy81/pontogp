@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server'
 import { requireAdmin } from '@/lib/api/admin-auth'
+import { getAdminToken } from '@/lib/pocketbase-admin'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
@@ -26,11 +27,16 @@ async function fetchCount(
 
 async function fetchRows<T>(token: string, collection: string, filter = '', fields = 'created,profile'): Promise<T[]> {
   try {
-    const url = `${PB_URL}/api/collections/${collection}/records?perPage=5000&fields=${encodeURIComponent(fields)}${filter ? `&filter=${encodeURIComponent(filter)}` : ''}`
-    const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
-    if (!res.ok) return []
-    const data = await res.json()
-    return Array.isArray(data.items) ? data.items as T[] : []
+    const rows: T[] = []
+    for (let page = 1; page <= 20; page += 1) {
+      const url = `${PB_URL}/api/collections/${collection}/records?perPage=500&page=${page}&fields=${encodeURIComponent(fields)}${filter ? `&filter=${encodeURIComponent(filter)}` : ''}`
+      const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
+      if (!res.ok) return []
+      const data = await res.json()
+      if (Array.isArray(data.items)) rows.push(...data.items as T[])
+      if (!data.totalPages || page >= data.totalPages) break
+    }
+    return rows
   } catch {
     return []
   }
@@ -45,12 +51,19 @@ function dateFilter(daysAgo: number): string {
 
 /** GET: analytics avançado (views, cliques, períodos, top perfis). Apenas admin. */
 export async function GET(request: NextRequest) {
-  const auth = await requireAdmin(request)
+    const auth = await requireAdmin(request)
   if (!auth) return Response.json({ error: 'Não autorizado' }, { status: 401 })
 
   try {
-    const filter7 = dateFilter(7)
-    const filter30 = dateFilter(30)
+    const token = (await getAdminToken()) || auth.token
+    const requestedDays = Number(request.nextUrl.searchParams.get('days'))
+    const periodDays = [7, 30, 90].includes(requestedDays) ? requestedDays : 30
+    const filterPeriod = dateFilter(periodDays)
+    const filterPrevious = (() => {
+      const end = new Date(); end.setDate(end.getDate() - periodDays); end.setHours(0, 0, 0, 0)
+      const start = new Date(end); start.setDate(start.getDate() - periodDays)
+      return `created >= "${start.toISOString()}" && created < "${end.toISOString()}"`
+    })()
 
     const [
       totalViews,
@@ -59,6 +72,8 @@ export async function GET(request: NextRequest) {
       viewsLast30Days,
       clicksLast7Days,
       clicksLast30Days,
+      previousViews,
+      previousClicks,
       clicksWhatsapp,
       clicksTelegram,
       clicksPhone,
@@ -71,29 +86,31 @@ export async function GET(request: NextRequest) {
       viewRows,
       clickRows,
     ] = await Promise.all([
-      fetchCount(auth.token, 'profile_views'),
-      fetchCount(auth.token, 'profile_clicks'),
-      fetchCount(auth.token, 'profile_views', filter7),
-      fetchCount(auth.token, 'profile_views', filter30),
-      fetchCount(auth.token, 'profile_clicks', filter7),
-      fetchCount(auth.token, 'profile_clicks', filter30),
-      fetchCount(auth.token, 'profile_clicks', 'contact_type = "whatsapp"'),
-      fetchCount(auth.token, 'profile_clicks', 'contact_type = "telegram"'),
-      fetchCount(auth.token, 'profile_clicks', 'contact_type = "phone"'),
-      fetchCount(auth.token, 'profile_clicks', 'contact_type = "message"'),
-      fetchCount(auth.token, 'profiles', 'status = "active"'),
-      fetchCount(auth.token, 'users'),
-      fetchCount(auth.token, 'stories', 'expires_at > "' + new Date().toISOString() + '"'),
-      fetchCount(auth.token, 'contacts', 'read = false'),
-      fetchCount(auth.token, 'reports', 'status = "pending"'),
-      fetchRows<{ created?: string; profile?: string }>(auth.token, 'profile_views', filter30, 'created,profile'),
-      fetchRows<{ created?: string; contact_type?: string }>(auth.token, 'profile_clicks', filter30, 'created,contact_type'),
+      fetchCount(token, 'profile_views'),
+      fetchCount(token, 'profile_clicks'),
+      fetchCount(token, 'profile_views', dateFilter(7)),
+      fetchCount(token, 'profile_views', filterPeriod),
+      fetchCount(token, 'profile_clicks', dateFilter(7)),
+      fetchCount(token, 'profile_clicks', filterPeriod),
+      fetchCount(token, 'profile_views', filterPrevious),
+      fetchCount(token, 'profile_clicks', filterPrevious),
+      fetchCount(token, 'profile_clicks', `${filterPeriod} && contact_type = "whatsapp"`),
+      fetchCount(token, 'profile_clicks', `${filterPeriod} && contact_type = "telegram"`),
+      fetchCount(token, 'profile_clicks', `${filterPeriod} && contact_type = "phone"`),
+      fetchCount(token, 'profile_clicks', `${filterPeriod} && contact_type = "message"`),
+      fetchCount(token, 'profiles', 'status = "active"'),
+      fetchCount(token, 'users'),
+      fetchCount(token, 'stories', 'expires_at > "' + new Date().toISOString() + '"'),
+      fetchCount(token, 'contacts', 'read = false'),
+      fetchCount(token, 'reports', 'status = "pending"'),
+      fetchRows<{ created?: string; profile?: string }>(token, 'profile_views', filterPeriod, 'created,profile'),
+      fetchRows<{ created?: string; contact_type?: string }>(token, 'profile_clicks', filterPeriod, 'created,contact_type'),
     ])
 
-    const dayKeys = Array.from({ length: 30 }, (_, index) => {
+    const dayKeys = Array.from({ length: periodDays }, (_, index) => {
       const date = new Date()
       date.setHours(0, 0, 0, 0)
-      date.setDate(date.getDate() - (29 - index))
+      date.setDate(date.getDate() - (periodDays - 1 - index))
       return date.toISOString().slice(0, 10)
     })
     const daily = dayKeys.map((date) => ({ date, views: 0, clicks: 0 }))
@@ -120,7 +137,7 @@ export async function GET(request: NextRequest) {
       const res = await fetch(
         `${PB_URL}/api/collections/profiles/records?perPage=10&fields=id,name,slug${profileFilter ? `&filter=${encodeURIComponent(profileFilter)}` : ''}`,
         {
-          headers: { Authorization: `Bearer ${auth.token}` },
+          headers: { Authorization: `Bearer ${token}` },
           cache: 'no-store',
         }
       )
@@ -158,20 +175,16 @@ export async function GET(request: NextRequest) {
       pendingReports,
       ctr: totalViews > 0 ? Math.round((totalClicks / totalViews) * 1000) / 10 : 0,
       topProfilesByViews,
+      periodDays,
+      previousViews,
+      previousClicks,
+      viewsChangePct: previousViews > 0 ? Math.round(((viewsLast30Days - previousViews) / previousViews) * 1000) / 10 : null,
+      clicksChangePct: previousClicks > 0 ? Math.round(((clicksLast30Days - previousClicks) / previousClicks) * 1000) / 10 : null,
     })
   } catch {
     return Response.json(
-      {
-        totalViews: 0,
-        totalClicks: 0,
-        viewsLast7Days: 0,
-        viewsLast30Days: 0,
-        clicksLast7Days: 0,
-        clicksLast30Days: 0,
-        clicksByType: { whatsapp: 0, telegram: 0, phone: 0, message: 0 },
-        topProfilesByViews: [],
-      },
-      { status: 200 }
+      { error: 'Não foi possível consultar os dados reais de analytics.' },
+      { status: 502 }
     )
   }
 }

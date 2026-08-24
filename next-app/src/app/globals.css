@@ -388,6 +388,25 @@ html.light .site-header .header-filter-select {
   color: #0f172a !important;
   border-color: #94a3b8 !important;
 }
+/* Stories usam uma superfície escura sobre a mídia; preservar o contraste mesmo no tema claro. */
+html.light .story-viewer .text-white { color: #fff !important; }
+html.light .story-viewer .text-white\/60 { color: rgba(255,255,255,.78) !important; }
+html.light .story-viewer .text-white\/70 { color: rgba(255,255,255,.86) !important; }
+html.light .story-viewer .text-white\/80 { color: rgba(255,255,255,.9) !important; }
+html.light .story-viewer .text-slate-400 { color: #cbd5e1 !important; }
+html.light .story-viewer .text-slate-500 { color: #cbd5e1 !important; }
+html.light .story-viewer .bg-black\/35 { background-color: rgba(0,0,0,.58) !important; }
+html.light .story-compose-modal .text-white { color: #0f172a !important; }
+html.light .story-compose-modal .text-slate-200 { color: #334155 !important; }
+html.light .story-compose-modal .text-slate-300 { color: #334155 !important; }
+html.light .story-compose-modal .text-slate-400 { color: #475569 !important; }
+html.light .story-compose-modal .text-slate-500 { color: #475569 !important; }
+html.light .story-compose-modal .bg-slate-900 { background-color: #f8fafc !important; }
+html.light .story-compose-modal .border-slate-700 { border-color: #cbd5e1 !important; }
+html.light .story-compose-modal .border-slate-600 { border-color: #94a3b8 !important; }
+html.light .story-compose-modal textarea { background-color: #fff !important; color: #0f172a !important; border-color: #64748b !important; }
+html.light .story-compose-modal textarea::placeholder { color: #64748b !important; }
+html.light .story-compose-modal .bg-slate-800\/80 { background-color: #fff !important; }
 html.light .site-header .header-filter-select option {
   background-color: #ffffff !important;
   color: #0f172a !important;

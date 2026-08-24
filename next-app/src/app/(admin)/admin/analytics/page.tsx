@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { BarChart3, Eye, MousePointer, MessageCircle, Phone, RefreshCw, Send, Users, UserCheck, AlertTriangle, Mail } from 'lucide-react'
 
@@ -20,6 +20,11 @@ interface AnalyticsData {
   pendingReports: number
   ctr: number
   topProfilesByViews: { id: string; name: string; views: number; slug?: string }[]
+  periodDays: number
+  previousViews: number
+  previousClicks: number
+  viewsChangePct: number | null
+  clicksChangePct: number | null
 }
 
 export default function AdminAnalyticsPage() {
@@ -27,13 +32,14 @@ export default function AdminAnalyticsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [refreshing, setRefreshing] = useState(false)
+  const [period, setPeriod] = useState<7 | 30 | 90>(30)
 
-  const load = async (initial = false) => {
+  const load = useCallback(async (initial = false) => {
     if (initial) setLoading(true)
     else setRefreshing(true)
     setError('')
     try {
-      const r = await fetch('/api/admin/analytics', { credentials: 'include', cache: 'no-store' })
+      const r = await fetch(`/api/admin/analytics?days=${period}`, { credentials: 'include', cache: 'no-store' })
       const d = await r.json().catch(() => ({}))
       if (!r.ok) throw new Error(d.error || 'Não foi possível carregar os analytics.')
       setData(d)
@@ -43,11 +49,11 @@ export default function AdminAnalyticsPage() {
       setLoading(false)
       setRefreshing(false)
     }
-  }
+  }, [period])
 
   useEffect(() => {
     void load(true)
-  }, [])
+  }, [load])
 
   if (loading) {
     return (
@@ -71,7 +77,13 @@ export default function AdminAnalyticsPage() {
     clicksLast30Days: 0,
     clicksByType: { whatsapp: 0, telegram: 0, phone: 0, message: 0 },
     daily: [], activeProfiles: 0, totalUsers: 0, activeStories: 0, unreadContacts: 0, pendingReports: 0, ctr: 0,
-    topProfilesByViews: [],
+    topProfilesByViews: [], periodDays: period, previousViews: 0, previousClicks: 0, viewsChangePct: null, clicksChangePct: null,
+  }
+  const exportCsv = () => {
+    const rows = [['data', 'visualizacoes', 'cliques'], ...d.daily.map((row) => [row.date, String(row.views), String(row.clicks)])]
+    const csv = rows.map((row) => row.map((value) => `"${value.replaceAll('"', '""')}"`).join(';')).join('\n')
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
+    const link = document.createElement('a'); link.href = url; link.download = `analytics-${d.periodDays}-dias.csv`; link.click(); URL.revokeObjectURL(url)
   }
 
   const typeLabels: Record<keyof typeof d.clicksByType, string> = {
@@ -92,10 +104,12 @@ export default function AdminAnalyticsPage() {
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold text-white">Analytics</h1>
         <div className="flex gap-2">
+          <select value={period} onChange={(e) => setPeriod(Number(e.target.value) as 7 | 30 | 90)} className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-300"><option value="7">7 dias</option><option value="30">30 dias</option><option value="90">90 dias</option></select>
           <button type="button" onClick={() => void load()} disabled={refreshing} className="flex items-center gap-2 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-300 hover:bg-slate-700 disabled:opacity-50">
             <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} /> Atualizar
           </button>
           <Link href="/admin" className="flex items-center gap-2 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-300 hover:bg-slate-700">Voltar ao painel</Link>
+          <button type="button" onClick={exportCsv} className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-300 hover:bg-slate-700">Exportar CSV</button>
         </div>
       </div>
 
@@ -152,6 +166,8 @@ export default function AdminAnalyticsPage() {
               <dt className="text-slate-400">Últimos 30 dias (views)</dt>
               <dd className="font-medium text-white">{d.viewsLast30Days.toLocaleString('pt-BR')}</dd>
             </div>
+            <div className="flex justify-between border-t border-slate-700 pt-2"><dt className="text-slate-400">Comparação de views</dt><dd className={d.viewsChangePct !== null && d.viewsChangePct >= 0 ? 'text-emerald-400' : 'text-red-400'}>{d.viewsChangePct === null ? 'Sem base' : `${d.viewsChangePct >= 0 ? '+' : ''}${d.viewsChangePct}%`}</dd></div>
+            <div className="flex justify-between"><dt className="text-slate-400">Comparação de cliques</dt><dd className={d.clicksChangePct !== null && d.clicksChangePct >= 0 ? 'text-emerald-400' : 'text-red-400'}>{d.clicksChangePct === null ? 'Sem base' : `${d.clicksChangePct >= 0 ? '+' : ''}${d.clicksChangePct}%`}</dd></div>
             <div className="flex justify-between border-t border-slate-700 pt-2">
               <dt className="text-slate-400">CTR (cliques / views)</dt>
               <dd className="font-medium text-primary-300">{d.ctr.toLocaleString('pt-BR')}%</dd>

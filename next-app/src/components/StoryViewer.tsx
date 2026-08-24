@@ -548,7 +548,7 @@ export default function StoryViewer({
         </div>
       )}
 
-    <div className="fixed inset-0 z-[100] flex justify-center bg-black">
+    <div className="story-viewer fixed inset-0 z-[100] flex justify-center bg-black">
       <div
         className="relative h-[100dvh] w-full touch-pan-y overflow-hidden shadow-2xl shadow-black/50"
         style={{ maxWidth: `min(100vw, ${VIEWER_MAX_W}px)` }}
