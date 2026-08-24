@@ -191,7 +191,7 @@ export default function AnunciantesPage() {
       </section>
 
       {/* Link na Bio */}
-      <section className="border-t border-white/10 bg-gradient-to-br from-cyan-950/30 via-slate-950 to-primary-950/20 px-4 py-16 md:px-8 md:py-24">
+      <section className="anunciantes-link-bio-section border-t border-white/10 bg-gradient-to-br from-cyan-950/30 via-slate-950 to-primary-950/20 px-4 py-16 md:px-8 md:py-24">
         <div className="mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-[1fr_0.8fr]">
           <div>
             <p className="mb-4 text-sm font-bold uppercase tracking-widest text-cyan-500">Link na Bio</p>
@@ -219,9 +219,10 @@ export default function AnunciantesPage() {
               })}
             </div>
           </div>
-          <div className="advertiser-link-bio-preview mx-auto w-full max-w-sm rounded-[2rem] border border-primary-500/30 bg-gradient-to-b from-primary-950 via-slate-900 to-slate-950 p-5 shadow-2xl shadow-primary-950/30">
-            <div className="mx-auto h-20 w-20 rounded-full border-4 border-white/15 bg-gradient-to-br from-primary-400 to-primary-700" />
-            <p className="mt-4 text-center text-xl font-bold text-white">Seu nome de perfil</p>
+          <div className="advertiser-link-bio-preview mx-auto w-full max-w-sm rounded-[2rem] border border-primary-400/40 bg-gradient-to-b from-slate-800 via-slate-900 to-slate-950 p-5 shadow-2xl shadow-black/40">
+            <div className="mx-auto flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border-4 border-white/20 bg-slate-950 shadow-lg"><img src="/logo-header.png" alt="CerejaVIP" className="w-16 object-contain" /></div>
+            <div className="mt-4 flex items-center justify-center gap-1"><p className="text-center text-xl font-bold text-white">Seu nome de perfil</p><BadgeCheck className="h-4 w-4 text-emerald-400" /></div>
+            <p className="text-center text-xs text-slate-400">@usuario · Rio de Janeiro</p>
             <p className="mt-2 text-center text-sm text-slate-300">Sua frase de apresentação aparece aqui.</p>
             <div className="mt-6 space-y-3">
               {['WhatsApp', 'Enviar mensagem', 'Instagram', 'Ver perfil completo'].map((label) => (
