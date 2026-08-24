@@ -26,6 +26,7 @@ function formatPrice(price: number) {
 
 export default function AnunciantesPlans() {
   const [plans, setPlans] = useState<Plan[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     fetch('/api/plans?enabledOnly=true')
@@ -45,7 +46,33 @@ export default function AnunciantesPlans() {
         setPlans(sorted)
       })
       .catch(() => {})
+      .finally(() => setLoading(false))
   }, [])
+
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-label="Carregando planos">
+        {['gratis', 'bronze', 'prata', 'ouro'].map((slug) => (
+          <div key={slug} className="h-72 animate-pulse rounded-2xl border border-white/10 bg-white/[.05] p-6">
+            <div className="h-5 w-24 rounded bg-white/10" />
+            <div className="mt-5 h-9 w-32 rounded bg-white/10" />
+            <div className="mt-8 space-y-3"><div className="h-3 rounded bg-white/10" /><div className="h-3 rounded bg-white/10" /><div className="h-3 rounded bg-white/10" /></div>
+            <div className="mt-8 h-11 rounded-lg bg-white/10" />
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  if (!plans.length) {
+    return (
+      <div className="rounded-2xl border border-white/10 bg-white/[.04] px-6 py-10 text-center">
+        <p className="font-semibold text-white">Os planos estão sendo carregados.</p>
+        <p className="mt-2 text-sm text-slate-400">Você pode consultar os valores e recursos na página completa de planos.</p>
+        <Link href="/planos" className="mt-5 inline-flex rounded-lg bg-primary-600 px-5 py-3 text-sm font-bold text-white">Ver planos</Link>
+      </div>
+    )
+  }
 
   return (
     <div className={`grid grid-cols-1 sm:grid-cols-2 ${plans.length >= 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-4`}>
@@ -57,7 +84,7 @@ export default function AnunciantesPlans() {
         return (
           <div
             key={plan.slug}
-            className={`relative border ${style.color} bg-slate-800/50 p-6 flex flex-col ${isPopular ? 'ring-1 ring-slate-400/50' : ''}`}
+            className={`relative flex flex-col rounded-2xl border ${style.color} bg-white/[.05] p-6 shadow-lg shadow-black/10 ${isPopular ? 'ring-1 ring-slate-400/50' : ''} ${isTop ? 'bg-gradient-to-b from-amber-500/15 to-white/[.04] shadow-amber-950/20' : ''}`}
           >
             {isPopular && (
               <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-white text-black text-xs font-bold px-3 py-1 tracking-wider uppercase">
@@ -90,7 +117,7 @@ export default function AnunciantesPlans() {
             </ul>
             <Link
               href={isFree ? '/register?tipo=advertiser' : '/planos'}
-              className={`block text-center py-3 text-sm font-bold uppercase tracking-wider transition-all ${
+                className={`block rounded-lg py-3 text-center text-sm font-bold uppercase tracking-wider transition-all ${
                 isTop
                   ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-black hover:from-amber-400 hover:to-amber-500'
                   : isPopular

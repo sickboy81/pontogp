@@ -80,7 +80,8 @@ export default function AnunciantesPage() {
       <section className="relative isolate overflow-hidden px-4 pb-20 pt-10 md:px-8 md:pb-28 md:pt-16">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_75%_20%,rgba(225,29,72,.24),transparent_35%),radial-gradient(circle_at_10%_80%,rgba(14,165,233,.12),transparent_30%)]" />
         <div className="relative mx-auto grid max-w-6xl items-center gap-14 lg:grid-cols-[1.05fr_.95fr]">
-          <div className="mb-8">
+          <div>
+          <div className="mb-7">
             <span className="inline-flex items-center gap-2 text-xs font-bold tracking-widest uppercase text-primary-400 bg-primary-500/10 border border-primary-500/20 px-4 py-2">
               <Sparkles className="w-4 h-4" />
               Crie e publique seu perfil gratuitamente
@@ -109,6 +110,7 @@ export default function AnunciantesPage() {
                 Ver Planos
               </Link>
             </div>
+          </div>
           </div>
           <div className="relative mx-auto w-full max-w-md">
             <div className="absolute -inset-5 rounded-[2rem] bg-primary-600/20 blur-3xl" />
