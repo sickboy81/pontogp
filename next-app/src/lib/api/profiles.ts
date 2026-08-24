@@ -239,7 +239,7 @@ function escapeDoubleQuotes(s: string): string {
   return s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
 }
 
-/** Lista perfis (servidor). Filtros: equality + min_age, max_age, min_price, max_price, online, verified, search. sort: default | recent | price_asc | price_desc | views */
+/** Lista perfis (servidor). Filtros: igualdade, localização, conteúdo, idade, preço, online e verificação. */
 export async function getProfiles(options: {
   filters?: Record<string, string | number | boolean>
   limit?: number
@@ -261,7 +261,7 @@ export async function getProfiles(options: {
   const lifecycleFilter = buildLifecycleFilter(policy)
   const parts: string[] = []
   Object.entries(filters).forEach(([key, val]) => {
-    if (key === 'min_age' || key === 'max_age' || key === 'search' || key === 'min_price' || key === 'max_price') return
+    if (key === 'min_age' || key === 'max_age' || key === 'search' || key === 'location' || key === 'content' || key === 'min_price' || key === 'max_price') return
     const k = key === 'user_id' ? 'user' : key
     if (val === null || val === undefined) return
     if (typeof val === 'boolean') parts.push(`${k} = ${val}`)
@@ -271,9 +271,13 @@ export async function getProfiles(options: {
   if (filters.max_age != null) parts.push(`age <= ${Number(filters.max_age)}`)
   if (filters.min_price != null) parts.push(`price_1h >= ${Number(filters.min_price)}`)
   if (filters.max_price != null) parts.push(`price_1h <= ${Number(filters.max_price)}`)
-  if (filters.search) {
-    const q = escapeDoubleQuotes(String(filters.search))
-    parts.push(`(name ~ "${q}" || bio ~ "${q}" || search_normalized ~ "${q}")`)
+  if (filters.location) {
+    const q = escapeDoubleQuotes(String(filters.location))
+    parts.push(`(city ~ "${q}" || state ~ "${q}" || neighborhoods ~ "${q}")`)
+  }
+  if (filters.content || filters.search) {
+    const q = escapeDoubleQuotes(String(filters.content || filters.search))
+    parts.push(`(name ~ "${q}" || bio ~ "${q}" || search_normalized ~ "${q}" || services ~ "${q}" || special_services ~ "${q}" || service_locations ~ "${q}" || service_to ~ "${q}" || hair_color ~ "${q}" || body_type ~ "${q}" || eye_color ~ "${q}" || pubis_type ~ "${q}" || smoker ~ "${q}")`)
   }
   if (jsonTag?.value) {
     const v = escapeDoubleQuotes(jsonTag.value)

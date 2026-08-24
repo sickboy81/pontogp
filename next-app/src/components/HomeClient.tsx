@@ -32,7 +32,8 @@ function parseTagScope(s: string | null): TagMatchScope | null {
 function buildQuery(
   filters: FilterOptions,
   page: number,
-  search: string,
+  location: string,
+  content: string,
   tagBlock: {
     tag?: string
     tagField?: string
@@ -57,7 +58,8 @@ function buildQuery(
   if (filters.body_type) params.set('body_type', filters.body_type)
   if (filters.verified) params.set('verified', 'true')
   if (filters.online) params.set('online', 'true')
-  if (search.trim()) params.set('search', search.trim())
+  if (location.trim()) params.set('location', location.trim())
+  if (content.trim()) params.set('content', content.trim())
   if (tagBlock.tag) params.set('tag', tagBlock.tag)
   if (tagBlock.tagField) params.set('tag_field', tagBlock.tagField)
   if (tagBlock.excludeProfile) params.set('exclude_profile', tagBlock.excludeProfile)
@@ -96,7 +98,8 @@ export default function HomeClient() {
       ...(maxPrice != null && maxPrice !== '' && { max_price: Number(maxPrice) }),
     }
   })
-  const [searchQuery, setSearchQuery] = useState(searchParams.get('search') ?? '')
+  const [locationQuery, setLocationQuery] = useState(searchParams.get('location') ?? '')
+  const [contentQuery, setContentQuery] = useState(searchParams.get('content') ?? searchParams.get('search') ?? '')
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -108,7 +111,8 @@ export default function HomeClient() {
   const requestIdRef = useRef(0)
   const planColorMap: Record<string, string> = { gratis: '#64748b', bronze: '#b45309', prata: '#737373', ouro: '#ca8a04' }
 
-  const [debouncedSearch, setDebouncedSearch] = useState(searchQuery)
+  const [debouncedLocation, setDebouncedLocation] = useState(locationQuery)
+  const [debouncedContent, setDebouncedContent] = useState(contentQuery)
   const [tagMatchScope, setTagMatchScope] = useState<TagMatchScope | null>(() =>
     parseTagScope(searchParams.get('tag_scope'))
   )
@@ -139,9 +143,14 @@ export default function HomeClient() {
   }, [searchParams])
 
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(searchQuery), 500)
+    const t = setTimeout(() => setDebouncedLocation(locationQuery), 500)
     return () => clearTimeout(t)
-  }, [searchQuery])
+  }, [locationQuery])
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedContent(contentQuery), 500)
+    return () => clearTimeout(t)
+  }, [contentQuery])
 
   useEffect(() => {
     if (isAuthenticated) fetchFavorites()
@@ -197,7 +206,7 @@ export default function HomeClient() {
       excludeProfile: excludeFromUrl || undefined,
       tagScope: effectiveTagScope,
     }
-    const qs = buildQuery(filters, 1, debouncedSearch, tagBlock)
+    const qs = buildQuery(filters, 1, debouncedLocation, debouncedContent, tagBlock)
     fetch(`/api/profiles?${qs}`, { signal: controller.signal })
       .then(async (res) => {
         const data = await res.json().catch(() => null)
@@ -245,7 +254,7 @@ export default function HomeClient() {
         if (requestIdRef.current === id) setLoading(false)
       })
     return () => controller.abort()
-  }, [filters, debouncedSearch, tagFromUrl, tagFieldFromUrl, excludeFromUrl, effectiveTagScope, reloadKey])
+  }, [filters, debouncedLocation, debouncedContent, tagFromUrl, tagFieldFromUrl, excludeFromUrl, effectiveTagScope, reloadKey])
 
   const loadMore = useCallback(() => {
     const nextPage = page + 1
@@ -255,7 +264,7 @@ export default function HomeClient() {
       excludeProfile: excludeFromUrl || undefined,
       tagScope: effectiveTagScope,
     }
-    const qs = buildQuery(filters, nextPage, debouncedSearch, moreTagBlock)
+    const qs = buildQuery(filters, nextPage, debouncedLocation, debouncedContent, moreTagBlock)
     setLoading(true)
     fetch(`/api/profiles?${qs}`)
       .then(async (res) => {
@@ -270,7 +279,7 @@ export default function HomeClient() {
         setPage(nextPage)
       })
       .finally(() => setLoading(false))
-  }, [filters, debouncedSearch, page, tagFromUrl, tagFieldFromUrl, excludeFromUrl, effectiveTagScope])
+  }, [filters, debouncedLocation, debouncedContent, page, tagFromUrl, tagFieldFromUrl, excludeFromUrl, effectiveTagScope])
 
   useEffect(() => {
     const el = sentinelRef.current
@@ -293,7 +302,8 @@ export default function HomeClient() {
 
   const clearFilters = useCallback(() => {
     setFilters({ category: 'acompanhante', gender: 'mulher' })
-    setSearchQuery('')
+    setLocationQuery('')
+    setContentQuery('')
     setPage(1)
     setTagMatchScope(null)
     setTagSearchBanner(null)
@@ -307,7 +317,8 @@ export default function HomeClient() {
         if (filters.category === 'online' && (k === 'state' || k === 'city')) return false
         return filters[k as keyof FilterOptions] != null
       }).length > 0 ||
-    searchQuery.length > 0 ||
+    locationQuery.length > 0 ||
+    contentQuery.length > 0 ||
     (tagFromUrl.length > 0 && tagFieldFromUrl.length > 0)
 
   const categoryLabel = CATEGORIES.find((c) => c.value === filters.category)?.label ?? 'Acompanhantes'
@@ -322,11 +333,24 @@ export default function HomeClient() {
           <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500 md:h-5 md:w-5" />
           <input
             type="text"
-            placeholder="Buscar..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            aria-label="Buscar anúncios"
-            name="search"
+            placeholder="Cidade, bairro ou estado"
+            value={locationQuery}
+            onChange={(e) => setLocationQuery(e.target.value)}
+            aria-label="Buscar por localização"
+            name="location"
+            autoComplete="off"
+            className="w-full rounded-xl border border-slate-800 bg-slate-900/50 py-3 pl-10 pr-4 text-white placeholder-slate-500 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 md:rounded-2xl md:py-4 md:pl-12"
+          />
+        </div>
+        <div className="relative flex-1">
+          <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500 md:h-5 md:w-5" />
+          <input
+            type="text"
+            placeholder="Serviços ou características"
+            value={contentQuery}
+            onChange={(e) => setContentQuery(e.target.value)}
+            aria-label="Buscar serviços, características ou descrição"
+            name="content"
             autoComplete="off"
             className="w-full rounded-xl border border-slate-800 bg-slate-900/50 py-3 pl-10 pr-4 text-white placeholder-slate-500 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 md:rounded-2xl md:py-4 md:pl-12"
           />

@@ -36,7 +36,8 @@ export async function GET(request: NextRequest) {
   const max_price = searchParams.get('max_price')
   const online = searchParams.get('online')
   const verified = searchParams.get('verified')
-  const search = searchParams.get('search')
+  const location = searchParams.get('location')
+  const content = searchParams.get('content') || searchParams.get('search')
   const sort = searchParams.get('sort') || 'default'
   const tagRaw = searchParams.get('tag')
   const tag_field = searchParams.get('tag_field')
@@ -56,7 +57,8 @@ export async function GET(request: NextRequest) {
   if (max_price != null && max_price !== '') filters.max_price = Number(max_price)
   if (online === 'true') filters.online = true
   if (verified === 'true') filters.verified = true
-  if (search?.trim()) filters.search = search.trim()
+  if (location?.trim()) filters.location = location.trim()
+  if (content?.trim()) filters.content = content.trim()
 
   const tagVal = tagRaw != null ? sanitizeProfileTagValue(tagRaw) : ''
   const tagFieldOk = tag_field && isProfileJsonTagField(tag_field) ? (tag_field as ProfileJsonTagField) : null
