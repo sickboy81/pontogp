@@ -402,6 +402,13 @@ export default function HomeClient() {
         )}
       </div>
 
+      {(locationQuery || contentQuery) && (
+        <div className="-mt-3 mb-5 flex flex-wrap gap-2" aria-label="Buscas ativas">
+          {locationQuery && <button type="button" onClick={() => setLocationQuery('')} className="rounded-full border border-primary-500/40 bg-primary-500/10 px-3 py-1 text-xs text-primary-200">{locationQuery} ×</button>}
+          {contentQuery.split(/[\s,]+/).filter(Boolean).map((term) => <button key={term} type="button" onClick={() => setContentQuery((current) => current.split(/[\s,]+/).filter((item) => item && item !== term).join(' '))} className="rounded-full border border-primary-500/40 bg-primary-500/10 px-3 py-1 text-xs text-primary-200">{term} ×</button>)}
+        </div>
+      )}
+
       {filtersOpen ? (
         <FilterPanel
           filters={filters}
