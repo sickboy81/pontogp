@@ -14,15 +14,18 @@ interface ProfileCardProps {
   index?: number
   planColor?: string
   priority?: boolean
+  searchTerms?: string[]
 }
 
-export default function ProfileCard({ profile, index = 0, planColor, priority = false }: ProfileCardProps) {
+export default function ProfileCard({ profile, index = 0, planColor, priority = false, searchTerms = [] }: ProfileCardProps) {
   const user = useAuthStore((s) => s.user)
   const router = useRouter()
   const isFavorite = useFavoritesStore((s) => s.isFavorite(profile.id))
   const toggleFavorite = useFavoritesStore((s) => s.toggleFavorite)
   const mainPhoto = profile.thumbnail || profile.photos?.[0]
   const isUnavailable = profile.is_unavailable === true
+  const searchable = [profile.name, profile.bio, ...(profile.services || []), ...(profile.special_services || []), profile.hair_color, profile.body_type, profile.eye_color, profile.pubis_type, profile.smoker].filter(Boolean).join(' ').toLocaleLowerCase('pt-BR')
+  const matchedTerms = searchTerms.filter((term) => searchable.includes(term.toLocaleLowerCase('pt-BR'))).slice(0, 3)
 
   async function handleFavoriteClick(e: React.MouseEvent) {
     e.preventDefault()
@@ -110,6 +113,7 @@ export default function ProfileCard({ profile, index = 0, planColor, priority = 
         </div>
         <div className="p-4">
           <h3 className="mb-1 truncate font-semibold text-lg text-white">{profile.name}</h3>
+          {matchedTerms.length > 0 && <div className="mb-2 flex flex-wrap gap-1"><span className="text-[10px] text-slate-500">Encontrado em:</span>{matchedTerms.map((term) => <span key={term} className="rounded bg-primary-500/15 px-1.5 py-0.5 text-[10px] text-primary-300">{term}</span>)}</div>}
           <div className="mb-2 flex items-center gap-1 text-[10px] text-slate-400">
             <span>{profile.age} anos</span>
             <span> • </span>

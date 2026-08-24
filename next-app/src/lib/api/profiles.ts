@@ -185,6 +185,14 @@ const PROFILE_LIST_FIELDS = [
   'name',
   'age',
   'city',
+  'bio',
+  'services',
+  'special_services',
+  'hair_color',
+  'body_type',
+  'eye_color',
+  'pubis_type',
+  'smoker',
   'state',
   'category',
   'gender',
@@ -239,6 +247,17 @@ function escapeDoubleQuotes(s: string): string {
   return s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
 }
 
+function expandContentTerm(term: string): string[] {
+  const normalized = term.toLocaleLowerCase('pt-BR')
+  const aliases: Record<string, string[]> = {
+    relax: ['relax', 'relaxante', 'massagem'],
+    massagem: ['massagem', 'massagens', 'relaxante'],
+    viagem: ['viagem', 'viajar', 'acompanhamento em viagem'],
+    tatuagem: ['tatuagem', 'tatuagens', 'tattoo'],
+  }
+  return aliases[normalized] || [normalized]
+}
+
 /** Lista perfis (servidor). Filtros: igualdade, localização, conteúdo, idade, preço, online e verificação. */
 export async function getProfiles(options: {
   filters?: Record<string, string | number | boolean>
@@ -276,8 +295,15 @@ export async function getProfiles(options: {
     parts.push(`(city ~ "${q}" || state ~ "${q}" || neighborhoods ~ "${q}")`)
   }
   if (filters.content || filters.search) {
-    const q = escapeDoubleQuotes(String(filters.content || filters.search))
-    parts.push(`(name ~ "${q}" || bio ~ "${q}" || search_normalized ~ "${q}" || services ~ "${q}" || special_services ~ "${q}" || service_locations ~ "${q}" || service_to ~ "${q}" || hair_color ~ "${q}" || body_type ~ "${q}" || eye_color ~ "${q}" || pubis_type ~ "${q}" || smoker ~ "${q}")`)
+    const terms = String(filters.content || filters.search).split(/[,\s]+/).map((term) => term.trim()).filter(Boolean).slice(0, 8)
+    const termFilters = terms.map((term) => {
+      const alternatives = expandContentTerm(term).map((value) => {
+        const q = escapeDoubleQuotes(value)
+        return `(name ~ "${q}" || bio ~ "${q}" || search_normalized ~ "${q}" || services ~ "${q}" || special_services ~ "${q}" || service_locations ~ "${q}" || service_to ~ "${q}" || hair_color ~ "${q}" || body_type ~ "${q}" || eye_color ~ "${q}" || pubis_type ~ "${q}" || smoker ~ "${q}")`
+      })
+      return `(${alternatives.join(' || ')})`
+    })
+    if (termFilters.length) parts.push(termFilters.join(' && '))
   }
   if (jsonTag?.value) {
     const v = escapeDoubleQuotes(jsonTag.value)

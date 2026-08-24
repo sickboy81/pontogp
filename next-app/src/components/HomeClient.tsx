@@ -7,11 +7,16 @@ import dynamic from 'next/dynamic'
 import { Search, Filter, X, RefreshCw } from 'lucide-react'
 import ProfileCard from '@/components/ProfileCard'
 import type { Profile, FilterOptions } from '@/lib/types'
-import { CATEGORIES } from '@/utils/constants'
+import { CATEGORIES, CITIES, STATES, NEIGHBORHOODS_BY_CITY } from '@/utils/constants'
 import { useAuthStore } from '@/store/auth'
 import { useFavoritesStore } from '@/store/favorites'
 
 const LIMIT = 21
+const LOCATION_SUGGESTIONS = Array.from(new Set([
+  ...STATES,
+  ...CITIES,
+  ...Object.values(NEIGHBORHOODS_BY_CITY).flat(),
+])).sort((a, b) => a.localeCompare(b, 'pt-BR'))
 
 const StoriesSection = dynamic(() => import('@/components/StoriesSection'), {
   ssr: false,
@@ -151,6 +156,17 @@ export default function HomeClient() {
     const t = setTimeout(() => setDebouncedContent(contentQuery), 500)
     return () => clearTimeout(t)
   }, [contentQuery])
+
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams.toString())
+    if (debouncedLocation.trim()) params.set('location', debouncedLocation.trim())
+    else params.delete('location')
+    if (debouncedContent.trim()) params.set('content', debouncedContent.trim())
+    else params.delete('content')
+    params.delete('search')
+    const next = params.toString()
+    if (next !== searchParams.toString()) router.replace(next ? `/?${next}` : '/', { scroll: false })
+  }, [debouncedLocation, debouncedContent, router, searchParams])
 
   useEffect(() => {
     if (isAuthenticated) fetchFavorites()
@@ -322,14 +338,15 @@ export default function HomeClient() {
     (tagFromUrl.length > 0 && tagFieldFromUrl.length > 0)
 
   const categoryLabel = CATEGORIES.find((c) => c.value === filters.category)?.label ?? 'Acompanhantes'
+  const searchTerms = contentQuery.split(/[\s,]+/).map((term) => term.trim()).filter((term) => term.length >= 2).slice(0, 8)
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 md:py-10">
       <h1 className="sr-only">
         CerejaVIP - acompanhantes, massagistas e atendimento online no Brasil
       </h1>
-      <div className="mb-6 flex gap-2 md:gap-4">
-        <div className="relative flex-1">
+      <div className="mb-6 grid gap-2 md:grid-cols-[1fr_1fr_auto_auto] md:gap-4">
+        <div className="relative">
           <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500 md:h-5 md:w-5" />
           <input
             type="text"
@@ -339,8 +356,10 @@ export default function HomeClient() {
             aria-label="Buscar por localização"
             name="location"
             autoComplete="off"
-            className="w-full rounded-xl border border-slate-800 bg-slate-900/50 py-3 pl-10 pr-4 text-white placeholder-slate-500 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 md:rounded-2xl md:py-4 md:pl-12"
+            list="cerejavip-location-suggestions"
+            className="w-full rounded-xl border border-slate-800 bg-slate-900/50 py-3 pl-10 pr-10 text-white placeholder-slate-500 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 md:rounded-2xl md:py-4 md:pl-12"
           />
+          {locationQuery && <button type="button" onClick={() => setLocationQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white" aria-label="Limpar localização"><X className="h-4 w-4" /></button>}
         </div>
         <div className="relative flex-1">
           <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500 md:h-5 md:w-5" />
@@ -352,9 +371,13 @@ export default function HomeClient() {
             aria-label="Buscar serviços, características ou descrição"
             name="content"
             autoComplete="off"
-            className="w-full rounded-xl border border-slate-800 bg-slate-900/50 py-3 pl-10 pr-4 text-white placeholder-slate-500 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 md:rounded-2xl md:py-4 md:pl-12"
+            className="w-full rounded-xl border border-slate-800 bg-slate-900/50 py-3 pl-10 pr-10 text-white placeholder-slate-500 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 md:rounded-2xl md:py-4 md:pl-12"
           />
+          {contentQuery && <button type="button" onClick={() => setContentQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white" aria-label="Limpar conteúdo"><X className="h-4 w-4" /></button>}
         </div>
+        <datalist id="cerejavip-location-suggestions">
+          {LOCATION_SUGGESTIONS.map((item) => <option key={item} value={item} />)}
+        </datalist>
         <button
           type="button"
           onClick={() => setFiltersOpen(true)}
@@ -439,7 +462,7 @@ export default function HomeClient() {
             <Search className="h-8 w-8 text-slate-500" />
           </div>
           <p className="text-lg font-medium text-slate-300">Nenhum anúncio encontrado</p>
-          <p className="mt-2 text-sm text-slate-500">Ajuste os filtros ou faça uma nova busca.</p>
+          <p className="mt-2 text-sm text-slate-500">Tente remover filtros, ampliar a localização ou usar outros termos de serviço e características.</p>
           <button
             type="button"
             onClick={clearFilters}
@@ -458,6 +481,7 @@ export default function HomeClient() {
                 index={index}
                 planColor={planColorMap[profile.plan_slug ?? profile.plan] ?? '#dc2626'}
                 priority={index === 0}
+                searchTerms={searchTerms}
               />
             ))}
           </div>
