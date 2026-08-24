@@ -10,6 +10,21 @@ function toPBDate(d: Date = new Date()) {
   return d.toISOString().replace('T', ' ')
 }
 
+function resolveStoryCreated(record: Record<string, unknown>): string {
+  const created = String(record.created || '').trim()
+  if (created) return created
+  // Stories atuais duram 24h. Para registros legados sem `created`, a data de
+  // expiração permite recuperar uma data aproximada em vez de chamar tudo de
+  // “recente”.
+  const expiresAt = new Date(String(record.expires_at || ''))
+  if (!Number.isNaN(expiresAt.getTime())) {
+    return new Date(expiresAt.getTime() - 24 * 60 * 60 * 1000).toISOString()
+  }
+  const updated = String(record.updated || '').trim()
+  if (updated) return updated
+  return ''
+}
+
 /** GET: lista stories ativas (não expiradas). Query: profileId (opcional) */
 export async function GET(request: NextRequest) {
   const profileId = request.nextUrl.searchParams.get('profileId')
@@ -56,7 +71,7 @@ export async function GET(request: NextRequest) {
         text: r.text || '',
         // O PocketBase sempre fornece `created`; o fallback mantém a informação
         // útil mesmo para registros legados importados sem esse campo.
-        created: String(r.created || r.updated || ''),
+        created: resolveStoryCreated(r),
         expires_at: r.expires_at,
       }
     })

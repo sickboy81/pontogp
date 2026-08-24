@@ -92,14 +92,14 @@ export default function StoryViewer({
   const hasPrev = currentIndex > 0
   const storyCreatedLabel = (() => {
     const c = story?.created
-    if (c == null || String(c).trim() === '') return 'Publicado recentemente'
+    if (c == null || String(c).trim() === '') return 'Data de publicação indisponível'
     const d = parsePocketBaseDateInput(c)
     if (d) {
       const rel = formatRelativeTime(c)
       if (rel) return `Publicado ${rel}`
       return `Publicado em ${d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}`
     }
-    return 'Publicado recentemente'
+    return 'Data de publicação indisponível'
   })()
 
   const goNext = useCallback(() => {
