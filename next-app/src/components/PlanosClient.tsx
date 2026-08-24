@@ -220,9 +220,9 @@ export default function PlanosClient() {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-5xl px-4 py-12">
-        <h1 className="mb-2 text-3xl font-bold text-white">Planos e Preços</h1>
-        <p className="mb-8 text-slate-400">Carregando planos...</p>
+      <div className="mx-auto max-w-6xl px-4 py-12">
+        <h1 className="mb-2 text-3xl font-bold text-slate-950 dark:text-white">Planos e Preços</h1>
+        <p className="mb-8 text-slate-600 dark:text-slate-400">Carregando planos...</p>
         <div className="flex items-center justify-center py-16">
           <Loader2 className="h-12 w-12 animate-spin text-primary-500" />
         </div>
@@ -231,11 +231,12 @@ export default function PlanosClient() {
   }
 
   return (
-    <div className="pricing-page mx-auto max-w-5xl px-4 py-12">
-      <h1 className="mb-2 text-3xl font-bold text-white">Planos e Preços</h1>
-      <p className="mb-8 text-slate-400">
-        Escolha o plano ideal. Comece grátis ou assine para mais visibilidade.
-      </p>
+    <div className="pricing-page mx-auto max-w-6xl px-4 py-8 sm:py-12">
+      <div className="mx-auto max-w-3xl text-center">
+        <span className="inline-flex rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-300">Planos para anunciantes</span>
+        <h1 className="mt-4 text-3xl font-black tracking-tight text-slate-950 dark:text-white sm:text-4xl">Escolha como quer aparecer</h1>
+        <p className="mt-3 text-slate-600 dark:text-slate-400">Comece grátis e evolua quando quiser mais alcance, mídia e informações sobre seus visitantes.</p>
+      </div>
 
       {isAuthenticated && profiles.length > 0 && (() => {
         const currentProfile = profiles[0]
@@ -244,12 +245,12 @@ export default function PlanosClient() {
         )
         const currentPlanExpired = hasExpired(currentProfile?.search_expires_at) || hasExpired(currentProfile?.contact_expires_at)
         return (
-          <div className={`pricing-current-plan mb-6 rounded-xl p-4 ${currentPlanExpired ? 'border border-amber-500/50 bg-amber-500/10' : 'border border-primary-500/40 bg-primary-500/10'}`}>
-            <p className="text-sm text-slate-400">Seu plano atual</p>
-            <p className="text-lg font-semibold text-white">
+          <div className={`pricing-current-plan mx-auto mb-6 mt-8 max-w-4xl rounded-2xl p-5 ${currentPlanExpired ? 'border border-amber-500/50 bg-amber-500/10' : 'border border-primary-500/40 bg-primary-500/10'}`}>
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Seu plano atual</p>
+            <p className="mt-1 text-xl font-bold text-slate-950 dark:text-white">
               {currentPlan?.name ?? (currentProfile?.plan_slug || 'Grátis')}
             </p>
-            <p className="mt-1 text-sm text-slate-300">
+            <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
               {currentPlanExpired
                 ? 'Seu plano expirou. Renove ou mude de plano para reativar o anúncio e os contatos.'
                 : 'Para renovar ou mudar de plano, escolha um dos planos abaixo.'}
@@ -259,8 +260,8 @@ export default function PlanosClient() {
       })()}
 
       {isAuthenticated && profiles.length > 0 && (
-        <div className="pricing-coupon-panel mb-6 flex flex-wrap items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-800/50 p-4">
-          <span className="text-sm text-slate-400">Tem um cupom?</span>
+        <div className="pricing-coupon-panel mx-auto mb-7 mt-5 flex max-w-4xl flex-wrap items-center justify-center gap-3 rounded-2xl border border-slate-700 bg-slate-800/50 p-4">
+          <span className="text-sm font-medium text-slate-600 dark:text-slate-300">Tem um cupom?</span>
           <input
             type="text"
             value={couponCode}
@@ -301,7 +302,8 @@ export default function PlanosClient() {
         </div>
       )}
 
-      <div className="pricing-period-toggle mb-8 flex justify-center gap-2">
+      <div className="pricing-period-toggle mb-8 mt-8 flex items-center justify-center gap-3">
+        <span className="mr-1 text-sm font-medium text-slate-600 dark:text-slate-400">Cobrança:</span>
         <button
           type="button"
           onClick={() => setBillingPeriod('weekly')}
@@ -326,7 +328,7 @@ export default function PlanosClient() {
         </button>
       </div>
 
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(240px,280px))] justify-center gap-6">
+      <div className="grid items-stretch gap-5 md:grid-cols-2 lg:grid-cols-4">
         {plans.map((plan) => {
           const price = getPrice(plan)
           const currentProfile = profiles[0]
@@ -338,7 +340,7 @@ export default function PlanosClient() {
           return (
             <div
               key={plan.id}
-              className={`pricing-plan-card flex flex-col rounded-xl border p-6 transition ${
+              className={`pricing-plan-card relative flex flex-col rounded-2xl border p-6 transition ${plan.slug === 'ouro' ? 'ring-2 ring-amber-400/70 lg:-translate-y-2' : ''} ${
                 isCurrentPlan
                   ? 'border-primary-500 bg-primary-500/10 ring-2 ring-primary-500/50'
                   : 'border-slate-700 bg-slate-800/50 hover:border-primary-500/50'
@@ -349,25 +351,25 @@ export default function PlanosClient() {
                   <Check className="h-3 w-3" /> Seu plano atual
                 </span>
               )}
-              {!isCurrentPlan && plan.slug === 'ouro' && (
-                <span className="mb-2 inline-flex items-center gap-1 text-xs font-semibold text-amber-400">
+              {plan.slug === 'ouro' && (
+                <span className="absolute -top-3 left-5 inline-flex items-center gap-1 rounded-full bg-amber-400 px-3 py-1 text-xs font-bold text-amber-950 shadow-sm">
                   <Star className="h-3 w-3 fill-current" /> Popular
                 </span>
               )}
-              <h3 className="text-xl font-bold text-white">{plan.name}</h3>
-              <p className="mt-2 text-2xl font-bold text-primary-400">
+              <h3 className="text-xl font-bold text-slate-950 dark:text-white">{plan.name}</h3>
+              <p className="mt-3 text-3xl font-black text-primary-700 dark:text-primary-400">
                 {price === 0 ? 'Grátis' : formatPrice(price)}
               </p>
-              <p className="mb-4 text-xs text-slate-500">
+              <p className="mb-5 text-xs text-slate-500 dark:text-slate-400">
                 {billingPeriod === 'weekly' ? 'por semana' : 'por mês'}
               </p>
-              <ul className="mb-6 flex-1 space-y-2 text-sm text-slate-300">
+              <ul className="mb-7 flex-1 space-y-3 text-sm text-slate-600 dark:text-slate-300">
                 {(() => {
                   const custom = (plan.features || []).map((f) => String(f).trim()).filter(Boolean)
                   if (custom.length > 0) {
                     return custom.map((f, i) => (
                       <li key={`${i}-${f.slice(0, 40)}`} className="flex items-center gap-2">
-                        <Check className="h-4 w-4 shrink-0 text-green-500" />
+                        <Check className="h-4 w-4 shrink-0 text-emerald-600 dark:text-green-400" />
                         {f}
                       </li>
                     ))
@@ -375,11 +377,11 @@ export default function PlanosClient() {
                   return (
                     <>
                       <li className="flex items-center gap-2">
-                        <Check className="h-4 w-4 shrink-0 text-green-500" />
+                        <Check className="h-4 w-4 shrink-0 text-emerald-600 dark:text-green-400" />
                         {formatLimit(plan.max_photos)} fotos
                       </li>
                       <li className="flex items-center gap-2">
-                        <Check className="h-4 w-4 shrink-0 text-green-500" />
+                        <Check className="h-4 w-4 shrink-0 text-emerald-600 dark:text-green-400" />
                         {plan.daily_bumps || 0} bumps/dia
                       </li>
                     </>
