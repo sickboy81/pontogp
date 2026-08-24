@@ -769,6 +769,30 @@ html.light .pricing-page .bg-primary-600\/80.text-white {
   scrollbar-color: rgba(148, 163, 184, 0.6) transparent;
 }
 
+.profile-card-featured {
+  position: relative;
+  background-image: linear-gradient(145deg, rgba(245, 158, 11, 0.12), rgba(15, 23, 42, 0.5) 34%, rgba(15, 23, 42, 0.72));
+}
+
+.profile-card-featured::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 2px;
+  z-index: 3;
+  background: linear-gradient(90deg, transparent, #fbbf24, #fde68a, #fbbf24, transparent);
+  opacity: 0.9;
+}
+
+.profile-card-featured:hover {
+  border-color: rgba(253, 224, 71, 0.95);
+  box-shadow: 0 20px 44px rgba(120, 53, 15, 0.28), 0 0 28px rgba(245, 158, 11, 0.12);
+}
+
+.profile-featured-badge {
+  letter-spacing: 0.02em;
+}
+
 /* Atalhos do anunciante: duas colunas legíveis no celular, sem largura mínima
    herdada dos botões de desktop. */
 @media (max-width: 640px) {

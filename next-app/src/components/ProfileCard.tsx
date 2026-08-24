@@ -54,7 +54,11 @@ export default function ProfileCard({ profile, index = 0, planColor, priority = 
     <div className="group relative">
       <Link
         href={`/perfil/${encodeURIComponent(profile.id)}`}
-        className="block overflow-hidden rounded-xl border border-slate-700 bg-slate-800/50 transition hover:border-primary-500 hover:shadow-lg hover:shadow-primary-500/10"
+        className={`profile-card block overflow-hidden rounded-xl border bg-slate-800/50 transition hover:-translate-y-1 hover:border-primary-500 hover:shadow-lg hover:shadow-primary-500/10 ${
+          profile.featured
+            ? 'profile-card-featured border-amber-300/80 shadow-lg shadow-amber-950/30 ring-1 ring-amber-400/30'
+            : 'border-slate-700'
+        }`}
       >
         <div className="relative aspect-[3/4] overflow-hidden bg-slate-800">
           {mainPhoto ? (
@@ -92,11 +96,11 @@ export default function ProfileCard({ profile, index = 0, planColor, priority = 
             )}
             {profile.featured && (
               <span
-                className="flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold text-white"
-                style={{ backgroundColor: planColor || '#dc2626' }}
+                className="profile-featured-badge flex items-center gap-1 rounded-full border border-amber-200/70 bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-500 px-2.5 py-1 text-xs font-extrabold text-amber-950 shadow-lg shadow-amber-950/30"
+                title="Benefício do plano Ouro"
               >
-                <Star className="h-3 w-3 fill-white" />
-                Destaque
+                <Star className="h-3 w-3 fill-current" />
+                Ouro em destaque
               </span>
             )}
           </div>
@@ -111,6 +115,12 @@ export default function ProfileCard({ profile, index = 0, planColor, priority = 
             />
           </button>
         </div>
+        {profile.featured && (
+          <div className="flex items-center justify-between border-b border-amber-300/20 bg-gradient-to-r from-amber-500/15 via-yellow-400/10 to-transparent px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-amber-300">
+            <span>Perfil Ouro</span>
+            <span className="text-amber-200/70">Destaque visual</span>
+          </div>
+        )}
         <div className="p-4">
           <h3 className="mb-1 truncate font-semibold text-lg text-white">{profile.name}</h3>
           {matchedTerms.length > 0 && <div className="mb-2 flex flex-wrap gap-1"><span className="text-[10px] text-slate-500">Encontrado em:</span>{matchedTerms.map((term) => <span key={term} className="rounded bg-primary-500/15 px-1.5 py-0.5 text-[10px] text-primary-300">{term}</span>)}</div>}
