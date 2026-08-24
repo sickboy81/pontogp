@@ -7,6 +7,23 @@ import { buildPublicProfileLifecycleFilter } from '@/lib/profile-visibility.mjs'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
+async function fetchPocketBase(input: string, init: RequestInit = {}, attempts = 2): Promise<Response> {
+  let lastError: unknown
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 8_000)
+    try {
+      return await fetch(input, { ...init, signal: controller.signal })
+    } catch (error) {
+      lastError = error
+      if (attempt + 1 < attempts) await new Promise((resolve) => setTimeout(resolve, 250))
+    } finally {
+      clearTimeout(timeout)
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error('PocketBase indisponível')
+}
+
 /** Mapeia registro PocketBase (com expand) para Profile. Exportado para uso em rotas (ex.: favoritos). */
 export function mapProfile(record: Record<string, unknown> & { expand?: Record<string, unknown> }): Profile | null {
   if (!record?.id) return null
@@ -132,7 +149,7 @@ async function getProfileVisibilityPolicy(): Promise<ProfileVisibilityPolicy> {
   }
   const fallback = parseProfileVisibilityPolicy(null)
   try {
-    const res = await fetch(
+    const res = await fetchPocketBase(
       `${PB_URL}/api/collections/settings/records?filter=${encodeURIComponent(`key = "${VISIBILITY_SETTINGS_KEY}"`)}&perPage=1&fields=value`,
       { cache: 'no-store' }
     )
@@ -386,7 +403,7 @@ export async function getProfiles(options: {
     sort,
     fields: PROFILE_LIST_FIELDS,
   })
-  const res = await fetch(
+  const res = await fetchPocketBase(
     `${PB_URL}/api/collections/profiles/records?${params}`,
     { cache: 'no-store' }
   )

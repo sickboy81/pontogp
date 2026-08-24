@@ -63,6 +63,7 @@ export async function GET(request: NextRequest) {
   const tagVal = tagRaw != null ? sanitizeProfileTagValue(tagRaw) : ''
   const tagFieldOk = tag_field && isProfileJsonTagField(tag_field) ? (tag_field as ProfileJsonTagField) : null
 
+  try {
   if (tagVal && tagFieldOk) {
     const jsonTag = { field: tagFieldOk, value: tagVal }
     const excludeId = exclude_profile?.trim() || undefined
@@ -135,6 +136,13 @@ export async function GET(request: NextRequest) {
   return Response.json(profiles, {
     headers: { 'Cache-Control': PUBLIC_CACHE_CONTROL },
   })
+  } catch (error) {
+    console.error('[api/profiles] PocketBase indisponível', error)
+    return Response.json(
+      { error: 'Perfis temporariamente indisponíveis. Tente novamente em alguns segundos.', profiles: [] },
+      { status: 503, headers: { 'Cache-Control': 'no-store', 'Retry-After': '5' } }
+    )
+  }
 }
 
 /** POST: cria perfil para o usuário logado. */

@@ -27,10 +27,17 @@ function formatPrice(price: number) {
 export default function AnunciantesPlans() {
   const [plans, setPlans] = useState<Plan[]>([])
   const [loading, setLoading] = useState(true)
+  const [unavailable, setUnavailable] = useState(false)
 
   useEffect(() => {
     fetch('/api/plans?enabledOnly=true')
-      .then((r) => r.json())
+      .then(async (r) => {
+        if (!r.ok) {
+          setUnavailable(true)
+          return [] as Plan[]
+        }
+        return (await r.json()) as Plan[]
+      })
       .then((data: Plan[]) => {
         const order = ['gratis', 'bronze', 'prata', 'ouro']
         const sorted = data
@@ -45,7 +52,7 @@ export default function AnunciantesPlans() {
           })
         setPlans(sorted)
       })
-      .catch(() => {})
+      .catch(() => setUnavailable(true))
       .finally(() => setLoading(false))
   }, [])
 
@@ -67,8 +74,8 @@ export default function AnunciantesPlans() {
   if (!plans.length) {
     return (
       <div className="rounded-2xl border border-white/10 bg-white/[.04] px-6 py-10 text-center">
-        <p className="font-semibold text-white">Os planos estão sendo carregados.</p>
-        <p className="mt-2 text-sm text-slate-400">Você pode consultar os valores e recursos na página completa de planos.</p>
+        <p className="font-semibold text-white">{unavailable ? 'Os planos estão temporariamente indisponíveis.' : 'Os planos estão sendo carregados.'}</p>
+        <p className="mt-2 text-sm text-slate-400">Tente novamente em alguns segundos ou consulte a página completa de planos.</p>
         <Link href="/planos" className="mt-5 inline-flex rounded-lg bg-primary-600 px-5 py-3 text-sm font-bold text-white">Ver planos</Link>
       </div>
     )

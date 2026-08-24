@@ -5,8 +5,25 @@ import { requireAdmin } from '@/lib/api/admin-auth'
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
 export const dynamic = 'force-dynamic'
-const PUBLIC_CACHE_CONTROL = 'public, max-age=60, s-maxage=60, stale-while-revalidate=300'
+const PUBLIC_CACHE_CONTROL = 'public, max-age=30, s-maxage=30, stale-while-revalidate=60'
 const PRIVATE_CACHE_CONTROL = 'private, no-store'
+
+async function fetchPocketBase(input: string, init: RequestInit = {}, attempts = 2): Promise<Response> {
+  let lastError: unknown
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 8_000)
+    try {
+      return await fetch(input, { ...init, signal: controller.signal })
+    } catch (error) {
+      lastError = error
+      if (attempt + 1 < attempts) await new Promise((resolve) => setTimeout(resolve, 250))
+    } finally {
+      clearTimeout(timeout)
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error('PocketBase indisponível')
+}
 
 function mapPlan(record: Record<string, unknown>): Plan {
   const subDays = record.subscription_days
@@ -41,20 +58,31 @@ export async function GET(request: NextRequest) {
   try {
     const filter = enabledOnly ? 'enabled = true' : ''
     const url = `${PB_URL}/api/collections/plans/records?perPage=50&sort=price_monthly${filter ? `&filter=${encodeURIComponent(filter)}` : ''}`
-    const res = await fetch(
-      url,
-      enabledOnly ? { next: { revalidate: 60 } } : { cache: 'no-store' }
-    )
+    const res = await fetchPocketBase(url, { cache: 'no-store' })
     const cacheControl = enabledOnly ? PUBLIC_CACHE_CONTROL : PRIVATE_CACHE_CONTROL
-    if (!res.ok) return Response.json([], { headers: { 'Cache-Control': cacheControl } })
+    if (!res.ok) {
+      return Response.json({ error: 'Planos temporariamente indisponíveis.' }, {
+        status: 503,
+        headers: { 'Cache-Control': 'no-store', 'Retry-After': '5' },
+      })
+    }
     const data = await res.json()
     const items = (data.items || []) as Record<string, unknown>[]
     const plans = items.map(mapPlan)
+    if (enabledOnly && plans.length === 0) {
+      return Response.json({ error: 'Planos temporariamente indisponíveis.' }, {
+        status: 503,
+        headers: { 'Cache-Control': 'no-store', 'Retry-After': '5' },
+      })
+    }
     return Response.json(plans, { headers: { 'Cache-Control': cacheControl } })
-  } catch {
-    return Response.json([], {
+  } catch (error) {
+    console.error('[api/plans] PocketBase indisponível', error)
+    return Response.json({ error: 'Planos temporariamente indisponíveis.' }, {
+      status: 503,
       headers: {
-        'Cache-Control': enabledOnly ? PUBLIC_CACHE_CONTROL : PRIVATE_CACHE_CONTROL,
+        'Cache-Control': 'no-store',
+        'Retry-After': '5',
       },
     })
   }
