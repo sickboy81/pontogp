@@ -347,7 +347,7 @@ export default function DashboardLocationMapPicker({
       </div>
 
       {hasCoords ? (
-        <div className="relative h-72 overflow-hidden rounded-lg border border-slate-600 bg-slate-800">
+        <div className="relative h-48 overflow-hidden rounded-lg border border-slate-600 bg-slate-800 sm:h-56">
           <div ref={containerRef} className="absolute inset-0 z-0" />
           {!mapReady && !mapError && (
             <div className="pointer-events-none absolute inset-0 z-[400] flex items-center justify-center bg-slate-800/80">
