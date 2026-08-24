@@ -114,12 +114,17 @@ export default function AnunciantesPage() {
           </div>
           <div className="relative mx-auto w-full max-w-md">
             <div className="absolute -inset-5 rounded-[2rem] bg-primary-600/20 blur-3xl" />
-            <div className="relative rounded-[2rem] border border-white/15 bg-white/[.08] p-3 shadow-2xl backdrop-blur-xl">
-              <div className="rounded-[1.5rem] bg-slate-900 p-5">
-                <div className="flex items-center justify-between border-b border-white/10 pb-4"><div className="flex items-center gap-3"><div className="h-11 w-11 rounded-full bg-gradient-to-br from-primary-400 to-primary-700" /><div><p className="font-bold">Seu perfil</p><p className="text-xs text-slate-400">cerejavip.com/@usuario</p></div></div><BadgeCheck className="h-5 w-5 text-emerald-400" /></div>
-                <div className="mt-5 grid grid-cols-3 gap-2"><div className="h-24 rounded-xl bg-gradient-to-br from-primary-500/80 to-slate-700" /><div className="h-24 rounded-xl bg-gradient-to-br from-amber-400/70 to-slate-700" /><div className="h-24 rounded-xl bg-gradient-to-br from-cyan-400/60 to-slate-700" /></div>
-                <div className="mt-5 rounded-xl border border-white/10 bg-white/5 p-4"><div className="mb-3 flex items-center justify-between"><span className="text-sm font-semibold">Seu Link na Bio</span><span className="text-xs text-primary-300">personalizável</span></div><div className="space-y-2"><div className="rounded-lg bg-primary-600 px-3 py-2 text-center text-sm font-bold">WhatsApp</div><div className="rounded-lg border border-white/10 px-3 py-2 text-center text-sm">Ver perfil completo</div></div></div>
-                <div className="mt-4 flex items-center justify-between text-xs text-slate-400"><span><Eye className="mr-1 inline h-3.5 w-3.5" /> visitas do perfil</span><span className="font-bold text-white">+ analytics</span></div>
+            <div className="relative rounded-[2rem] border border-white/20 bg-slate-800/80 p-2 shadow-2xl backdrop-blur-xl">
+              <div className="overflow-hidden rounded-[1.55rem] bg-slate-100">
+                <div className="flex items-center justify-between bg-slate-200 px-4 py-2 text-[10px] text-slate-500"><span>9:41</span><span className="flex gap-1"><span>●</span><span>●</span><span>▰</span></span></div>
+                <div className="bg-gradient-to-b from-rose-100 via-white to-white px-5 pb-6 pt-7 text-center text-slate-900">
+                  <div className="mx-auto flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border-4 border-white bg-slate-900 shadow-lg"><img src="/logo-header.png" alt="CerejaVIP" className="w-16 object-contain" /></div>
+                  <div className="mt-3 flex items-center justify-center gap-1"><p className="text-lg font-bold">Seu nome de perfil</p><BadgeCheck className="h-4 w-4 text-emerald-500" /></div>
+                  <p className="text-xs text-slate-500">@usuario · Rio de Janeiro</p>
+                  <p className="mx-auto mt-3 max-w-[230px] text-xs leading-relaxed text-slate-600">Sua frase de apresentação aparece aqui.</p>
+                  <div className="mt-5 space-y-2.5"><div className="rounded-xl bg-primary-600 px-4 py-3 text-sm font-bold text-white shadow-sm">WhatsApp</div><div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold shadow-sm">Enviar mensagem</div><div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold shadow-sm">Instagram</div><div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold shadow-sm">Ver perfil completo</div></div>
+                  <p className="mt-5 text-[10px] font-semibold text-primary-600">cerejavip.com/@usuario</p>
+                </div>
               </div>
             </div>
           </div>
