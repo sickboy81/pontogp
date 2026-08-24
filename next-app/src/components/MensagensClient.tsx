@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { MessageSquare, Search } from 'lucide-react'
+import { MessageSquare, Search, SlidersHorizontal } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
 import type { Message } from '@/lib/types'
 import MessageThread from '@/components/MessageThread'
@@ -141,7 +141,7 @@ export default function MensagensClient() {
 
   if (selectedOther) {
     return (
-      <div className="h-[calc(100vh-12rem)] min-h-[400px]">
+      <div className="mx-auto max-w-5xl">
         <MessageThread
           otherUserId={selectedOther.otherUserId}
           otherUserName={selectedOther.otherUserName}
@@ -155,14 +155,31 @@ export default function MensagensClient() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl">
-      <h1 className="mb-6 text-2xl font-bold text-white">Mensagens</h1>
+    <div className="mx-auto max-w-5xl">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="mb-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary-400">Central de contato</p>
+          <h1 className="text-3xl font-bold text-white">Mensagens</h1>
+          <p className="mt-1 text-sm text-slate-400">Converse com seus contatos em um só lugar.</p>
+        </div>
+        <div className="flex items-center gap-2 text-sm text-slate-400">
+          <MessageSquare className="h-4 w-4" />
+          {conversations.length} {conversations.length === 1 ? 'conversa' : 'conversas'}
+        </div>
+      </div>
       {!messagesSettings.enabled && (
         <div className="mb-4 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
           {messagesSettings.notice || DEFAULT_INTERNAL_MESSAGES_NOTICE}
         </div>
       )}
-      <div className="rounded-xl border border-slate-700 bg-slate-800/50 overflow-hidden">
+      <div className="overflow-hidden rounded-2xl border border-slate-700 bg-slate-800/70 shadow-xl shadow-slate-950/20">
+        <div className="flex items-center justify-between border-b border-slate-700/80 px-4 py-3">
+          <div>
+            <h2 className="font-semibold text-white">Suas conversas</h2>
+            <p className="text-xs text-slate-400">As mais recentes aparecem primeiro</p>
+          </div>
+          <SlidersHorizontal className="h-4 w-4 text-slate-500" aria-hidden="true" />
+        </div>
         <div className="border-b border-slate-700 p-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
@@ -171,17 +188,18 @@ export default function MensagensClient() {
               placeholder="Buscar conversas..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 py-2 pl-10 pr-4 text-white placeholder-slate-500 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+              aria-label="Buscar conversas"
+              className="w-full rounded-xl border border-slate-600 bg-slate-900/70 py-3 pl-10 pr-4 text-white placeholder-slate-500 transition focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/30"
             />
           </div>
         </div>
-        <div className="divide-y divide-slate-700/50 max-h-[70vh] overflow-y-auto">
+        <div className="max-h-[65vh] divide-y divide-slate-700/50 overflow-y-auto">
           {loading ? (
             <div className="p-8 text-center text-slate-400">Carregando conversas...</div>
           ) : filtered.length === 0 ? (
             <div className="p-8 text-center">
               <MessageSquare className="mx-auto mb-4 h-16 w-16 text-slate-600" />
-              <p className="text-slate-400">
+              <p className="font-medium text-slate-300">
                 {searchQuery ? 'Nenhuma conversa encontrada' : 'Nenhuma conversa ainda'}
               </p>
             </div>
@@ -197,15 +215,15 @@ export default function MensagensClient() {
                     otherUserAvatar: conv.otherUserAvatar,
                   })
                 }
-                className={`flex w-full items-center gap-3 p-4 text-left transition hover:bg-slate-700/30 ${
-                  conv.unread ? 'bg-slate-700/20' : ''
+                className={`flex w-full items-center gap-3 px-4 py-4 text-left transition hover:bg-slate-700/40 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500 ${
+                  conv.unread ? 'bg-primary-500/10' : ''
                 }`}
               >
                 {conv.otherUserAvatar ? (
                   <img
                     src={conv.otherUserAvatar}
                     alt={conv.otherUserName}
-                    className="h-12 w-12 rounded-full object-cover"
+                    className="h-12 w-12 rounded-full object-cover ring-2 ring-slate-700"
                   />
                 ) : (
                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-700 text-lg font-semibold text-slate-300">
@@ -215,8 +233,8 @@ export default function MensagensClient() {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-2">
                     <span
-                      className={`font-medium truncate ${
-                        conv.unread ? 'text-white' : 'text-slate-300'
+                    className={`truncate font-semibold ${
+                        conv.unread ? 'text-white' : 'text-slate-200'
                       }`}
                     >
                       {conv.otherUserName}
@@ -226,8 +244,8 @@ export default function MensagensClient() {
                     </span>
                   </div>
                   <p
-                    className={`mt-0.5 truncate text-sm ${
-                      conv.unread ? 'font-medium text-white' : 'text-slate-400'
+                    className={`mt-1 truncate text-sm ${
+                      conv.unread ? 'font-medium text-slate-200' : 'text-slate-400'
                     }`}
                   >
                     {conv.lastMessage.content}

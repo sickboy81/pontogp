@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Send, ArrowLeft, Check, CheckCheck, Ban, ShieldOff } from 'lucide-react'
+import { Send, ArrowLeft, Check, CheckCheck, Ban, ShieldOff, MessageCircle } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
 import { getPb } from '@/lib/pb'
 import type { Message } from '@/lib/types'
@@ -181,7 +181,7 @@ export default function MessageThread({
 
   if (loading) {
     return (
-      <div className="flex h-full flex-col rounded-xl border border-slate-700 bg-slate-800/50">
+      <div className="flex min-h-[calc(100vh-12rem)] flex-col rounded-2xl border border-slate-700 bg-slate-800/70 shadow-xl shadow-slate-950/20">
         <div className="flex items-center gap-3 border-b border-slate-700 p-4">
           <button
             type="button"
@@ -202,12 +202,12 @@ export default function MessageThread({
   }
 
   return (
-    <div className="flex h-full flex-col rounded-xl border border-slate-700 bg-slate-800/50">
-      <div className="flex items-center gap-3 border-b border-slate-700 p-4">
+    <div className="flex min-h-[calc(100vh-12rem)] flex-col rounded-2xl border border-slate-700 bg-slate-800/70 shadow-xl shadow-slate-950/20">
+      <div className="flex items-center gap-3 border-b border-slate-700/80 bg-slate-800/80 px-4 py-3">
         <button
           type="button"
           onClick={onBack}
-          className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-700 hover:text-white"
+          className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-700 hover:text-white"
           aria-label="Voltar"
         >
           <ArrowLeft className="h-5 w-5" />
@@ -216,29 +216,38 @@ export default function MessageThread({
           <img
             src={otherUserAvatar}
             alt={displayName}
-            className="h-10 w-10 rounded-full object-cover"
+            className="h-10 w-10 rounded-full object-cover ring-2 ring-slate-700"
           />
         ) : (
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-700 text-lg font-semibold text-slate-300">
             {displayName.charAt(0).toUpperCase()}
           </div>
         )}
-        <span className="font-medium text-white">{displayName}</span>
+        <div className="min-w-0">
+          <span className="block truncate font-semibold text-white">{displayName}</span>
+          <span className="text-xs text-slate-400">Conversa privada</span>
+        </div>
         <button
           type="button"
           onClick={handleBlockToggle}
           disabled={blockLoading}
-          className="ml-auto flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-slate-400 transition hover:bg-slate-700 hover:text-amber-400 disabled:opacity-50"
+          className="ml-auto flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-sm text-slate-400 transition hover:bg-slate-700 hover:text-amber-400 disabled:opacity-50 sm:px-3"
           title={blocked ? 'Desbloquear conversa' : 'Bloquear conversa'}
         >
           {blocked ? <ShieldOff className="h-4 w-4" /> : <Ban className="h-4 w-4" />}
-          {blocked ? 'Desbloquear' : 'Bloquear'}
+          <span className="hidden sm:inline">{blocked ? 'Desbloquear' : 'Bloquear'}</span>
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4">
+      <div className="flex-1 overflow-y-auto bg-slate-900/20 p-4 sm:p-6">
         {messages.length === 0 ? (
-          <p className="py-8 text-center text-slate-400">Nenhuma mensagem ainda. Envie a primeira.</p>
+          <div className="flex h-full min-h-64 flex-col items-center justify-center text-center">
+            <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-primary-500/10 text-primary-400">
+              <MessageCircle className="h-6 w-6" />
+            </div>
+            <p className="font-medium text-slate-200">Nenhuma mensagem ainda</p>
+            <p className="mt-1 max-w-xs text-sm text-slate-400">Envie uma mensagem para iniciar esta conversa.</p>
+          </div>
         ) : (
           <div className="space-y-3">
             {messages.map((msg) => {
@@ -251,8 +260,8 @@ export default function MessageThread({
                   <div
                     className={`max-w-[80%] rounded-2xl px-4 py-2 ${
                       isMe
-                        ? 'bg-primary-600 text-white'
-                        : 'bg-slate-700 text-slate-100'
+                        ? 'bg-primary-600 text-white shadow-md shadow-primary-950/20'
+                        : 'border border-slate-600/80 bg-slate-700 text-slate-100'
                     }`}
                   >
                     <p className="whitespace-pre-wrap break-words text-sm">{msg.content}</p>
@@ -285,20 +294,22 @@ export default function MessageThread({
           <button type="button" onClick={() => { setSendError(''); void handleSend({ preventDefault: () => undefined } as React.FormEvent) }} className="font-semibold underline hover:text-white">Tentar novamente</button>
         </div>
       )}
-      <form onSubmit={handleSend} className="border-t border-slate-700 p-4">
-        <div className="flex gap-2">
+      <form onSubmit={handleSend} className="border-t border-slate-700/80 bg-slate-800/80 p-3 sm:p-4">
+        <div className="flex items-end gap-2">
           <input
             type="text"
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             placeholder={inputPlaceholder}
-            className="flex-1 rounded-xl border border-slate-600 bg-slate-800 px-4 py-2.5 text-white placeholder-slate-500 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 disabled:opacity-60"
+            aria-label="Mensagem"
+            className="min-w-0 flex-1 rounded-xl border border-slate-600 bg-slate-900/70 px-4 py-3 text-white placeholder-slate-500 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/30 disabled:opacity-60"
             disabled={sendDisabled}
           />
           <button
             type="submit"
             disabled={sendDisabled || !newMessage.trim()}
-            className="rounded-xl bg-primary-600 px-4 py-2.5 font-medium text-white transition hover:bg-primary-500 disabled:opacity-50"
+            aria-label="Enviar mensagem"
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary-600 font-medium text-white transition hover:bg-primary-500 disabled:opacity-50"
           >
             <Send className="h-5 w-5" />
           </button>
