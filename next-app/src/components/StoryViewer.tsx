@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { X, Heart, MessageCircle, Volume2, VolumeX, MoreVertical, Share2 } from 'lucide-react'
+import { X, Heart, MessageCircle, Volume2, VolumeX, MoreVertical, Share2, Reply } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAuthStore } from '@/store/auth'
 import { formatRelativeTime, parsePocketBaseDateInput } from '@/utils/format'
@@ -22,6 +22,9 @@ interface StoryComment {
   content: string
   created: string
   userName: string
+  parentId?: string | null
+  likesCount: number
+  liked: boolean
 }
 
 interface StoryViewerProps {
@@ -65,7 +68,9 @@ export default function StoryViewer({
   const [likesError, setLikesError] = useState<string | null>(null)
   const [commentsError, setCommentsError] = useState<string | null>(null)
   const [commentInput, setCommentInput] = useState('')
+  const [replyTo, setReplyTo] = useState<StoryComment | null>(null)
   const [commentSending, setCommentSending] = useState(false)
+  const [commentLikeLoading, setCommentLikeLoading] = useState<string | null>(null)
   const [likeLoading, setLikeLoading] = useState(false)
   const [showComments, setShowComments] = useState(false)
   const [isPaused, setIsPaused] = useState(false)
@@ -221,6 +226,7 @@ export default function StoryViewer({
     if (!story?.id) return
     setLikes({ count: 0, liked: false })
     setComments([])
+    setReplyTo(null)
     setLikesError(null)
     setCommentsError(null)
     setIsPaused(false)
@@ -316,7 +322,7 @@ export default function StoryViewer({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({ content, parentId: replyTo?.id || undefined }),
       })
         .then(async (r) => {
           const d = (await r.json().catch(() => ({}))) as {
@@ -342,9 +348,13 @@ export default function StoryViewer({
                 content: d.content!,
                 created: d.created || new Date().toISOString(),
                 userName: displayName,
+                parentId: replyTo?.id || null,
+                likesCount: 0,
+                liked: false,
               },
             ])
             setCommentInput('')
+            setReplyTo(null)
             setCommentsError(null)
           } else {
             toast.error('Resposta inesperada do servidor')
@@ -352,8 +362,33 @@ export default function StoryViewer({
         })
         .finally(() => setCommentSending(false))
     },
-    [story, commentInput, commentSending, user]
+    [story, commentInput, commentSending, user, replyTo]
   )
+
+  const handleCommentLike = useCallback(async (comment: StoryComment) => {
+    if (!isAuthenticated) {
+      toast.error('Faça login para curtir comentários')
+      return
+    }
+    if (commentLikeLoading || !story?.id) return
+    setCommentLikeLoading(comment.id)
+    try {
+      const res = await fetch(`/api/stories/${story.id}/comments/${comment.id}/like`, {
+        method: 'POST',
+        credentials: 'include',
+      })
+      const data = (await res.json().catch(() => ({}))) as { liked?: boolean; count?: number; error?: string }
+      if (!res.ok) {
+        toast.error(data.error || 'Não foi possível curtir o comentário')
+        return
+      }
+      setComments((current) => current.map((item) => item.id === comment.id
+        ? { ...item, liked: !!data.liked, likesCount: data.count ?? item.likesCount }
+        : item))
+    } finally {
+      setCommentLikeLoading(null)
+    }
+  }, [commentLikeLoading, isAuthenticated, story?.id])
 
   useEffect(() => {
     if (!optionsOpen) return
@@ -838,23 +873,49 @@ export default function StoryViewer({
               ) : comments.length === 0 ? (
                 <p className="py-6 text-center text-sm text-white/50">Nenhum comentário ainda.</p>
               ) : (
-                comments.map((c) => (
-                  <div key={c.id} className="rounded-xl border border-white/15 bg-white/[0.1] px-3 py-2.5 text-sm shadow-sm">
-                    <div className="flex items-baseline justify-between gap-2">
-                      <p className="font-semibold text-white">{c.userName}</p>
-                      {c.created && (
-                        <span className="shrink-0 text-[10px] text-white/70">
-                          {formatRelativeTime(c.created) || new Date(c.created).toLocaleString('pt-BR')}
-                        </span>
-                      )}
+                comments.filter((c) => !c.parentId).map((c) => (
+                  <div key={c.id}>
+                    <div className="rounded-xl border border-white/15 bg-white/[0.1] px-3 py-2.5 text-sm shadow-sm">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <p className="font-semibold text-white">{c.userName}</p>
+                        {c.created && <span className="shrink-0 text-[10px] text-white/70">{formatRelativeTime(c.created) || new Date(c.created).toLocaleString('pt-BR')}</span>}
+                      </div>
+                      <p className="mt-1 whitespace-pre-wrap break-words text-white">{c.content}</p>
+                      <div className="mt-2 flex items-center gap-3 text-xs text-white/70">
+                        <button type="button" onClick={() => void handleCommentLike(c)} className={`inline-flex items-center gap-1 rounded-full px-2 py-1 hover:bg-white/10 ${c.liked ? 'text-red-300' : ''}`} aria-label={`Curtir comentário de ${c.userName}`}>
+                          <Heart className={`h-3.5 w-3.5 ${c.liked ? 'fill-current' : ''}`} /> {c.likesCount}
+                        </button>
+                        <button type="button" onClick={() => { setReplyTo(c); setCommentInput('') }} className="inline-flex items-center gap-1 rounded-full px-2 py-1 hover:bg-white/10">
+                          <Reply className="h-3.5 w-3.5" /> Responder
+                        </button>
+                      </div>
                     </div>
-                    <p className="mt-1 whitespace-pre-wrap break-words text-white">{c.content}</p>
+                    <div className="ml-5 mt-2 space-y-2 border-l border-white/15 pl-3">
+                      {comments.filter((reply) => reply.parentId === c.id).map((reply) => (
+                        <div key={reply.id} className="rounded-xl border border-white/10 bg-white/[0.07] px-3 py-2 text-sm">
+                          <div className="flex items-baseline justify-between gap-2">
+                            <p className="font-semibold text-white">{reply.userName}</p>
+                            {reply.created && <span className="shrink-0 text-[10px] text-white/65">{formatRelativeTime(reply.created) || new Date(reply.created).toLocaleString('pt-BR')}</span>}
+                          </div>
+                          <p className="mt-1 whitespace-pre-wrap break-words text-white">{reply.content}</p>
+                          <button type="button" onClick={() => void handleCommentLike(reply)} className={`mt-1 inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs text-white/70 hover:bg-white/10 ${reply.liked ? 'text-red-300' : ''}`} aria-label={`Curtir comentário de ${reply.userName}`}>
+                            <Heart className={`h-3.5 w-3.5 ${reply.liked ? 'fill-current' : ''}`} /> {reply.likesCount}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 ))
               )}
             </div>
             {isAuthenticated ? (
               <form onSubmit={handleCommentSubmit} className="shrink-0 border-t border-white/10 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+                {replyTo && (
+                  <div className="mb-2 flex items-center justify-between rounded-lg bg-primary-500/15 px-3 py-2 text-xs text-primary-100">
+                    <span>Respondendo a <strong>{replyTo.userName}</strong></span>
+                    <button type="button" onClick={() => setReplyTo(null)} className="font-semibold underline">Cancelar</button>
+                  </div>
+                )}
                 <div className="flex gap-2">
                   <input
                     type="text"

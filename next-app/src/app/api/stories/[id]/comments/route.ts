@@ -46,14 +46,32 @@ export async function GET(
     if (!res.ok) {
       return Response.json({ error: 'Não foi possível carregar comentários' }, { status: res.status })
     }
-    const data = (await res.json()) as { items?: Array<{ id: string; content: string; created: string; expand?: { user?: { name?: string } } }> }
-    const items = (data.items || []).map((r) => ({
+    const data = (await res.json()) as { items?: Array<{ id: string; content: string; created: string; parent?: string; expand?: { user?: { name?: string } } }> }
+    const items = data.items || []
+    const commentIds = items.map((r) => r.id)
+    const viewerId = getUserIdFromToken(getToken(request) || '')
+    let likeItems: Array<{ comment?: string; user?: string }> = []
+    if (commentIds.length > 0) {
+      const likeFilter = commentIds.map((id) => `comment="${id}"`).join(' || ')
+      const likesRes = await fetch(
+        `${PB_URL}/api/collections/comment_likes/records?filter=${encodeURIComponent(likeFilter)}&perPage=500&fields=comment,user`,
+        { headers: { Authorization: `Bearer ${adminToken}` }, cache: 'no-store' },
+      )
+      if (likesRes.ok) {
+        const likesData = (await likesRes.json()) as { items?: Array<{ comment?: string; user?: string }> }
+        likeItems = likesData.items || []
+      }
+    }
+    const normalizedItems = items.map((r) => ({
       id: r.id,
       content: r.content,
       created: r.created,
+      parentId: r.parent || null,
       userName: r.expand?.user?.name ?? 'Anônimo',
+      likesCount: likeItems.filter((like) => like.comment === r.id).length,
+      liked: !!viewerId && likeItems.some((like) => like.comment === r.id && like.user === viewerId),
     }))
-    return Response.json({ items })
+    return Response.json({ items: normalizedItems })
   } catch {
     return Response.json({ error: 'Erro ao carregar comentários' }, { status: 500 })
   }
@@ -72,9 +90,9 @@ export async function POST(
   const { id: storyId } = await params
   if (!storyId) return Response.json({ error: 'ID obrigatório' }, { status: 400 })
 
-  let parsed: { content?: string }
+  let parsed: { content?: string; parentId?: string }
   try {
-    parsed = (await request.json()) as { content?: string }
+    parsed = (await request.json()) as { content?: string; parentId?: string }
   } catch {
     return Response.json({ error: 'Body inválido' }, { status: 400 })
   }
@@ -83,6 +101,7 @@ export async function POST(
     return Response.json({ error: normalized.error }, { status: 400 })
   }
   const content = normalized.content
+  const parentId = typeof parsed.parentId === 'string' ? parsed.parentId.trim() : ''
 
   const adminToken = await getAdminToken()
   if (!adminToken) {
@@ -103,8 +122,18 @@ export async function POST(
     return Response.json({ error: 'Esta story não aceita mais interações' }, { status: 410 })
   }
 
-  const pbBody = JSON.stringify({ story: storyId, user: userId, content })
-  const pbBodyMultiRel = JSON.stringify({ story: [storyId], user: [userId], content })
+  if (parentId) {
+    const parentRes = await fetch(
+      `${PB_URL}/api/collections/story_comments/records/${encodeURIComponent(parentId)}?fields=id,story`,
+      { headers: { Authorization: `Bearer ${adminToken}` }, cache: 'no-store' },
+    )
+    if (!parentRes.ok) return Response.json({ error: 'Comentário original não encontrado' }, { status: 400 })
+    const parent = (await parentRes.json()) as { story?: string }
+    if (parent.story !== storyId) return Response.json({ error: 'Resposta inválida' }, { status: 400 })
+  }
+
+  const pbBody = JSON.stringify({ story: storyId, user: userId, content, ...(parentId ? { parent: parentId } : {}) })
+  const pbBodyMultiRel = JSON.stringify({ story: [storyId], user: [userId], content, ...(parentId ? { parent: [parentId] } : {}) })
   const userHeaders = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` } as const
 
   try {
@@ -148,6 +177,9 @@ export async function POST(
       id: record.id,
       content: record.content,
       created: record.created || record.updated || new Date().toISOString(),
+      parentId: parentId || null,
+      likesCount: 0,
+      liked: false,
     })
   } catch {
     return Response.json({ error: 'Erro ao comentar' }, { status: 500 })

@@ -1,5 +1,5 @@
 {
-  "exportedAt": "2026-08-24T16:55:07.203Z",
+  "exportedAt": "2026-08-24T20:25:37.632Z",
   "baseUrl": "https://pocketbase.cerejavip.com",
   "collections": [
     {
@@ -3981,6 +3981,20 @@
           "name": "user",
           "presentable": false,
           "required": true,
+          "system": false,
+          "type": "relation"
+        },
+        {
+          "cascadeDelete": true,
+          "collectionId": "pbc_2073099553",
+          "help": "Opcional; preenchido quando o comentário é uma resposta.",
+          "hidden": false,
+          "id": "relation_story_comment_parent",
+          "maxSelect": 1,
+          "minSelect": 0,
+          "name": "parent",
+          "presentable": false,
+          "required": false,
           "system": false,
           "type": "relation"
         },
