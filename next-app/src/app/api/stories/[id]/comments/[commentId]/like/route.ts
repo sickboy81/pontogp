@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { getAuthCookieFromHeader, getUserIdFromToken } from '@/lib/auth-cookie'
 import { getAdminToken } from '@/lib/pocketbase-admin'
+import { canInteractWithStory } from '@/lib/story-interactions.mjs'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 export const dynamic = 'force-dynamic'
@@ -27,6 +28,13 @@ export async function POST(
     if (!commentRes.ok) return Response.json({ error: 'Comentário não encontrado' }, { status: 404 })
     const comment = (await commentRes.json()) as { story?: string }
     if (comment.story !== storyId) return Response.json({ error: 'Comentário inválido' }, { status: 400 })
+    const storyRes = await fetch(
+      `${PB_URL}/api/collections/stories/records/${encodeURIComponent(storyId)}?fields=id,active,expires_at`,
+      { headers: adminHeaders, cache: 'no-store' },
+    )
+    if (!storyRes.ok) return Response.json({ error: 'Story não encontrada' }, { status: 404 })
+    const story = (await storyRes.json()) as { active?: boolean; expires_at?: string }
+    if (!canInteractWithStory(story)) return Response.json({ error: 'Esta story não aceita mais interações' }, { status: 410 })
 
     const filter = encodeURIComponent(`comment="${commentId}" && user="${userId}"`)
     const existingRes = await fetch(
