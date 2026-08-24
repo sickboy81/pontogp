@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { BarChart3, Eye, MousePointer, MessageCircle, Phone, RefreshCw, Send, Users, UserCheck, AlertTriangle, Mail } from 'lucide-react'
+import { BarChart3, Eye, MousePointer, MessageCircle, Phone, RefreshCw, Send, Users, UserCheck, AlertTriangle, Mail, Search } from 'lucide-react'
 
 interface AnalyticsData {
   totalViews: number
@@ -25,6 +25,7 @@ interface AnalyticsData {
   previousClicks: number
   viewsChangePct: number | null
   clicksChangePct: number | null
+  searchAnalytics?: { searches: number; zeroResultSearches: number; topTerms: { term: string; count: number }[] }
 }
 
 export default function AdminAnalyticsPage() {
@@ -39,10 +40,14 @@ export default function AdminAnalyticsPage() {
     else setRefreshing(true)
     setError('')
     try {
-      const r = await fetch(`/api/admin/analytics?days=${period}`, { credentials: 'include', cache: 'no-store' })
+      const [r, searchResponse] = await Promise.all([
+        fetch(`/api/admin/analytics?days=${period}`, { credentials: 'include', cache: 'no-store' }),
+        fetch(`/api/admin/search-analytics?days=${period}`, { credentials: 'include', cache: 'no-store' }),
+      ])
       const d = await r.json().catch(() => ({}))
+      const searchAnalytics = await searchResponse.json().catch(() => ({ unavailable: true }))
       if (!r.ok) throw new Error(d.error || 'Não foi possível carregar os analytics.')
-      setData(d)
+      setData({ ...d, searchAnalytics })
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Não foi possível carregar os analytics.')
     } finally {
@@ -77,7 +82,8 @@ export default function AdminAnalyticsPage() {
     clicksLast30Days: 0,
     clicksByType: { whatsapp: 0, telegram: 0, phone: 0, message: 0 },
     daily: [], activeProfiles: 0, totalUsers: 0, activeStories: 0, unreadContacts: 0, pendingReports: 0, ctr: 0,
-    topProfilesByViews: [], periodDays: period, previousViews: 0, previousClicks: 0, viewsChangePct: null, clicksChangePct: null,
+      topProfilesByViews: [], periodDays: period, previousViews: 0, previousClicks: 0, viewsChangePct: null, clicksChangePct: null,
+    searchAnalytics: { searches: 0, zeroResultSearches: 0, topTerms: [] },
   }
   const exportCsv = () => {
     const rows = [['data', 'visualizacoes', 'cliques'], ...d.daily.map((row) => [row.date, String(row.views), String(row.clicks)])]
@@ -195,6 +201,16 @@ export default function AdminAnalyticsPage() {
             })}
           </ul>
         </div>
+      </div>
+
+      <div className="mb-8 rounded-xl border border-slate-700 bg-slate-800/50 p-6">
+        <h2 className="mb-1 flex items-center gap-2 text-lg font-semibold text-white"><Search className="h-5 w-5 text-primary-400" /> Buscas realizadas</h2>
+        <p className="mb-4 text-sm text-slate-400">Consultas anônimas na home no período selecionado.</p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="rounded-lg border border-slate-700 bg-slate-900/30 p-4"><p className="text-xs uppercase tracking-wide text-slate-500">Consultas</p><p className="mt-1 text-2xl font-bold text-white">{d.searchAnalytics?.searches ?? 0}</p></div>
+          <div className="rounded-lg border border-slate-700 bg-slate-900/30 p-4"><p className="text-xs uppercase tracking-wide text-slate-500">Sem resultados</p><p className="mt-1 text-2xl font-bold text-amber-300">{d.searchAnalytics?.zeroResultSearches ?? 0}</p></div>
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2">{(d.searchAnalytics?.topTerms ?? []).map((item) => <span key={item.term} className="rounded-full border border-primary-500/30 bg-primary-500/10 px-3 py-1 text-xs text-primary-200">{item.term} ({item.count})</span>)}{(d.searchAnalytics?.topTerms ?? []).length === 0 && <span className="text-sm text-slate-500">Ainda não há buscas registradas.</span>}</div>
       </div>
 
       <div className="mb-8 rounded-xl border border-slate-700 bg-slate-800/50 p-6">

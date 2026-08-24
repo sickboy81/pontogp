@@ -127,6 +127,7 @@ export default function HomeClient() {
 
   const tagScopeFromUrl = parseTagScope(searchParams.get('tag_scope'))
   const effectiveTagScope = tagScopeFromUrl ?? tagMatchScope
+  const loggedSearchRef = useRef('')
   useEffect(() => {
     const t = searchParams.get('tag')?.trim() ?? ''
     const tf = searchParams.get('tag_field') ?? ''
@@ -171,6 +172,18 @@ export default function HomeClient() {
   useEffect(() => {
     if (isAuthenticated) fetchFavorites()
   }, [isAuthenticated, fetchFavorites])
+
+  useEffect(() => {
+    if (loading || (!debouncedLocation.trim() && !debouncedContent.trim())) return
+    const searchKey = `${debouncedLocation.trim()}|${debouncedContent.trim()}`
+    if (loggedSearchRef.current === searchKey) return
+    loggedSearchRef.current = searchKey
+    void fetch('/api/search/analytics', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ location: debouncedLocation, content: debouncedContent, resultCount: profiles.length }),
+      keepalive: true,
+    }).catch(() => {})
+  }, [debouncedLocation, debouncedContent, loading, profiles.length])
 
   useEffect(() => {
     const c = searchParams.get('category')

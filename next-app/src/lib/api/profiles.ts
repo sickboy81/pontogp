@@ -258,6 +258,52 @@ function expandContentTerm(term: string): string[] {
   return aliases[normalized] || [normalized]
 }
 
+function normalizeSearchText(value: unknown): string {
+  return String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLocaleLowerCase('pt-BR')
+}
+
+function levenshtein(a: string, b: string): number {
+  if (a === b) return 0
+  if (!a.length) return b.length
+  if (!b.length) return a.length
+  let previous = Array.from({ length: b.length + 1 }, (_, i) => i)
+  for (let i = 1; i <= a.length; i += 1) {
+    const current = [i]
+    for (let j = 1; j <= b.length; j += 1) {
+      current[j] = Math.min(current[j - 1] + 1, previous[j] + 1, previous[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1))
+    }
+    previous = current
+  }
+  return previous[b.length]
+}
+
+function fuzzyWordScore(query: string, text: string): number {
+  if (!query || !text) return 0
+  if (text.includes(query)) return 100
+  const words = text.split(/[^a-z0-9]+/).filter(Boolean)
+  const distance = Math.min(...words.filter((word) => Math.abs(word.length - query.length) <= 2).map((word) => levenshtein(query, word)), 99)
+  const threshold = query.length <= 4 ? 1 : query.length <= 7 ? 2 : 3
+  return distance <= threshold ? Math.max(0, 80 - distance * 20) : 0
+}
+
+function profileSearchScore(profile: Profile, locationQuery: string, contentQuery: string): number {
+  const location = normalizeSearchText(locationQuery)
+  const contentTerms = contentQuery.split(/[,\s]+/).map(normalizeSearchText).filter((term) => term.length >= 3)
+  const locationText = normalizeSearchText([profile.city, profile.state, ...(profile.neighborhoods || [])].join(' '))
+  const contentText = normalizeSearchText([
+    profile.name, profile.bio, ...(profile.services || []), ...(profile.special_services || []),
+    ...(profile.service_locations || []), ...(profile.service_to || []), profile.hair_color,
+    profile.body_type, profile.eye_color, profile.pubis_type, profile.smoker,
+  ].join(' '))
+  let score = 0
+  if (location) score += fuzzyWordScore(location, locationText) * 2
+  for (const term of contentTerms) score += Math.max(...expandContentTerm(term).map((candidate) => fuzzyWordScore(candidate, contentText)), 0)
+  return score
+}
+
 /** Lista perfis (servidor). Filtros: igualdade, localização, conteúdo, idade, preço, online e verificação. */
 export async function getProfiles(options: {
   filters?: Record<string, string | number | boolean>
@@ -293,8 +339,9 @@ export async function getProfiles(options: {
   if (filters.location) {
     const locationQuery = String(filters.location).trim().slice(0, 80)
     if (locationQuery.length >= 2) {
-      const q = escapeDoubleQuotes(locationQuery)
-      parts.push(`(city ~ "${q}" || state ~ "${q}" || neighborhoods ~ "${q}")`)
+      // A localização também passa pelo ranking normalizado/fuzzy abaixo.
+      // Não aplicar LIKE exato aqui permite corrigir acentos e pequenos erros.
+      void escapeDoubleQuotes(locationQuery)
     }
   }
   if (filters.content || filters.search) {
@@ -312,7 +359,10 @@ export async function getProfiles(options: {
       })
       return `(${alternatives.join(' || ')})`
     })
-    if (termFilters.length) parts.push(termFilters.join(' && '))
+    // A filtragem final é feita localmente com normalização e distância de
+    // Levenshtein. Manter o filtro textual exato do PocketBase aqui faria com
+    // que um erro de digitação eliminasse o candidato antes do fuzzy search.
+    void termFilters
   }
   if (jsonTag?.value) {
     const v = escapeDoubleQuotes(jsonTag.value)
@@ -323,10 +373,14 @@ export async function getProfiles(options: {
   }
   let filterStr = parts.length ? `(${parts.join(' && ')}) && (${lifecycleFilter})` : lifecycleFilter
   const sort = SORT_MAP[sortKey] || SORT_MAP.default
-  const page = Math.floor(offset / limit) + 1
+  const hasSearch = Boolean(filters.location || filters.content || filters.search)
+  // Consultas pesquisáveis precisam de uma janela comum para poder ordenar por
+  // relevância antes da paginação. O limite protege o PocketBase contra buscas
+  // excessivamente amplas.
+  const page = hasSearch ? 1 : Math.floor(offset / limit) + 1
   const params = new URLSearchParams({
     page: String(page),
-    perPage: String(limit),
+    perPage: String(hasSearch ? Math.min(100, Math.max(limit, 50)) : limit),
     filter: filterStr,
     expand: 'photos,plan',
     sort,
@@ -339,7 +393,7 @@ export async function getProfiles(options: {
   if (!res.ok) return []
   const data = await res.json()
   const now = new Date()
-  return (data.items || [])
+  const mappedProfiles: Profile[] = (data.items || [])
     .map(mapProfile)
     .filter((p: Profile | null): p is Profile => p !== null)
     .map((p: Profile) => {
@@ -351,6 +405,17 @@ export async function getProfiles(options: {
       } as Profile
     })
     .filter((p: Profile) => !isProfileBeyondArchiveWindow(p, policy, now))
+
+  if (!hasSearch) return mappedProfiles
+
+  const locationQuery = String(filters.location || '')
+  const contentQuery = String(filters.content || filters.search || '')
+  return mappedProfiles
+    .map((profile: Profile) => ({ profile, score: profileSearchScore(profile, locationQuery, contentQuery) }))
+    .filter(({ score }) => score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(offset, offset + limit)
+    .map(({ profile }) => profile)
 }
 
 /** Busca perfil do usuário por user id (servidor). Não aplica LIFECYCLE para permitir edição mesmo expirado. */

@@ -1,5 +1,5 @@
 {
-  "exportedAt": "2026-08-23T19:42:38.771Z",
+  "exportedAt": "2026-08-24T16:01:11.144Z",
   "baseUrl": "https://pocketbase.cerejavip.com",
   "collections": [
     {
@@ -4665,6 +4665,34 @@
           "required": false,
           "system": false,
           "type": "date"
+        }
+      ]
+    },
+    {
+      "id": "pbc_1666254116",
+      "name": "search_events",
+      "type": "base",
+      "authRule": null,
+      "listRule": "@request.auth.role = 'admin'",
+      "viewRule": "@request.auth.role = 'admin'",
+      "createRule": "",
+      "updateRule": null,
+      "deleteRule": "@request.auth.role = 'admin'",
+      "schema": [
+        {
+          "autogeneratePattern": "[a-z0-9]{15}",
+          "help": "",
+          "hidden": false,
+          "id": "text3208210256",
+          "max": 15,
+          "min": 15,
+          "name": "id",
+          "pattern": "^[a-z0-9]+$",
+          "presentable": false,
+          "primaryKey": true,
+          "required": true,
+          "system": true,
+          "type": "text"
         }
       ]
     }
