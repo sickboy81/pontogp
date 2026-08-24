@@ -320,6 +320,7 @@ export default function DashboardPerfilForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const authUser = useAuthStore((s) => s.user)
   const [activeTab, setActiveTab] = useState<TabId>(() => {
     const t = searchParams.get('tab')
     if (t === 'midia' || t === 'stats' || t === 'bio' || t === 'dados') return t
@@ -372,12 +373,26 @@ export default function DashboardPerfilForm() {
       })
       .then((data) => {
         if (cancelled) return
-        setProfile(data)
-        setForm(profileToForm(data))
+        if (data?.id) {
+          setProfile(data)
+          setForm(profileToForm(data))
+        } else {
+          setProfile(null)
+          setForm({
+            ...emptyForm,
+            name: authUser?.display_name || authUser?.name || '',
+            age: authUser?.age ?? 18,
+          })
+        }
       })
       .catch(() => {
         if (!cancelled) {
           setProfile(undefined)
+          setForm({
+            ...emptyForm,
+            name: authUser?.display_name || authUser?.name || '',
+            age: authUser?.age ?? 18,
+          })
           setProfileLoadError('Não foi possível carregar os dados do seu perfil agora.')
         }
       })
@@ -385,7 +400,7 @@ export default function DashboardPerfilForm() {
         if (!cancelled) setLoading(false)
       })
     return () => { cancelled = true }
-  }, [router, authHydrated, isAuthenticated, profileReloadKey])
+  }, [router, authHydrated, isAuthenticated, profileReloadKey, authUser])
 
   useEffect(() => {
     if (profile) {

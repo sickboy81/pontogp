@@ -51,6 +51,10 @@ function mapPbUser(pbUser: Record<string, unknown>): User {
     avatar: pbUser.avatar ? getPb().files.getURL(pbUser as any, pbUser.avatar as string) : undefined,
     verified: pbUser.verified as boolean | undefined,
     document_verified: pbUser.document_verified as boolean | undefined,
+    name,
+    full_name: (pbUser.full_name as string) || undefined,
+    display_name: (pbUser.display_name as string) || name || undefined,
+    age: typeof pbUser.age === 'number' ? pbUser.age : Number(pbUser.age) || undefined,
   }
 }
 

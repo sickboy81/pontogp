@@ -148,6 +148,9 @@ export interface User {
   verified?: boolean
   document_verified?: boolean
   name?: string
+  full_name?: string
+  display_name?: string
+  age?: number
 }
 
 export interface Plan {
