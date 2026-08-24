@@ -603,7 +603,7 @@ export default function DashboardPerfilForm() {
   }
 
   const handlePublish = async () => {
-    if (!profile || profile.status !== 'inactive' || !canPublish) return
+    if (!profile || !canPublish) return
     setPublishing(true)
     setError(null)
     try {
@@ -2657,7 +2657,7 @@ export default function DashboardPerfilForm() {
             <Save className="h-4 w-4" />
             {saving ? 'Salvando...' : 'Salvar como rascunho'}
           </button>
-          {profile?.status === 'inactive' && (
+          {profile && (
             <button
               type="button"
               onClick={handlePublish}
