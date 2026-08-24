@@ -1,52 +1,45 @@
 import Link from 'next/link'
 import {
-  Shield, Star, Zap, Quote, Camera, MessageCircle,
+  Shield, Star, Zap, Camera, MessageCircle,
   Heart, BarChart3, Link2, Clock, Video, Lock, Sparkles,
-  Eye, Phone, ArrowRight, Users, TrendingUp, BadgeCheck,
+  Eye, Phone, ArrowRight, Users, TrendingUp, BadgeCheck, Palette,
 } from 'lucide-react'
 import AnunciantesFaq from '@/components/AnunciantesFaq'
 import AnunciantesPlans from '@/components/AnunciantesPlans'
 
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://cerejavip.com'
 
-const testimonials = [
-  { name: 'Juliana M.', location: 'São Paulo, SP', text: 'Meus contatos aumentaram mais de 200% no primeiro mês! O dashboard mostra tudo em tempo real — sei exatamente de onde vêm meus clientes.', rating: 5, plan: 'Ouro' },
-  { name: 'Ana Paula', location: 'Rio de Janeiro, RJ', text: 'O link na bio mudou meu jogo. Coloquei no Instagram e os contatos não param. A plataforma é muito profissional e o suporte é excelente.', rating: 5, plan: 'Prata' },
-  { name: 'Mariana S.', location: 'Belo Horizonte, MG', text: 'Comecei no plano grátis e em uma semana já fiz upgrade pro Bronze. As Cereja Stories e o sistema de verificação fazem toda a diferença na credibilidade.', rating: 5, plan: 'Bronze' },
-  { name: 'Fernanda L.', location: 'Curitiba, PR', text: 'O que mais gosto é a privacidade. Tenho controle total sobre quem vê meu perfil. O painel é intuitivo e moderno.', rating: 5, plan: 'Ouro' },
-]
-
 const features = [
-  { icon: Camera, title: 'Galeria HD Ilimitada', description: 'Upload de fotos em alta resolução com watermark automática para proteger suas imagens.', color: 'text-pink-500', bgColor: 'bg-pink-500/10', borderColor: 'border-pink-500/20' },
-  { icon: Sparkles, title: 'Cereja Stories', description: 'Publique Cereja Stories que ficam ativas por 24 horas. Mostre seu dia a dia e engaje seus visitantes.', color: 'text-amber-500', bgColor: 'bg-amber-500/10', borderColor: 'border-amber-500/20' },
-  { icon: Link2, title: 'Link na Bio', description: 'Ganhe uma URL exclusiva cerejavip.com/@seunome para usar no Instagram, Twitter e mais.', color: 'text-cyan-500', bgColor: 'bg-cyan-500/10', borderColor: 'border-cyan-500/20' },
-  { icon: BarChart3, title: 'Dashboard Analytics', description: 'Acompanhe visualizações, cliques, contatos e favoritos em tempo real no seu painel.', color: 'text-emerald-500', bgColor: 'bg-emerald-500/10', borderColor: 'border-emerald-500/20' },
-  { icon: MessageCircle, title: 'Chat Interno', description: 'Receba mensagens diretamente pela plataforma. Comunicação segura sem expor seu número.', color: 'text-blue-500', bgColor: 'bg-blue-500/10', borderColor: 'border-blue-500/20' },
-  { icon: Heart, title: 'Sistema de Favoritos', description: 'Clientes salvam seu perfil nos favoritos e voltam sempre. Fidelização automática.', color: 'text-red-500', bgColor: 'bg-red-500/10', borderColor: 'border-red-500/20' },
-  { icon: BadgeCheck, title: 'Verificação de Perfil', description: 'Selo de autenticidade exclusivo que transmite confiança e aumenta seus contatos em até 3x.', color: 'text-sky-500', bgColor: 'bg-sky-500/10', borderColor: 'border-sky-500/20' },
-  { icon: TrendingUp, title: 'Bump Automático', description: 'Seu perfil sobe periodicamente no ranking de busca, garantindo visibilidade constante.', color: 'text-orange-500', bgColor: 'bg-orange-500/10', borderColor: 'border-orange-500/20' },
-  { icon: Users, title: 'Filtros Avançados', description: 'Apareça para quem procura exatamente o que você oferece. Segmentação inteligente.', color: 'text-violet-500', bgColor: 'bg-violet-500/10', borderColor: 'border-violet-500/20' },
-  { icon: Clock, title: 'Agenda Online', description: 'Defina seu status online/offline com horários. Seus clientes sabem quando você está disponível.', color: 'text-teal-500', bgColor: 'bg-teal-500/10', borderColor: 'border-teal-500/20' },
-  { icon: Video, title: 'Vídeos de Apresentação', description: 'Envie vídeos para mostrar seu diferencial. Mais engajamento que apenas fotos.', color: 'text-rose-500', bgColor: 'bg-rose-500/10', borderColor: 'border-rose-500/20' },
-  { icon: Lock, title: 'Privacidade Total', description: 'Controle quem vê o quê. Proteção contra prints e controle total sobre seus dados.', color: 'text-slate-400', bgColor: 'bg-slate-500/10', borderColor: 'border-slate-500/20' },
+  { icon: Camera, title: 'Perfil com fotos', description: 'Monte sua apresentação com fotos, descrição, serviços, valores, regiões e formas de atendimento.', color: 'text-pink-500', bgColor: 'bg-pink-500/10', borderColor: 'border-pink-500/20' },
+  { icon: Sparkles, title: 'Cereja Stories', description: 'Publique fotos ou vídeos que aparecem por 24 horas na home e no seu perfil.', color: 'text-amber-500', bgColor: 'bg-amber-500/10', borderColor: 'border-amber-500/20' },
+  { icon: Link2, title: 'Seu Link na Bio', description: 'Crie uma página compacta com endereço personalizado para divulgar nas suas redes sociais.', color: 'text-cyan-500', bgColor: 'bg-cyan-500/10', borderColor: 'border-cyan-500/20' },
+  { icon: BarChart3, title: 'Estatísticas do perfil', description: 'Veja dados disponíveis para o seu plano. O Ouro libera a versão mais completa do analytics.', color: 'text-emerald-500', bgColor: 'bg-emerald-500/10', borderColor: 'border-emerald-500/20' },
+  { icon: MessageCircle, title: 'Mensagens internas', description: 'Receba mensagens dentro da plataforma e mantenha uma alternativa aos contatos externos.', color: 'text-blue-500', bgColor: 'bg-blue-500/10', borderColor: 'border-blue-500/20' },
+  { icon: Heart, title: 'Favoritos', description: 'Visitantes logados podem salvar seu anúncio e encontrá-lo novamente na lista de favoritos.', color: 'text-red-500', bgColor: 'bg-red-500/10', borderColor: 'border-red-500/20' },
+  { icon: BadgeCheck, title: 'Verificação de perfil', description: 'Envie os documentos solicitados para análise e, após aprovação, exiba o selo de perfil verificado.', color: 'text-sky-500', bgColor: 'bg-sky-500/10', borderColor: 'border-sky-500/20' },
+  { icon: TrendingUp, title: 'Bumps conforme o plano', description: 'Use a quantidade diária incluída no seu plano para atualizar a posição do perfil na listagem.', color: 'text-orange-500', bgColor: 'bg-orange-500/10', borderColor: 'border-orange-500/20' },
+  { icon: Users, title: 'Busca por localização e conteúdo', description: 'Seu perfil pode ser encontrado por cidade, estado, bairro, serviços, características e descrição.', color: 'text-violet-500', bgColor: 'bg-violet-500/10', borderColor: 'border-violet-500/20' },
+  { icon: Clock, title: 'Horários e status', description: 'Informe seus horários de atendimento e altere seu status entre online e offline.', color: 'text-teal-500', bgColor: 'bg-teal-500/10', borderColor: 'border-teal-500/20' },
+  { icon: Video, title: 'Vídeo e áudio', description: 'Planos compatíveis permitem complementar o perfil com vídeo e áudio de apresentação.', color: 'text-rose-500', bgColor: 'bg-rose-500/10', borderColor: 'border-rose-500/20' },
+  { icon: Lock, title: 'Canais sob seu controle', description: 'Escolha se quer mostrar WhatsApp, Telegram ou telefone e mantenha apenas os canais que deseja usar.', color: 'text-slate-400', bgColor: 'bg-slate-500/10', borderColor: 'border-slate-500/20' },
 ]
 
 const faqData = [
-  { question: 'É grátis para anunciar?', answer: 'Sim! Você pode criar seu perfil gratuitamente e começar a receber contatos. O plano grátis inclui fotos, descrição completa e presença na busca. Para mais visibilidade e recursos premium, oferecemos planos pagos a partir de valores acessíveis.' },
-  { question: 'Como funciona o pagamento dos planos?', answer: 'Aceitamos pagamento via PIX, que é instantâneo e seguro. Após a confirmação do pagamento, seu plano é ativado automaticamente e você já começa a usufruir dos benefícios imediatamente.' },
-  { question: 'Posso cancelar ou trocar de plano a qualquer momento?', answer: 'Sim! Não existe fidelidade. Quando o período do seu plano expira, você pode renová-lo, fazer upgrade, downgrade ou simplesmente continuar no plano grátis. Sem burocracia.' },
-  { question: 'Como funciona o selo de verificação?', answer: 'O selo de verificação é obtido após enviar uma selfie com documento para confirmação de identidade. O processo é rápido, sigiloso e aumenta consideravelmente a confiança dos seus clientes.' },
-  { question: 'Meus dados estão seguros?', answer: 'Absolutamente. Utilizamos criptografia de ponta a ponta, não compartilhamos seus dados com terceiros e você tem controle total sobre o que é exibido no seu perfil. Sua privacidade é nossa prioridade.' },
+  { question: 'É grátis para anunciar?', answer: 'Sim. O plano grátis permite publicar o perfil com até 3 fotos e acompanhar o total de visitas. Os planos pagos aumentam os limites de mídia, bumps e estatísticas.' },
+  { question: 'Como funciona o pagamento dos planos?', answer: 'Os planos são pagos por PIX. Depois que o pagamento é confirmado, a plataforma aplica os recursos e o período correspondente ao plano escolhido.' },
+  { question: 'Posso trocar ou renovar meu plano?', answer: 'Sim. Você pode escolher outro plano ou renovar quando precisar. Não existe renovação automática: perto do vencimento, a plataforma envia avisos para você renovar manualmente.' },
+  { question: 'Como funciona o selo de verificação?', answer: 'Você envia os documentos solicitados pela área de verificação. O pedido fica pendente até a análise administrativa; o selo só aparece após a aprovação.' },
+  { question: 'Posso escolher quais contatos aparecem?', answer: 'Sim. Você escolhe quais canais deseja exibir entre WhatsApp, Telegram e telefone. O chat interno também pode ser usado por visitantes logados.' },
   { question: 'Como recebo os contatos dos clientes?', answer: 'Os clientes podem entrar em contato diretamente pelo WhatsApp (com link direto), pelo chat interno da plataforma, por Telegram ou telefone — você escolhe quais canais exibir no seu perfil.' },
-  { question: 'O que é o Link na Bio?', answer: 'É uma URL exclusiva (cerejavip.com/@seunome) que transforma seu perfil em um mini-site. Perfeito para colocar no Instagram, Twitter, TikTok e outras redes sociais. Seus seguidores acessam seu perfil completo com um clique.' },
-  { question: 'Quanto tempo leva para meu perfil aparecer?', answer: 'Seu perfil fica disponível imediatamente após a criação. Se você tiver um plano pago, ele já aparece nos destaques e no topo das buscas assim que o pagamento é confirmado.' },
+  { question: 'O que é o Link na Bio?', answer: 'É uma página compacta com URL personalizada no formato cerejavip.com/@usuario. Você escolhe o tema, a foto, a frase e os botões de contato ou redes sociais.' },
+  { question: 'Quando meu perfil aparece no site?', answer: 'Depois de preencher os itens obrigatórios e adicionar pelo menos 3 fotos, clique em “Publicar perfil”. Enquanto isso, você pode manter tudo salvo como rascunho.' },
 ]
 
 const steps = [
-  { number: 1, title: 'Crie sua conta', description: 'Cadastro rápido e gratuito. Leva menos de 2 minutos.', icon: Users },
+  { number: 1, title: 'Crie sua conta', description: 'Cadastre seus dados e confirme o endereço de email.', icon: Users },
   { number: 2, title: 'Monte seu perfil', description: 'Adicione fotos, descrição, serviços e preços. Tudo personalizável.', icon: Camera },
   { number: 3, title: 'Escolha seu plano', description: 'Comece grátis ou escolha um plano para mais visibilidade e recursos.', icon: Star },
-  { number: 4, title: 'Receba contatos', description: 'Clientes encontram você e entram em contato direto via WhatsApp ou chat.', icon: Phone },
+  { number: 4, title: 'Publique quando estiver pronta', description: 'Revise as pendências e escolha entre publicar ou manter como rascunho.', icon: Phone },
 ]
 
 const faqJsonLd = {
@@ -90,17 +83,16 @@ export default function AnunciantesPage() {
           <div className="mb-8">
             <span className="inline-flex items-center gap-2 text-xs font-bold tracking-widest uppercase text-primary-400 bg-primary-500/10 border border-primary-500/20 px-4 py-2">
               <Sparkles className="w-4 h-4" />
-              Criação de perfil 100% grátis
+              Crie e publique seu perfil gratuitamente
             </span>
           </div>
           <h1 className="text-4xl md:text-6xl lg:text-7xl leading-tight font-black tracking-tight mb-6">
-            <span className="text-white">SUA </span>
-            <span className="text-white">VITRINE </span>
-            <span className="bg-gradient-to-r from-primary-500 to-primary-600 bg-clip-text text-transparent">DIGITAL.</span>
+            <span className="text-white">SEU PERFIL, </span>
+            <span className="bg-gradient-to-r from-primary-500 to-primary-600 bg-clip-text text-transparent">DO SEU JEITO.</span>
           </h1>
           <div className="flex flex-col md:flex-row gap-8 md:gap-12 items-start md:items-end justify-between mt-8">
             <p className="text-lg md:text-xl text-slate-400 max-w-xl font-light leading-relaxed">
-              A CerejaVIP é a plataforma completa para profissionais que querem <span className="text-white font-medium">maximizar sua visibilidade</span>, gerenciar contatos e construir uma presença online profissional — tudo em um só lugar.
+              Apresente seu trabalho com fotos, descrição, valores, localização aproximada e os contatos que você escolher. Tenha também <span className="text-white font-medium">Stories, Link na Bio e um painel para cuidar do anúncio</span> em um só lugar.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
               <Link
@@ -158,7 +150,7 @@ export default function AnunciantesPage() {
             Funcionalidades <span className="text-primary-500">completas</span>
           </h2>
           <p className="text-slate-400 text-lg max-w-2xl mb-16">
-            Mais do que um simples anúncio. É uma plataforma profissional com ferramentas que realmente fazem diferença nos seus resultados.
+            Recursos para montar, divulgar e administrar sua presença no site. Alguns limites e funcionalidades variam conforme o plano escolhido.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {features.map((feature, index) => {
@@ -180,24 +172,45 @@ export default function AnunciantesPage() {
         </div>
       </section>
 
-      {/* Números */}
-      <section className="py-16 md:py-24 px-4 md:px-8 border-t border-slate-800 bg-slate-900/50">
-        <div className="max-w-6xl mx-auto text-center">
-          <h2 className="text-3xl md:text-5xl font-bold mb-16">
-            Números que <span className="text-primary-500">impressionam</span>
-          </h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {[
-              { value: '2.500+', label: 'Perfis Ativos' },
-              { value: '150K+', label: 'Views/mês' },
-              { value: '45K+', label: 'Cliques/mês' },
-              { value: '98%', label: 'Satisfação' },
-            ].map((stat, i) => (
-              <div key={i}>
-                <div className="text-4xl md:text-6xl font-black text-white mb-2">{stat.value}</div>
-                <div className="text-slate-400 text-sm uppercase tracking-widest">{stat.label}</div>
-              </div>
-            ))}
+      {/* Link na Bio */}
+      <section className="border-t border-slate-800 px-4 py-16 md:px-8 md:py-24">
+        <div className="mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-[1fr_0.8fr]">
+          <div>
+            <p className="mb-4 text-sm font-bold uppercase tracking-widest text-cyan-500">Link na Bio</p>
+            <h2 className="mb-6 text-3xl font-bold md:text-5xl">
+              Um link só seu para <span className="text-primary-500">divulgar nas redes</span>
+            </h2>
+            <p className="max-w-2xl text-lg leading-relaxed text-slate-400">
+              Crie um endereço no formato <strong className="font-semibold text-white">cerejavip.com/@usuario</strong> e reúna numa página compacta sua foto, frase de apresentação, contatos e redes sociais.
+            </p>
+            <div className="mt-8 grid gap-4 sm:grid-cols-2">
+              {[
+                { icon: Palette, title: 'Escolha o visual', text: 'Use os temas disponíveis e personalize a cor dos botões.' },
+                { icon: Link2, title: 'Organize seus links', text: 'Adicione contatos, redes sociais e links extras.' },
+                { icon: Eye, title: 'Veja antes de salvar', text: 'A pré-visualização mostra como sua página vai ficar.' },
+                { icon: ArrowRight, title: 'Leve ao perfil completo', text: 'Você pode manter um botão para abrir seu anúncio completo.' },
+              ].map((item) => {
+                const Icon = item.icon
+                return (
+                  <div key={item.title} className="rounded-2xl border border-slate-700 bg-slate-800/50 p-5">
+                    <Icon className="mb-3 h-6 w-6 text-cyan-500" />
+                    <h3 className="font-bold text-white">{item.title}</h3>
+                    <p className="mt-1 text-sm leading-relaxed text-slate-400">{item.text}</p>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+          <div className="advertiser-link-bio-preview mx-auto w-full max-w-sm rounded-[2rem] border border-primary-500/30 bg-gradient-to-b from-primary-950 via-slate-900 to-slate-950 p-5 shadow-2xl shadow-primary-950/30">
+            <div className="mx-auto h-20 w-20 rounded-full border-4 border-white/15 bg-gradient-to-br from-primary-400 to-primary-700" />
+            <p className="mt-4 text-center text-xl font-bold text-white">Seu nome de perfil</p>
+            <p className="mt-2 text-center text-sm text-slate-300">Sua frase de apresentação aparece aqui.</p>
+            <div className="mt-6 space-y-3">
+              {['WhatsApp', 'Enviar mensagem', 'Instagram', 'Ver perfil completo'].map((label) => (
+                <div key={label} className="rounded-xl border border-white/15 bg-white/10 px-4 py-3 text-center text-sm font-semibold text-white">{label}</div>
+              ))}
+            </div>
+            <p className="mt-5 text-center text-xs font-semibold text-primary-300">cerejavip.com/@usuario</p>
           </div>
         </div>
       </section>
@@ -210,7 +223,7 @@ export default function AnunciantesPage() {
             Planos para cada <span className="text-primary-500">momento</span>
           </h2>
           <p className="text-slate-400 text-lg max-w-2xl mb-16">
-            Comece grátis e faça upgrade quando quiser. Sem fidelidade, sem burocracia.
+            Comece no plano grátis e escolha um plano pago quando precisar de mais fotos, mídia, bumps ou estatísticas.
           </p>
           <AnunciantesPlans />
           <div className="text-center mt-8">
@@ -230,14 +243,14 @@ export default function AnunciantesPage() {
             Sua segurança é <span className="text-primary-500">prioridade</span>
           </h2>
           <p className="text-slate-400 text-lg max-w-2xl mx-auto mb-12">
-            Trabalhamos com as melhores práticas de segurança digital para garantir sua tranquilidade.
+            Você controla o que publica e quais canais de contato ficam visíveis. A plataforma também oferece denúncia, bloqueio e verificação de perfil.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {[
-              { icon: Lock, title: 'Dados Criptografados', description: 'Todas as suas informações são protegidas com criptografia de ponta a ponta. Nenhum dado é compartilhado com terceiros.' },
-              { icon: BadgeCheck, title: 'Verificação de Identidade', description: 'Processo discreto e seguro de verificação. O selo de autenticidade aumenta sua credibilidade junto aos clientes.' },
-              { icon: Eye, title: 'Controle de Privacidade', description: 'Você decide o que mostrar, para quem mostrar e quando mostrar. Proteção contra screenshots e controles granulares.' },
-              { icon: MessageCircle, title: 'Suporte Dedicado', description: 'Equipe de suporte disponível para ajudar com qualquer dúvida ou necessidade. Atendimento humanizado e rápido.' },
+              { icon: Lock, title: 'Contatos configuráveis', description: 'Você decide se deseja mostrar WhatsApp, Telegram ou telefone no perfil público.' },
+              { icon: BadgeCheck, title: 'Verificação com análise', description: 'A solicitação fica pendente para análise e o selo só é exibido depois da aprovação.' },
+              { icon: Eye, title: 'Localização aproximada', description: 'O mapa público apresenta uma localização aproximada, sem exigir a exibição do endereço exato.' },
+              { icon: MessageCircle, title: 'Denúncia e bloqueio', description: 'Visitantes podem denunciar perfis e usuários podem bloquear conversas dentro da plataforma.' },
             ].map((item, index) => {
               const Icon = item.icon
               return (
@@ -248,50 +261,6 @@ export default function AnunciantesPage() {
                 </div>
               )
             })}
-          </div>
-        </div>
-      </section>
-
-      {/* Depoimentos */}
-      <section className="py-16 md:py-24 px-4 md:px-8 border-t border-slate-800">
-        <div className="max-w-6xl mx-auto">
-          <p className="text-primary-500 tracking-widest uppercase text-sm font-bold mb-4">Depoimentos</p>
-          <h2 className="text-3xl md:text-5xl font-bold mb-4">
-            Quem usa, <span className="text-primary-500">recomenda</span>
-          </h2>
-          <p className="text-slate-400 max-w-2xl mb-16">
-            Histórias reais de profissionais que transformaram sua carreira com a CerejaVIP
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {testimonials.map((t, index) => (
-              <div key={index} className="bg-slate-800/50 border border-slate-700 p-8 hover:border-slate-600 transition-all">
-                <Quote className="w-8 h-8 text-primary-500/20 mb-4" />
-                <p className="text-lg text-slate-300 mb-6 leading-relaxed italic">&quot;{t.text}&quot;</p>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-white font-bold">
-                      {t.name.charAt(0)}
-                    </div>
-                    <div>
-                      <div className="font-medium text-white">{t.name}</div>
-                      <div className="text-sm text-slate-500">{t.location}</div>
-                    </div>
-                  </div>
-                  <span className={`text-xs font-bold px-2 py-1 ${
-                    t.plan === 'Ouro' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
-                    t.plan === 'Prata' ? 'bg-slate-500/10 text-slate-300 border border-slate-500/20' :
-                    'bg-amber-700/10 text-amber-600 border border-amber-700/20'
-                  }`}>
-                    {t.plan}
-                  </span>
-                </div>
-                <div className="flex gap-1 mt-4">
-                  {[...Array(t.rating)].map((_, i) => (
-                    <Star key={i} className="w-4 h-4 text-amber-500 fill-amber-500" />
-                  ))}
-                </div>
-              </div>
-            ))}
           </div>
         </div>
       </section>
@@ -312,13 +281,13 @@ export default function AnunciantesPage() {
         <div className="max-w-4xl mx-auto text-center">
           <span className="inline-flex items-center gap-2 text-xs font-bold tracking-widest uppercase text-primary-400 bg-primary-500/10 border border-primary-500/20 px-4 py-2 mb-8">
             <Zap className="w-4 h-4" />
-            Comece em menos de 5 minutos
+            Comece pelo plano grátis
           </span>
           <h2 className="text-3xl md:text-6xl font-bold mb-6">
-            Pronta para elevar seu nível?
+            Pronta para montar sua presença no CerejaVIP?
           </h2>
           <p className="text-xl text-slate-400 mb-12 max-w-2xl mx-auto">
-            Junte-se a mais de 2.500 profissionais que já escolheram a CerejaVIP. Crie seu perfil gratuitamente e comece a receber contatos hoje.
+            Crie sua conta, monte o perfil no seu ritmo e publique quando todos os itens obrigatórios estiverem preenchidos.
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-4">
             <Link
@@ -336,7 +305,7 @@ export default function AnunciantesPage() {
             </Link>
           </div>
           <p className="text-slate-500 text-sm mt-8">
-            Sem cartão de crédito · Sem fidelidade · Cancele quando quiser
+            Plano grátis disponível · Planos pagos por PIX · Sem renovação automática
           </p>
         </div>
       </section>

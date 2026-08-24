@@ -3,12 +3,12 @@ import type { Metadata } from 'next'
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://cerejavip.com'
 
 export const metadata: Metadata = {
-  title: 'Anuncie Grátis - Acompanhantes Brasil | CerejaVIP',
-  description: 'Anuncie como acompanhante na CerejaVIP. Perfil grátis com galeria HD, Cereja Stories, link na bio, dashboard analytics, chat interno e verificação de identidade. Comece em 2 minutos.',
+  title: 'Crie seu perfil de acompanhante | CerejaVIP',
+  description: 'Crie seu perfil grátis no CerejaVIP e divulgue fotos, serviços, valores e contatos. Use Cereja Stories, Link na Bio, mensagens e recursos conforme o plano.',
   alternates: { canonical: `${SITE_URL}/anunciantes` },
   openGraph: {
-    title: 'Anuncie Grátis - Acompanhantes Brasil | CerejaVIP',
-    description: 'Plataforma completa para acompanhantes. Crie seu perfil grátis com galeria HD, Cereja Stories, analytics e chat interno.',
+    title: 'Crie e divulgue seu perfil no CerejaVIP',
+    description: 'Perfil gratuito, Cereja Stories, Link na Bio, mensagens, verificação e planos com diferentes limites de mídia, bumps e estatísticas.',
     url: `${SITE_URL}/anunciantes`,
     type: 'website',
   },

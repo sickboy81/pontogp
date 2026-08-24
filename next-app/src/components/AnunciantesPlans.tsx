@@ -61,7 +61,7 @@ export default function AnunciantesPlans() {
           >
             {isPopular && (
               <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-white text-black text-xs font-bold px-3 py-1 tracking-wider uppercase">
-                Mais Popular
+                Mais mídia
               </div>
             )}
             <div className="mb-6">
@@ -89,7 +89,7 @@ export default function AnunciantesPlans() {
               )}
             </ul>
             <Link
-              href={isFree ? '/register' : '/planos'}
+              href={isFree ? '/register?tipo=advertiser' : '/planos'}
               className={`block text-center py-3 text-sm font-bold uppercase tracking-wider transition-all ${
                 isTop
                   ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-black hover:from-amber-400 hover:to-amber-500'

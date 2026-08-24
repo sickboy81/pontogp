@@ -407,6 +407,9 @@ html.light .story-compose-modal .border-slate-600 { border-color: #94a3b8 !impor
 html.light .story-compose-modal textarea { background-color: #fff !important; color: #0f172a !important; border-color: #64748b !important; }
 html.light .story-compose-modal textarea::placeholder { color: #64748b !important; }
 html.light .story-compose-modal .bg-slate-800\/80 { background-color: #fff !important; }
+html.light .advertiser-link-bio-preview .text-white { color: #fff !important; }
+html.light .advertiser-link-bio-preview .text-slate-300 { color: #cbd5e1 !important; }
+html.light .advertiser-link-bio-preview .text-primary-300 { color: #fda4af !important; }
 html.light .site-header .header-filter-select option {
   background-color: #ffffff !important;
   color: #0f172a !important;
