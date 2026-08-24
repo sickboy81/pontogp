@@ -23,7 +23,7 @@ export default function ProfileSections({
       {profile.category !== 'online' &&
         profile.location_lat != null &&
         profile.location_lng != null && (
-          <section className="mx-auto w-full max-w-4xl rounded-[1.75rem] border border-slate-700/70 bg-slate-900/60 p-5">
+          <section className="mx-auto w-full max-w-2xl rounded-[1.75rem] border border-slate-700/70 bg-slate-900/60 p-5">
             <ProfileMap
               lat={profile.location_lat}
               lng={profile.location_lng}
