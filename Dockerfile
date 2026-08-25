@@ -50,6 +50,16 @@ RUN printf '%s\n' \
   > /usr/local/bin/export-cron-env.sh \
   && chmod +x /usr/local/bin/export-cron-env.sh
 
+# A aplicação e o PocketBase compartilham o proxy interno do Coolify. Resolver
+# o domínio público para esse proxy evita depender da rota externa/Cloudflare
+# entre containers da própria VPS, que pode expirar mesmo com o PocketBase saudável.
+RUN printf '%s\n' \
+  '#!/bin/sh' \
+  'proxy_ip=$(getent ahostsv4 coolify-proxy 2>/dev/null | awk "NR == 1 { print \$1 }")' \
+  'if [ -n "$proxy_ip" ]; then echo "$proxy_ip pocketbase.cerejavip.com" >> /etc/hosts; fi' \
+  > /usr/local/bin/resolve-pocketbase-internal.sh \
+  && chmod +x /usr/local/bin/resolve-pocketbase-internal.sh
+
 # Cron jobs (daily reset + 5-min auto bump)
 RUN /usr/local/bin/export-cron-env.sh && \
     echo "0 0 * * * . /etc/environment.sh && cd /app && node /app/scripts/reset-daily-bumps.mjs >> /var/log/cron.log 2>&1" > /etc/crontabs/root && \
@@ -59,4 +69,4 @@ RUN /usr/local/bin/export-cron-env.sh && \
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "/usr/local/bin/export-cron-env.sh && crond && node server.js"]
+CMD ["sh", "-c", "/usr/local/bin/resolve-pocketbase-internal.sh && /usr/local/bin/export-cron-env.sh && crond && node server.js"]

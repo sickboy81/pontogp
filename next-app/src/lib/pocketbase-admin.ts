@@ -26,24 +26,28 @@ export async function getAdminToken(): Promise<string | null> {
   const password = process.env.POCKETBASE_ADMIN_PASSWORD
   if (!email || !password) return null
 
-  // PB v0.23+: superusers; fallback para v0.22-: admins
-  let res = await fetch(`${PB_URL}/api/collections/_superusers/auth-with-password`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ identity: email, password }),
-  })
-  if (!res.ok) {
-    res = await fetch(`${PB_URL}/api/admins/auth-with-password`, {
+  try {
+    // PB v0.23+: superusers; fallback para v0.22-: admins
+    let res = await fetch(`${PB_URL}/api/collections/_superusers/auth-with-password`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ identity: email, password }),
     })
+    if (!res.ok) {
+      res = await fetch(`${PB_URL}/api/admins/auth-with-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ identity: email, password }),
+      })
+    }
+    if (!res.ok) return null
+    const json = (await res.json()) as { token?: string }
+    const token = json.token ?? null
+    if (!token) return null
+    cachedToken = token
+    cachedTokenExpMs = getJwtExpMs(token) || now + 10 * 60 * 1000
+    return token
+  } catch {
+    return null
   }
-  if (!res.ok) return null
-  const json = (await res.json()) as { token?: string }
-  const token = json.token ?? null
-  if (!token) return null
-  cachedToken = token
-  cachedTokenExpMs = getJwtExpMs(token) || now + 10 * 60 * 1000
-  return token
 }
