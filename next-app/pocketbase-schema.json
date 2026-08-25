@@ -1,5 +1,5 @@
 {
-  "exportedAt": "2026-08-25T13:39:46.611Z",
+  "exportedAt": "2026-08-25T22:59:02.181Z",
   "baseUrl": "https://pocketbase.cerejavip.com",
   "collections": [
     {
@@ -4711,6 +4711,178 @@
           "primaryKey": true,
           "required": true,
           "system": true,
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "id": "pbc_2026077308",
+      "name": "account_preferences",
+      "type": "base",
+      "authRule": null,
+      "listRule": "@request.auth.id = user",
+      "viewRule": "@request.auth.id = user",
+      "createRule": "@request.auth.id = user",
+      "updateRule": "@request.auth.id = user",
+      "deleteRule": "@request.auth.id = user",
+      "schema": [
+        {
+          "autogeneratePattern": "[a-z0-9]{15}",
+          "help": "",
+          "hidden": false,
+          "id": "text3208210256",
+          "max": 15,
+          "min": 15,
+          "name": "id",
+          "pattern": "^[a-z0-9]+$",
+          "presentable": false,
+          "primaryKey": true,
+          "required": true,
+          "system": true,
+          "type": "text"
+        },
+        {
+          "cascadeDelete": true,
+          "collectionId": "_pb_users_auth_",
+          "help": "",
+          "hidden": false,
+          "id": "relation2375276105",
+          "maxSelect": 1,
+          "minSelect": 0,
+          "name": "user",
+          "presentable": false,
+          "required": true,
+          "system": false,
+          "type": "relation"
+        },
+        {
+          "help": "",
+          "hidden": false,
+          "id": "bool3432486996",
+          "name": "notify_messages",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "bool"
+        },
+        {
+          "help": "",
+          "hidden": false,
+          "id": "bool1917263344",
+          "name": "notify_payments",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "bool"
+        },
+        {
+          "help": "",
+          "hidden": false,
+          "id": "bool4085191894",
+          "name": "notify_plan_expiry",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "bool"
+        },
+        {
+          "help": "",
+          "hidden": false,
+          "id": "bool3524154115",
+          "name": "notify_security",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "id": "pbc_1398336686",
+      "name": "account_events",
+      "type": "base",
+      "authRule": null,
+      "listRule": "@request.auth.id = user",
+      "viewRule": "@request.auth.id = user",
+      "createRule": null,
+      "updateRule": null,
+      "deleteRule": null,
+      "schema": [
+        {
+          "autogeneratePattern": "[a-z0-9]{15}",
+          "help": "",
+          "hidden": false,
+          "id": "text3208210256",
+          "max": 15,
+          "min": 15,
+          "name": "id",
+          "pattern": "^[a-z0-9]+$",
+          "presentable": false,
+          "primaryKey": true,
+          "required": true,
+          "system": true,
+          "type": "text"
+        },
+        {
+          "cascadeDelete": true,
+          "collectionId": "_pb_users_auth_",
+          "help": "",
+          "hidden": false,
+          "id": "relation2375276105",
+          "maxSelect": 1,
+          "minSelect": 0,
+          "name": "user",
+          "presentable": false,
+          "required": true,
+          "system": false,
+          "type": "relation"
+        },
+        {
+          "help": "",
+          "hidden": false,
+          "id": "select2363381545",
+          "maxSelect": 1,
+          "name": "type",
+          "presentable": false,
+          "required": true,
+          "system": false,
+          "type": "select",
+          "values": [
+            "login",
+            "password_changed",
+            "email_change_requested",
+            "logout_all",
+            "data_export"
+          ]
+        },
+        {
+          "autogeneratePattern": "",
+          "help": "",
+          "hidden": false,
+          "id": "text587191692",
+          "max": 80,
+          "min": 0,
+          "name": "ip_address",
+          "pattern": "",
+          "presentable": false,
+          "primaryKey": false,
+          "required": false,
+          "system": false,
+          "type": "text"
+        },
+        {
+          "autogeneratePattern": "",
+          "help": "",
+          "hidden": false,
+          "id": "text3293145029",
+          "max": 500,
+          "min": 0,
+          "name": "user_agent",
+          "pattern": "",
+          "presentable": false,
+          "primaryKey": false,
+          "required": false,
+          "system": false,
           "type": "text"
         }
       ]
