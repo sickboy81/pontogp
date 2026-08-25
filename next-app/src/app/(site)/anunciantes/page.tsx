@@ -221,14 +221,14 @@ export default function AnunciantesPage() {
           </div>
           <div className="advertiser-link-bio-mockup mx-auto w-full max-w-sm rounded-[2rem] border border-rose-300/50 bg-gradient-to-b from-rose-800 via-rose-900 to-rose-950 px-5 py-8 text-white shadow-2xl shadow-rose-950/30">
             <div className="mx-auto flex h-28 w-28 items-center justify-center overflow-hidden rounded-full border-4 border-rose-200/70 bg-slate-900 shadow-lg">
-              <img src="/logo-header.png" alt="CerejaVIP" className="w-20 object-contain" />
+              <img src="/link-bio-avatar-ficticio.png" alt="Avatar ilustrado fictício" className="h-full w-full object-cover" />
             </div>
             <div className="mt-5 flex items-center justify-center gap-1.5">
-              <p className="text-center text-2xl font-bold text-white">Luiza Menescal</p>
+              <p className="text-center text-2xl font-bold text-white">Aline Exemplo</p>
               <BadgeCheck className="h-5 w-5 text-emerald-300" />
             </div>
-            <p className="text-center text-sm text-rose-100">Rio de Janeiro, RJ</p>
-            <p className="mt-3 text-center text-sm text-white/90">Realizo seus fetiches, conto com local</p>
+            <p className="text-center text-sm text-rose-100">São Paulo, SP</p>
+            <p className="mt-3 text-center text-sm text-white/90">Uma apresentação simples para mostrar como funciona.</p>
             <div className="mt-3 flex justify-center gap-2 text-[11px] font-semibold">
               <span className="rounded bg-emerald-500/80 px-2 py-1 text-white">Verificado</span>
               <span className="rounded bg-emerald-500/80 px-2 py-1 text-white">Online</span>
