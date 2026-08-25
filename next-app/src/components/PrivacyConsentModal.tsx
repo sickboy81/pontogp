@@ -69,9 +69,9 @@ export default function PrivacyConsentModal() {
               <div className="absolute -bottom-16 -left-12 h-40 w-40 rounded-full border border-white/10" />
               <div className="relative flex h-full flex-col">
                 <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/25 bg-white/10 text-2xl font-black tracking-tight">18+</div>
-                <p className="mt-7 text-xs font-semibold uppercase tracking-[0.24em] text-white/70">CerejaVIP</p>
+                <p className="mt-7 text-xs font-semibold uppercase tracking-[0.24em] text-slate-800 dark:text-white/90">CerejaVIP</p>
                 <h2 className="mt-3 text-2xl font-bold leading-tight">Navegue com clareza e discrição.</h2>
-                <p className="mt-auto pt-8 text-sm leading-relaxed text-white/75">Conteúdo adulto para maiores de 18 anos. Leia as regras antes de continuar.</p>
+                <p className="mt-auto pt-8 text-sm font-semibold leading-relaxed text-slate-900 dark:text-white">Conteúdo adulto para maiores de 18 anos. Leia as regras antes de continuar.</p>
               </div>
             </div>
             <div className="p-6 sm:p-8">

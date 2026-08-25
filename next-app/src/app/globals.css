@@ -26,6 +26,18 @@ html.light {
   --foreground: #0f172a;
 }
 
+/* O autofill do navegador não deve criar um bloco azul/escuro no formulário claro. */
+html.light input:-webkit-autofill,
+html.light input:-webkit-autofill:hover,
+html.light input:-webkit-autofill:focus,
+html.light textarea:-webkit-autofill,
+html.light select:-webkit-autofill {
+  -webkit-text-fill-color: #0f172a;
+  -webkit-box-shadow: 0 0 0 1000px #ffffff inset;
+  box-shadow: 0 0 0 1000px #ffffff inset;
+  caret-color: #0f172a;
+}
+
 body {
   @apply bg-slate-900 text-slate-100 antialiased;
 }

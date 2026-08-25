@@ -12,6 +12,20 @@ import { getRegistrationNextUrl } from '@/lib/registration-flow.mjs'
 
 type RegistrationRole = 'user' | 'advertiser'
 
+function getRegistrationErrorMessage(error: unknown) {
+  const response = error as { data?: Record<string, { code?: string; message?: string }>; message?: string }
+  const fields = response.data || {}
+  const field = Object.entries(fields).find(([, value]) => value?.message)
+  if (!field) return response.message || 'Erro ao criar conta'
+
+  const [name, detail] = field
+  if (name === 'email' && detail.code === 'validation_not_unique') return 'Este email já está cadastrado. Use outro email ou entre na sua conta.'
+  if (name === 'email' && detail.code === 'validation_is_email') return 'Informe um endereço de email válido.'
+  if (name === 'password') return 'A senha não atende aos requisitos do cadastro.'
+  if (name === 'passwordConfirm') return 'As senhas não coincidem.'
+  return `${name}: ${detail.message}`
+}
+
 const ROLE_COPY: Record<
   RegistrationRole,
   {
@@ -98,17 +112,16 @@ function RegisterPageContent() {
       toast.success('Conta criada! Entre para continuar.')
       router.push(getRegistrationNextUrl(role))
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Erro ao criar conta'
-      toast.error(message)
+      toast.error(getRegistrationErrorMessage(err))
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-6">
+    <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-5 sm:p-6">
       <h1 className="text-2xl font-bold text-white">Criar conta</h1>
-      <p className="mt-2 text-slate-400">Escolha como deseja utilizar o CerejaVIP.</p>
+      <p className="mt-1 text-sm text-slate-400">Escolha como deseja utilizar o CerejaVIP.</p>
 
       {!role ? (
         <>
@@ -127,35 +140,35 @@ function RegisterPageContent() {
         </>
       ) : (
       <>
-      <div className="mt-6 grid grid-cols-2 rounded-xl border border-slate-600 bg-slate-900/50 p-1">
-        <button type="button" onClick={() => selectRole('advertiser')} className={`rounded-lg px-3 py-3 text-sm font-semibold transition ${role === 'advertiser' ? 'bg-primary-500 text-white' : 'text-slate-400 hover:text-white'}`}>
+      <div className="mt-4 grid grid-cols-2 rounded-xl border border-slate-600 bg-slate-900/50 p-1">
+        <button type="button" onClick={() => selectRole('advertiser')} className={`rounded-lg px-3 py-2.5 text-sm font-semibold transition ${role === 'advertiser' ? 'bg-primary-500 text-white' : 'text-slate-400 hover:text-white'}`}>
           Sou Acompanhante
         </button>
-        <button type="button" onClick={() => selectRole('user')} className={`rounded-lg px-3 py-3 text-sm font-semibold transition ${role === 'user' ? 'bg-sky-600 text-white' : 'text-slate-400 hover:text-white'}`}>
+        <button type="button" onClick={() => selectRole('user')} className={`rounded-lg px-3 py-2.5 text-sm font-semibold transition ${role === 'user' ? 'bg-sky-600 text-white' : 'text-slate-400 hover:text-white'}`}>
           Sou Cliente
         </button>
       </div>
 
-      <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+      <form onSubmit={handleSubmit} className="mt-4 space-y-3">
         <div>
           <label className="block text-sm font-medium text-slate-300">Nome completo</label>
           <input
             type="text"
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-4 py-3 text-white placeholder-slate-500 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+            className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-4 py-2.5 text-white placeholder-slate-500 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
             placeholder="Seu nome completo"
             required
           />
         </div>
         <div>
           <label className="block text-sm font-medium text-slate-300">Nome no perfil</label>
-          <input type="text" value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-4 py-3 text-white placeholder-slate-500 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" placeholder="Como aparecerá publicamente" maxLength={100} required />
+          <input type="text" value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-4 py-2.5 text-white placeholder-slate-500 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" placeholder="Como aparecerá publicamente" maxLength={100} required />
           <p className="mt-1 text-xs text-slate-500">Este nome será exibido no seu anúncio.</p>
         </div>
         <div>
           <label className="block text-sm font-medium text-slate-300">Idade</label>
-          <input type="text" inputMode="numeric" autoComplete="bday-year" maxLength={3} value={age} onChange={(e) => setAge(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-4 py-3 text-white placeholder-slate-500 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" placeholder="Digite sua idade" required />
+          <input type="text" inputMode="numeric" autoComplete="bday-year" maxLength={3} value={age} onChange={(e) => setAge(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-4 py-2.5 text-white placeholder-slate-500 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" placeholder="Digite sua idade" required />
           <p className="mt-1 text-xs text-slate-500">A plataforma é exclusiva para maiores de 18 anos.</p>
         </div>
         <div>
@@ -164,7 +177,7 @@ function RegisterPageContent() {
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-4 py-3 text-white placeholder-slate-500 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+            className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-4 py-2.5 text-white placeholder-slate-500 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
             placeholder="seu@email.com"
             required
           />
@@ -176,7 +189,7 @@ function RegisterPageContent() {
               type={showPassword ? 'text' : 'password'}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-lg border border-slate-600 bg-slate-800 py-3 pl-4 pr-10 text-white placeholder-slate-500 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 py-2.5 pl-4 pr-10 text-white placeholder-slate-500 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
               placeholder="Mínimo 6 caracteres"
               minLength={6}
               required
