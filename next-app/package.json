@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "node .next/standalone/server.js",
     "postbuild": "node scripts/prepare-standalone.mjs",
     "test": "node --test src/**/*.test.mjs",
