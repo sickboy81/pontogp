@@ -210,7 +210,7 @@ export default function AnunciantesPage() {
               ].map((item) => {
                 const Icon = item.icon
                 return (
-                  <div key={item.title} className="rounded-2xl border border-white/10 bg-slate-900/70 p-5 shadow-lg shadow-black/10">
+                  <div key={item.title} className="anunciantes-link-bio-card rounded-2xl border border-white/10 bg-slate-900/70 p-5 shadow-lg shadow-black/10">
                     <Icon className="mb-3 h-6 w-6 text-cyan-500" />
                     <h3 className="font-bold text-white">{item.title}</h3>
                     <p className="mt-1 text-sm leading-relaxed text-slate-400">{item.text}</p>

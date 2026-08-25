@@ -773,6 +773,28 @@ html.light .anunciantes-page .anunciantes-link-bio-section .bg-slate-800\/50 {
   background-color: rgba(255, 255, 255, 0.86) !important;
   border-color: #dbe4ee !important;
 }
+html.light .anunciantes-page .anunciantes-link-bio-card {
+  background: #ffffff !important;
+  border-color: #d7e0eb !important;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.07) !important;
+}
+html.light .anunciantes-page .anunciantes-link-bio-card h3 {
+  color: #0f172a !important;
+}
+html.light .anunciantes-page .anunciantes-link-bio-card p {
+  color: #475569 !important;
+}
+html.light .anunciantes-page .advertiser-link-bio-preview {
+  background: linear-gradient(160deg, #f8fafc 0%, #ffffff 58%, #fff1f2 100%) !important;
+  border-color: #d7e0eb !important;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.14) !important;
+}
+html.light .anunciantes-page .advertiser-link-bio-preview .bg-white\/10 {
+  background-color: #ffffff !important;
+  border-color: #d7e0eb !important;
+  color: #0f172a !important;
+  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.05) !important;
+}
 
 .profile-reveal {
   animation: profile-reveal-up 0.55s ease both;
