@@ -2,10 +2,13 @@ import webpush from 'web-push'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
-export async function sendWebPushToUser({ userId, title, body, url = '/notificacoes', adminToken }) {
+export async function sendWebPushToUser({ userId, title, body, url = '/notificacoes', kind = 'messages', adminToken }) {
   if (!process.env.VAPID_PRIVATE_KEY || !process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || !adminToken || !userId) return 0
   webpush.setVapidDetails(process.env.VAPID_SUBJECT || 'mailto:contato@cerejavip.com', process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY, process.env.VAPID_PRIVATE_KEY)
   const headers = { Authorization: `Bearer ${adminToken}` }
+  const preferencesFilter = encodeURIComponent(`user = "${userId.replace(/"/g, '\\"')}"`)
+  const preferences = await fetch(`${PB_URL}/api/collections/account_preferences/records?filter=${preferencesFilter}&perPage=1`, { headers, cache: 'no-store' }).then(async (res) => res.ok ? (await res.json()).items?.[0] : null).catch(() => null)
+  if (preferences && preferences[`notify_${kind}`] === false) return 0
   const filter = encodeURIComponent(`user = "${userId.replace(/"/g, '\\"')}"`)
   const res = await fetch(`${PB_URL}/api/collections/push_subscriptions/records?filter=${filter}&perPage=100`, { headers, cache: 'no-store' })
   if (!res.ok) return 0

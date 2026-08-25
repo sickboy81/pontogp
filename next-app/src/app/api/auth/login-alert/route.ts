@@ -3,6 +3,7 @@ import { getAuthCookieFromHeader, getTokenPayload } from '@/lib/auth-cookie'
 import { getClientIp } from '@/lib/rate-limit.mjs'
 import { enforceUserRateLimit, RATE_LIMIT_POLICIES } from '@/lib/api-rate-limit.mjs'
 import { buildLoginAlertEmail, getResendEmailConfig, sendResendEmail } from '@/lib/resend-email.mjs'
+import { getAdminToken } from '@/lib/pocketbase-admin'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
@@ -28,7 +29,13 @@ export async function POST(request: NextRequest) {
     const user = await userResponse.json() as { email?: string; status?: string }
     if (!user.email || (user.status && user.status !== 'active')) return Response.json({ error: 'Conta indisponível.' }, { status: 403 })
 
-    await sendResendEmail(buildLoginAlertEmail(user, getClientIp(request.headers), new Date(), config), config.apiKey)
+    const occurredAt = new Date()
+    await sendResendEmail(buildLoginAlertEmail(user, getClientIp(request.headers), occurredAt, config), config.apiKey)
+    const adminToken = await getAdminToken()
+    if (adminToken) await fetch(`${PB_URL}/api/collections/account_events/records`, {
+      method: 'POST', headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user: userId, type: 'login', ip_address: getClientIp(request.headers), user_agent: request.headers.get('user-agent') || '' }),
+    }).catch(() => undefined)
     return new Response(null, { status: 204 })
   } catch (error) {
     console.error('[login-alert] Falha ao enviar alerta de segurança:', error instanceof Error ? error.message : 'erro desconhecido')

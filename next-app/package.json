@@ -17,6 +17,7 @@
     "schema:ensure-user-registration-fields": "node scripts/ensure-user-registration-fields.mjs",
     "schema:ensure-user-file-upload": "node scripts/ensure-user-file-upload.mjs",
     "schema:ensure-search-analytics": "node scripts/ensure-search-analytics.mjs",
+    "schema:ensure-account-settings": "node scripts/ensure-account-settings-schema.mjs",
     "email:configure-resend": "node scripts/configure-resend-smtp.mjs",
     "auto-bump": "node scripts/auto_bump.mjs",
     "cleanup-profiles": "node scripts/cleanup_profiles.mjs",

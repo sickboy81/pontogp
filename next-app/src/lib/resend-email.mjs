@@ -126,7 +126,7 @@ export function buildPocketBaseEmailTemplates(appUrl = 'https://cerejavip.com') 
       'Confirme seu novo email no CerejaVIP',
       'Clique no botao abaixo para confirmar a alteracao do seu email.',
       'Confirmar novo email',
-      `${normalizedUrl}/verificar-email?token={TOKEN}`,
+      `${normalizedUrl}/confirmar-email?token={TOKEN}`,
       'Se voce nao solicitou essa alteracao, ignore este email.'
     ),
     otp: {

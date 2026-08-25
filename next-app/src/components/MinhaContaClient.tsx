@@ -1,171 +1,42 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { AlertTriangle, BadgeCheck, CreditCard, KeyRound, Mail, ShieldCheck, Trash2 } from 'lucide-react'
+import { AlertTriangle, BadgeCheck, Bell, CreditCard, Download, KeyRound, Laptop, LogOut, Mail, MessageCircleQuestion, ShieldCheck, Trash2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAuthStore } from '@/store/auth'
 import { getPb } from '@/lib/pb'
+import PushNotificationPrompt from '@/components/PushNotificationPrompt'
+
+type Preferences = { notify_messages: boolean; notify_payments: boolean; notify_plan_expiry: boolean; notify_security: boolean }
+type Settings = { profile?: { plan?: string; search_expires_at?: string }; plan?: { plan?: string; expires_at?: string }; preferences: Preferences; events: { type: string; ip_address?: string; created: string }[] }
+const eventLabels: Record<string, string> = { login: 'Login realizado', password_changed: 'Senha alterada', email_change_requested: 'Troca de email solicitada', logout_all: 'Sessões encerradas', data_export: 'Cópia dos dados baixada' }
+const format = (value?: string) => value ? new Intl.DateTimeFormat('pt-BR', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value)) : 'Não informado'
+const input = 'w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 placeholder-slate-500 dark:border-slate-600 dark:bg-slate-900 dark:text-white'
+const card = 'rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800/70'
 
 export default function MinhaContaClient() {
-  const router = useRouter()
-  const user = useAuthStore((state) => state.user)
-  const logout = useAuthStore((state) => state.logout)
-  const [currentPassword, setCurrentPassword] = useState('')
-  const [newPassword, setNewPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [saving, setSaving] = useState(false)
-  const [deleteOpen, setDeleteOpen] = useState(false)
-  const [deletePassword, setDeletePassword] = useState('')
-  const [deleteConfirmation, setDeleteConfirmation] = useState('')
-  const [deleting, setDeleting] = useState(false)
-
-  const changePassword = async (event: React.FormEvent) => {
-    event.preventDefault()
-    if (!user?.id) return
-    if (newPassword.length < 8) {
-      toast.error('A nova senha deve ter pelo menos 8 caracteres.')
-      return
-    }
-    if (newPassword !== confirmPassword) {
-      toast.error('A confirmação não é igual à nova senha.')
-      return
-    }
-    try {
-      setSaving(true)
-      await getPb().collection('users').update(user.id, {
-        oldPassword: currentPassword,
-        password: newPassword,
-        passwordConfirm: confirmPassword,
-      })
-      setCurrentPassword('')
-      setNewPassword('')
-      setConfirmPassword('')
-      toast.success('Senha alterada com sucesso.')
-    } catch (error) {
-      const detail = error as { response?: { data?: Record<string, { message?: string }> } }
-      const message = Object.values(detail.response?.data || {}).find((item) => item?.message)?.message
-      toast.error(message || 'Não foi possível alterar a senha. Confira a senha atual e tente novamente.')
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const deleteAccount = async (event: React.FormEvent) => {
-    event.preventDefault()
-    if (deleteConfirmation !== 'EXCLUIR') {
-      toast.error('Digite EXCLUIR para confirmar a exclusão.')
-      return
-    }
-    try {
-      setDeleting(true)
-      const response = await fetch('/api/account/delete', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ currentPassword: deletePassword, confirmation: deleteConfirmation }),
-      })
-      const data = (await response.json().catch(() => null)) as { error?: string } | null
-      if (!response.ok) throw new Error(data?.error || 'Não foi possível excluir a conta.')
-      await logout()
-      toast.success('Sua conta foi excluída.')
-      router.replace('/')
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Não foi possível excluir a conta.')
-    } finally {
-      setDeleting(false)
-    }
-  }
-
-  return (
-    <div className="mx-auto max-w-4xl">
-      <div className="mb-6">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary-500">Área pessoal</p>
-        <h1 className="mt-1 text-3xl font-bold text-slate-900 dark:text-white">Minha conta</h1>
-        <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">Consulte os dados de acesso, mantenha sua senha segura e acompanhe seus pagamentos.</p>
-      </div>
-
-      <div className="grid gap-5 lg:grid-cols-[1fr,1.2fr]">
-        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800/70" aria-labelledby="dados-conta">
-          <div className="flex items-center gap-3">
-            <span className="rounded-xl bg-primary-500/10 p-2.5 text-primary-600 dark:text-primary-400"><Mail className="h-5 w-5" /></span>
-            <div>
-              <h2 id="dados-conta" className="font-semibold text-slate-900 dark:text-white">Dados de acesso</h2>
-              <p className="text-xs text-slate-600 dark:text-slate-400">Seu email usado para entrar no CerejaVIP.</p>
-            </div>
-          </div>
-          <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900/40">
-            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Email da conta</p>
-            <p className="mt-1 break-all font-medium text-slate-900 dark:text-white">{user?.email || 'Email indisponível'}</p>
-          </div>
-          <div className="mt-3 flex items-center gap-2 text-sm text-emerald-700 dark:text-emerald-300">
-            <BadgeCheck className="h-4 w-4" />
-            {user?.verified ? 'Email confirmado' : 'Email ainda não confirmado'}
-          </div>
-        </section>
-
-        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800/70" aria-labelledby="senha-conta">
-          <div className="flex items-center gap-3">
-            <span className="rounded-xl bg-violet-500/10 p-2.5 text-violet-600 dark:text-violet-300"><KeyRound className="h-5 w-5" /></span>
-            <div>
-              <h2 id="senha-conta" className="font-semibold text-slate-900 dark:text-white">Alterar senha</h2>
-              <p className="text-xs text-slate-600 dark:text-slate-400">Use pelo menos 8 caracteres e não reutilize senhas expostas.</p>
-            </div>
-          </div>
-          <form onSubmit={changePassword} className="mt-5 space-y-3">
-            <input type="password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 placeholder-slate-500 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 dark:border-slate-600 dark:bg-slate-900 dark:text-white" placeholder="Senha atual" autoComplete="current-password" required />
-            <input type="password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 placeholder-slate-500 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 dark:border-slate-600 dark:bg-slate-900 dark:text-white" placeholder="Nova senha (mínimo 8 caracteres)" autoComplete="new-password" minLength={8} required />
-            <input type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 placeholder-slate-500 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 dark:border-slate-600 dark:bg-slate-900 dark:text-white" placeholder="Confirme a nova senha" autoComplete="new-password" minLength={8} required />
-            <button type="submit" disabled={saving} className="w-full rounded-xl bg-primary-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-600 disabled:opacity-50">{saving ? 'Alterando senha...' : 'Alterar senha'}</button>
-          </form>
-        </section>
-      </div>
-
-      <section className="mt-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800/70">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
-            <span className="rounded-xl bg-emerald-500/10 p-2.5 text-emerald-600 dark:text-emerald-300"><CreditCard className="h-5 w-5" /></span>
-            <div>
-              <h2 className="font-semibold text-slate-900 dark:text-white">Pagamentos e plano</h2>
-              <p className="text-sm text-slate-600 dark:text-slate-400">Veja cobranças PIX, pagamentos aprovados e tentativas pendentes.</p>
-            </div>
-          </div>
-          <Link href="/pagamentos" className="inline-flex items-center justify-center rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-800 transition hover:border-primary-500 hover:text-primary-600 dark:border-slate-600 dark:text-slate-200 dark:hover:text-white">Ver histórico de pagamentos</Link>
-        </div>
-      </section>
-
-      <section className="mt-5 rounded-2xl border border-red-200 bg-red-50/60 p-5 dark:border-red-500/30 dark:bg-red-950/20">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-3">
-            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-red-600 dark:text-red-300" />
-            <div>
-              <h2 className="font-semibold text-red-900 dark:text-red-100">Excluir conta definitivamente</h2>
-              <p className="mt-1 text-sm leading-6 text-red-800/80 dark:text-red-200/80">Apaga sua conta, perfil, mídias, conversas, favoritos, pagamentos e demais dados vinculados. Esta ação não pode ser desfeita.</p>
-            </div>
-          </div>
-          <button type="button" onClick={() => setDeleteOpen(true)} className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-red-300 px-4 py-2.5 text-sm font-semibold text-red-700 transition hover:bg-red-100 dark:border-red-500/50 dark:text-red-200 dark:hover:bg-red-500/15"><Trash2 className="h-4 w-4" />Excluir conta</button>
-        </div>
-      </section>
-
-      {deleteOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 p-4" role="dialog" aria-modal="true" aria-labelledby="delete-account-title">
-          <form onSubmit={deleteAccount} className="w-full max-w-md rounded-2xl border border-red-200 bg-white p-6 shadow-2xl dark:border-red-500/30 dark:bg-slate-900">
-            <h2 id="delete-account-title" className="text-xl font-bold text-slate-900 dark:text-white">Confirmar exclusão da conta</h2>
-            <p className="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-300">Esta ação é definitiva. Para continuar, informe sua senha atual e digite <strong>EXCLUIR</strong>.</p>
-            <div className="mt-5 space-y-3">
-              <input type="password" value={deletePassword} onChange={(event) => setDeletePassword(event.target.value)} className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 placeholder-slate-500 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-white" placeholder="Senha atual" autoComplete="current-password" required />
-              <input type="text" value={deleteConfirmation} onChange={(event) => setDeleteConfirmation(event.target.value.toUpperCase())} className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 placeholder-slate-500 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-white" placeholder="Digite EXCLUIR" required />
-            </div>
-            <div className="mt-5 flex gap-3">
-              <button type="button" onClick={() => { setDeleteOpen(false); setDeletePassword(''); setDeleteConfirmation('') }} disabled={deleting} className="flex-1 rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800">Cancelar</button>
-              <button type="submit" disabled={deleting || deleteConfirmation !== 'EXCLUIR' || !deletePassword} className="flex-1 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-50">{deleting ? 'Excluindo...' : 'Excluir definitivamente'}</button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      <p className="mt-5 flex items-start gap-2 text-xs leading-5 text-slate-500 dark:text-slate-400"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" />Nunca compartilhe sua senha, códigos de confirmação ou dados bancários com outras pessoas.</p>
-    </div>
-  )
+  const router = useRouter(); const user = useAuthStore((s) => s.user); const logout = useAuthStore((s) => s.logout)
+  const [settings, setSettings] = useState<Settings | null>(null); const [password, setPassword] = useState(''); const [newPassword, setNewPassword] = useState(''); const [confirmPassword, setConfirmPassword] = useState(''); const [newEmail, setNewEmail] = useState(''); const [logoutPassword, setLogoutPassword] = useState(''); const [deletePassword, setDeletePassword] = useState(''); const [deleteConfirmation, setDeleteConfirmation] = useState(''); const [deleteOpen, setDeleteOpen] = useState(false); const [logoutOpen, setLogoutOpen] = useState(false); const [busy, setBusy] = useState(false)
+  const load = () => fetch('/api/account/settings', { credentials: 'include' }).then(r => r.ok ? r.json() : null).then(setSettings).catch(() => setSettings(null))
+  useEffect(() => { void load() }, [])
+  const changePassword = async (e: React.FormEvent) => { e.preventDefault(); if (!user?.id || newPassword.length < 8) return toast.error('A nova senha deve ter pelo menos 8 caracteres.'); if (newPassword !== confirmPassword) return toast.error('A confirmação não é igual.'); try { setBusy(true); await getPb().collection('users').update(user.id, { oldPassword: password, password: newPassword, passwordConfirm: confirmPassword }); await fetch('/api/account/events', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ type: 'password_changed' }) }); setPassword(''); setNewPassword(''); setConfirmPassword(''); toast.success('Senha alterada.'); load() } catch { toast.error('Não foi possível alterar a senha. Confira a senha atual.') } finally { setBusy(false) } }
+  const changeEmail = async (e: React.FormEvent) => { e.preventDefault(); try { setBusy(true); await getPb().collection('users').requestEmailChange(newEmail.trim().toLowerCase()); await fetch('/api/account/events', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ type: 'email_change_requested' }) }); setNewEmail(''); toast.success('Enviamos a confirmação para o novo email.') } catch { toast.error('Não foi possível solicitar a troca de email.') } finally { setBusy(false) } }
+  const resend = async () => { try { await getPb().collection('users').requestVerification(user?.email || ''); toast.success('Email de confirmação reenviado.') } catch { toast.error('Não foi possível reenviar a confirmação.') } }
+  const setPreference = async (key: keyof Preferences, checked: boolean) => { if (!settings) return; const preferences = { ...settings.preferences, [key]: checked }; setSettings({ ...settings, preferences }); const result = await fetch('/api/account/settings', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify(preferences) }); if (!result.ok) { toast.error('Não foi possível salvar esta preferência.'); load() } }
+  const logoutAll = async (e: React.FormEvent) => { e.preventDefault(); const result = await fetch('/api/account/logout-all', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ currentPassword: logoutPassword }) }); const data = await result.json().catch(() => ({})); if (!result.ok) return toast.error(data.error || 'Não foi possível encerrar as sessões.'); await logout(); router.replace('/login'); toast.success('Sessões encerradas.') }
+  const remove = async (e: React.FormEvent) => { e.preventDefault(); if (deleteConfirmation !== 'EXCLUIR') return toast.error('Digite EXCLUIR para confirmar.'); try { setBusy(true); const res = await fetch('/api/account/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ currentPassword: deletePassword, confirmation: deleteConfirmation }) }); const data = await res.json().catch(() => ({})); if (!res.ok) throw new Error(data.error); await logout(); router.replace('/'); toast.success('Sua conta foi excluída.') } catch (error) { toast.error(error instanceof Error ? error.message : 'Não foi possível excluir a conta.') } finally { setBusy(false) } }
+  const toggle = (label: string, key: keyof Preferences, text: string) => <label className="flex cursor-pointer items-start justify-between gap-4 rounded-xl border border-slate-200 p-3 dark:border-slate-700"><span><b className="block text-sm text-slate-900 dark:text-white">{label}</b><span className="block text-xs text-slate-600 dark:text-slate-400">{text}</span></span><input type="checkbox" checked={Boolean(settings?.preferences[key])} onChange={e => setPreference(key, e.target.checked)} className="mt-1 h-4 w-4 accent-primary-600" /></label>
+  return <div className="mx-auto max-w-5xl"><header className="mb-6"><p className="text-xs font-semibold uppercase tracking-[.18em] text-primary-600">Área pessoal</p><h1 className="mt-1 text-3xl font-bold text-slate-900 dark:text-white">Minha conta</h1><p className="mt-2 text-sm text-slate-600 dark:text-slate-400">Acesso, segurança, notificações e informações financeiras em um só lugar.</p></header><div className="grid gap-5 lg:grid-cols-2">
+    <section className={card}><div className="flex gap-3"><Mail className="mt-1 h-5 w-5 text-primary-600" /><div><h2 className="font-semibold text-slate-900 dark:text-white">Email e confirmação</h2><p className="text-sm text-slate-600 dark:text-slate-400">{user?.email || 'Email indisponível'}</p></div></div><p className="mt-4 flex items-center gap-2 text-sm font-medium text-emerald-700 dark:text-emerald-300"><BadgeCheck className="h-4 w-4" />{user?.verified ? 'Email confirmado' : 'Email ainda não confirmado'}</p>{!user?.verified && <button onClick={resend} className="mt-2 text-sm font-semibold text-primary-700 hover:underline dark:text-primary-300">Reenviar confirmação</button>}<form onSubmit={changeEmail} className="mt-4 flex gap-2"><input className={input} type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)} placeholder="Novo email" required /><button disabled={busy} className="rounded-xl border border-primary-500 px-3 text-sm font-semibold text-primary-700 dark:text-primary-300">Alterar</button></form></section>
+    <section className={card}><div className="flex gap-3"><CreditCard className="mt-1 h-5 w-5 text-emerald-600" /><div><h2 className="font-semibold text-slate-900 dark:text-white">Plano e pagamentos</h2><p className="text-sm text-slate-600 dark:text-slate-400">Plano atual: <b>{(settings?.plan?.plan || settings?.profile?.plan || 'Grátis').toString()}</b></p></div></div><p className="mt-4 text-sm text-slate-600 dark:text-slate-400">Vencimento: <b className="text-slate-900 dark:text-white">{format(settings?.plan?.expires_at || settings?.profile?.search_expires_at)}</b></p><div className="mt-4 flex gap-4"><Link href="/pagamentos" className="text-sm font-semibold text-primary-700 hover:underline dark:text-primary-300">Histórico</Link><Link href="/planos" className="text-sm font-semibold text-primary-700 hover:underline dark:text-primary-300">Ver planos</Link></div></section>
+    <section className={card}><div className="flex gap-3"><Bell className="mt-1 h-5 w-5 text-violet-600" /><div><h2 className="font-semibold text-slate-900 dark:text-white">Notificações</h2><p className="text-sm text-slate-600 dark:text-slate-400">Escolha quais alertas podem chegar ao dispositivo.</p></div></div><div className="mt-4 space-y-2">{toggle('Mensagens', 'notify_messages', 'Novas mensagens recebidas.')}{toggle('Pagamentos', 'notify_payments', 'Atualizações de cobrança e pagamento.')}{toggle('Plano', 'notify_plan_expiry', 'Avisos de vencimento e renovação.')}{toggle('Segurança', 'notify_security', 'Alertas de acesso e alterações.')}</div><div className="mt-4"><PushNotificationPrompt /></div></section>
+    <section className={card}><div className="flex gap-3"><Laptop className="mt-1 h-5 w-5 text-violet-600" /><div><h2 className="font-semibold text-slate-900 dark:text-white">Segurança e sessões</h2><p className="text-sm text-slate-600 dark:text-slate-400">Atividade recente da sua conta.</p></div></div><div className="mt-4 space-y-2">{settings?.events?.length ? settings.events.slice(0, 4).map(e => <div key={`${e.type}-${e.created}`} className="rounded-xl bg-slate-50 p-3 text-sm dark:bg-slate-900/50"><b className="text-slate-900 dark:text-white">{eventLabels[e.type] || e.type}</b><p className="text-slate-600 dark:text-slate-400">{format(e.created)}{e.ip_address ? ` · IP ${e.ip_address}` : ''}</p></div>) : <p className="text-sm text-slate-600 dark:text-slate-400">O histórico aparecerá nos próximos acessos.</p>}</div><button onClick={() => setLogoutOpen(true)} className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-primary-700 hover:underline dark:text-primary-300"><LogOut className="h-4 w-4" />Sair de todos os dispositivos</button></section>
+    <section className={card}><div className="flex gap-3"><KeyRound className="mt-1 h-5 w-5 text-primary-600" /><div><h2 className="font-semibold text-slate-900 dark:text-white">Alterar senha</h2><p className="text-sm text-slate-600 dark:text-slate-400">Use ao menos 8 caracteres.</p></div></div><form onSubmit={changePassword} className="mt-4 space-y-2"><input className={input} type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Senha atual" required /><input className={input} type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="Nova senha (mínimo 8 caracteres)" minLength={8} required /><input className={input} type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="Confirme a nova senha" minLength={8} required /><button disabled={busy} className="w-full rounded-xl bg-primary-600 py-2.5 text-sm font-semibold text-white disabled:opacity-50">Alterar senha</button></form></section>
+    <section className={card}><div className="flex gap-3"><Download className="mt-1 h-5 w-5 text-sky-600" /><div><h2 className="font-semibold text-slate-900 dark:text-white">Privacidade e dados</h2><p className="text-sm text-slate-600 dark:text-slate-400">Baixe uma cópia de conta, perfil, pagamentos, favoritos, notificações e mensagens. Arquivos de mídia não são incluídos.</p></div></div><Link href="/api/account/export" prefetch={false} className="mt-4 inline-block rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-800 dark:border-slate-600 dark:text-slate-200">Baixar meus dados</Link><Link href="/contato" className="mt-4 flex items-center gap-2 text-sm font-semibold text-primary-700 hover:underline dark:text-primary-300"><MessageCircleQuestion className="h-4 w-4" />Falar com o suporte</Link></section>
+  </div><section className="mt-5 rounded-2xl border border-red-200 bg-red-50/60 p-5 dark:border-red-500/30 dark:bg-red-950/20"><div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center"><div className="flex gap-3"><AlertTriangle className="mt-1 h-5 w-5 text-red-600" /><div><h2 className="font-semibold text-red-900 dark:text-red-100">Excluir conta definitivamente</h2><p className="text-sm text-red-800/80 dark:text-red-200/80">Apaga conta, perfil, mídias, conversas, favoritos, pagamentos e dados vinculados.</p></div></div><button onClick={() => setDeleteOpen(true)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-300 px-4 py-2.5 text-sm font-semibold text-red-700 dark:text-red-200"><Trash2 className="h-4 w-4" />Excluir conta</button></div></section>
+  {logoutOpen && <div className="fixed inset-0 z-[100] grid place-items-center bg-slate-950/60 p-4"><form onSubmit={logoutAll} className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl dark:bg-slate-900"><h2 className="font-bold text-slate-900 dark:text-white">Sair de todos os dispositivos</h2><p className="mt-2 text-sm text-slate-600 dark:text-slate-300">Você também sairá deste dispositivo.</p><input className={`${input} mt-4`} type="password" value={logoutPassword} onChange={e => setLogoutPassword(e.target.value)} placeholder="Senha atual" required /><div className="mt-4 flex gap-3"><button type="button" onClick={() => setLogoutOpen(false)} className="flex-1 rounded-xl border py-2.5 text-sm">Cancelar</button><button className="flex-1 rounded-xl bg-primary-600 py-2.5 text-sm font-semibold text-white">Encerrar sessões</button></div></form></div>}
+  {deleteOpen && <div className="fixed inset-0 z-[100] grid place-items-center bg-slate-950/60 p-4"><form onSubmit={remove} className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl dark:bg-slate-900"><h2 className="font-bold text-slate-900 dark:text-white">Confirmar exclusão</h2><p className="mt-2 text-sm text-slate-600 dark:text-slate-300">Informe sua senha e digite <b>EXCLUIR</b>. Esta ação é definitiva.</p><input className={`${input} mt-4`} type="password" value={deletePassword} onChange={e => setDeletePassword(e.target.value)} placeholder="Senha atual" required /><input className={`${input} mt-3`} value={deleteConfirmation} onChange={e => setDeleteConfirmation(e.target.value.toUpperCase())} placeholder="Digite EXCLUIR" required /><div className="mt-4 flex gap-3"><button type="button" onClick={() => setDeleteOpen(false)} className="flex-1 rounded-xl border py-2.5 text-sm">Cancelar</button><button disabled={busy || deleteConfirmation !== 'EXCLUIR'} className="flex-1 rounded-xl bg-red-600 py-2.5 text-sm font-semibold text-white disabled:opacity-50">Excluir definitivamente</button></div></form></div>}
+  <p className="mt-5 flex gap-2 text-xs text-slate-500 dark:text-slate-400"><ShieldCheck className="h-4 w-4" />Nunca compartilhe senhas ou códigos de confirmação.</p></div>
 }

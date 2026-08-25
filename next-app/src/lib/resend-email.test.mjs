@@ -88,7 +88,7 @@ test('builds PocketBase auth templates with CerejaVIP confirmation routes', () =
   const templates = buildPocketBaseEmailTemplates('https://cerejavip.com')
   assert.equal(templates.verificationTemplate.actionUrl, 'https://cerejavip.com/verificar-email?token={TOKEN}')
   assert.equal(templates.resetPasswordTemplate.actionUrl, 'https://cerejavip.com/redefinir-senha?token={TOKEN}')
-  assert.equal(templates.confirmEmailChangeTemplate.actionUrl, 'https://cerejavip.com/verificar-email?token={TOKEN}')
+  assert.equal(templates.confirmEmailChangeTemplate.actionUrl, 'https://cerejavip.com/confirmar-email?token={TOKEN}')
   assert.match(templates.otp.emailTemplate.body, /\{OTP\}/)
   assert.match(templates.authAlert.emailTemplate.body, /\{ACTION_TIME\}/)
   assert.match(templates.authAlert.emailTemplate.body, /\{ACTION_IP\}/)
