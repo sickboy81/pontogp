@@ -648,8 +648,8 @@ export default function DashboardPerfilForm() {
   const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file || !profile) return
-    if (file.size > 100 * 1024 * 1024) {
-      setError('O vídeo ultrapassa o limite de 100 MB.')
+    if (file.size > 50 * 1024 * 1024) {
+      setError('O vídeo ultrapassa o limite de 50 MB.')
       e.target.value = ''
       return
     }
@@ -1976,7 +1976,7 @@ export default function DashboardPerfilForm() {
               </label>
             </div>
             <p className="mt-2 text-xs text-slate-500">
-              Arraste as fotos para ordenar; a primeira será a principal. Selecione uma ou várias fotos. JPG, PNG ou WebP. Máximo 5 MB por foto.
+              Arraste as fotos para ordenar; a primeira será a principal. Selecione uma ou várias fotos. JPG, PNG ou WebP. Máximo 5 MB por foto. <Link href="/diretrizes-fotos-videos" className="text-primary-400 hover:underline">Ver regras de publicação</Link>.
             </p>
             {profile.status === 'active' && !canRemovePhoto && (
               <p className="mt-2 text-xs text-amber-300">
@@ -2022,7 +2022,7 @@ export default function DashboardPerfilForm() {
               <label className="flex aspect-video cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-slate-600 bg-slate-800/50 transition hover:border-primary-500 hover:bg-slate-800">
                 <input
                   type="file"
-                  accept="video/mp4,video/webm,video/quicktime"
+                  accept="video/mp4,video/webm,video/quicktime,video/x-matroska"
                   className="hidden"
                   onChange={handleVideoUpload}
                   disabled={videoUploading}
@@ -2038,7 +2038,7 @@ export default function DashboardPerfilForm() {
               </label>
             </div>
             <p className="mt-2 text-xs text-slate-500">
-              MP4 ou WebM. Máximo 100 MB por vídeo.
+              MP4, WebM, MOV ou MKV. Máximo 50 MB por vídeo. <Link href="/diretrizes-fotos-videos" className="text-primary-400 hover:underline">Ver regras de publicação</Link>.
             </p>
           </div>
 
