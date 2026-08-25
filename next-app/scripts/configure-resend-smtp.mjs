@@ -21,6 +21,7 @@ function loadEnv(path) {
 }
 
 loadEnv(join(root, '.env'))
+loadEnv(join(root, '..', '.env'))
 
 const pbUrl = String(process.env.NEXT_PUBLIC_POCKETBASE_URL ?? '').replace(/\/$/, '')
 const adminEmail = String(process.env.POCKETBASE_ADMIN_EMAIL ?? '').trim()
