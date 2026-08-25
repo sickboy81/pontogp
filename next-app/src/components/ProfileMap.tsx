@@ -16,10 +16,9 @@ interface ProfileMapProps {
 }
 
 export default function ProfileMap({ lat, lng, city, state, neighborhoods = [], approximate, className = '' }: ProfileMapProps) {
-  // Um nível de zoom adicional deixa o mapa aproximadamente 50% mais próximo
-  // sem mudar a largura nem o alinhamento do cartão.
-  // Mais 20% de aproximação em relação ao enquadramento anterior.
-  const delta = approximate ? 0.0208 : 0.0083
+  // Reduzimos a área enquadrada em 30% para aproximar o mapa,
+  // sem mudar a largura, a altura ou o alinhamento do cartão.
+  const delta = approximate ? 0.01456 : 0.00581
   const bbox = `${lng - delta},${lat - delta},${lng + delta},${lat + delta}`
   const embedUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${encodeURIComponent(bbox)}&layer=mapnik&marker=${lat},${lng}`
 
