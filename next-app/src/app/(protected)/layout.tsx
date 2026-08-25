@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { Menu, X, Home, LogOut, LayoutDashboard, User, MessageCircle, CreditCard, Bell } from 'lucide-react'
+import { Menu, X, Home, LogOut, LayoutDashboard, User, MessageCircle, CreditCard, Bell, Settings } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
 
 const DASHBOARD_TABS = [
@@ -12,6 +12,7 @@ const DASHBOARD_TABS = [
   { href: '/mensagens', label: 'Mensagens', icon: MessageCircle },
   { href: '/planos', label: 'Planos', icon: CreditCard },
   { href: '/notificacoes', label: 'Notificações', icon: Bell },
+  { href: '/conta', label: 'Minha conta', icon: Settings },
 ]
 
 function DashboardTabBar() {
@@ -57,6 +58,7 @@ export default function ProtectedLayout({
     pathname === '/mensagens' ||
     pathname === '/planos' ||
     pathname === '/notificacoes'
+    || pathname === '/conta'
 
   const handleLogout = async () => {
     setMenuOpen(false)
