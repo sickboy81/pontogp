@@ -181,20 +181,20 @@ export default function MessageThread({
 
   if (loading) {
     return (
-      <div className="flex min-h-[calc(100vh-12rem)] flex-col rounded-2xl border border-slate-700 bg-slate-800/70 shadow-xl shadow-slate-950/20">
-        <div className="flex items-center gap-3 border-b border-slate-700 p-4">
+      <div className="flex min-h-[calc(100vh-12rem)] flex-col rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-900/10 dark:border-slate-700 dark:bg-slate-800/70 dark:shadow-slate-950/20">
+        <div className="flex items-center gap-3 border-b border-slate-200 p-4 dark:border-slate-700">
           <button
             type="button"
             onClick={onBack}
-            className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-700 hover:text-white"
+            className="rounded-lg p-1.5 text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-white"
             aria-label="Voltar"
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
-          <div className="h-10 w-10 animate-pulse rounded-full bg-slate-700" />
-          <div className="h-4 flex-1 animate-pulse rounded bg-slate-700" />
+          <div className="h-10 w-10 animate-pulse rounded-full bg-slate-200 dark:bg-slate-700" />
+          <div className="h-4 flex-1 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
         </div>
-        <div className="flex flex-1 items-center justify-center p-8 text-slate-400">
+        <div className="flex flex-1 items-center justify-center p-8 text-slate-600 dark:text-slate-400">
           Carregando conversa...
         </div>
       </div>
@@ -202,12 +202,12 @@ export default function MessageThread({
   }
 
   return (
-    <div className="flex min-h-[calc(100vh-12rem)] flex-col rounded-2xl border border-slate-700 bg-slate-800/70 shadow-xl shadow-slate-950/20">
-      <div className="flex items-center gap-3 border-b border-slate-700/80 bg-slate-800/80 px-4 py-3">
+    <div className="flex min-h-[calc(100vh-12rem)] flex-col rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-900/10 dark:border-slate-700 dark:bg-slate-800/70 dark:shadow-slate-950/20">
+      <div className="flex items-center gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700/80 dark:bg-slate-800/80">
         <button
           type="button"
           onClick={onBack}
-          className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-700 hover:text-white"
+          className="rounded-lg p-2 text-slate-600 transition hover:bg-slate-200 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-white"
           aria-label="Voltar"
         >
           <ArrowLeft className="h-5 w-5" />
@@ -216,22 +216,22 @@ export default function MessageThread({
           <img
             src={otherUserAvatar}
             alt={displayName}
-            className="h-10 w-10 rounded-full object-cover ring-2 ring-slate-700"
+            className="h-10 w-10 rounded-full object-cover ring-2 ring-slate-200 dark:ring-slate-700"
           />
         ) : (
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-700 text-lg font-semibold text-slate-300">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-200 text-lg font-semibold text-slate-700 dark:bg-slate-700 dark:text-slate-300">
             {displayName.charAt(0).toUpperCase()}
           </div>
         )}
         <div className="min-w-0">
-          <span className="block truncate font-semibold text-white">{displayName}</span>
-          <span className="text-xs text-slate-400">Conversa privada</span>
+          <span className="block truncate font-semibold text-slate-900 dark:text-white">{displayName}</span>
+          <span className="text-xs text-slate-600 dark:text-slate-400">Conversa privada</span>
         </div>
         <button
           type="button"
           onClick={handleBlockToggle}
           disabled={blockLoading}
-          className="ml-auto flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-sm text-slate-400 transition hover:bg-slate-700 hover:text-amber-400 disabled:opacity-50 sm:px-3"
+          className="ml-auto flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-sm text-slate-600 transition hover:bg-slate-200 hover:text-amber-600 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-amber-400 disabled:opacity-50 sm:px-3"
           title={blocked ? 'Desbloquear conversa' : 'Bloquear conversa'}
         >
           {blocked ? <ShieldOff className="h-4 w-4" /> : <Ban className="h-4 w-4" />}
@@ -239,14 +239,14 @@ export default function MessageThread({
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto bg-slate-900/20 p-4 sm:p-6">
+      <div className="flex-1 overflow-y-auto bg-slate-50 p-4 sm:p-6 dark:bg-slate-900/20">
         {messages.length === 0 ? (
           <div className="flex h-full min-h-64 flex-col items-center justify-center text-center">
             <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-primary-500/10 text-primary-400">
               <MessageCircle className="h-6 w-6" />
             </div>
-            <p className="font-medium text-slate-200">Nenhuma mensagem ainda</p>
-            <p className="mt-1 max-w-xs text-sm text-slate-400">Envie uma mensagem para iniciar esta conversa.</p>
+            <p className="font-medium text-slate-800 dark:text-slate-200">Nenhuma mensagem ainda</p>
+            <p className="mt-1 max-w-xs text-sm text-slate-600 dark:text-slate-400">Envie uma mensagem para iniciar esta conversa.</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -261,7 +261,7 @@ export default function MessageThread({
                     className={`max-w-[80%] rounded-2xl px-4 py-2 ${
                       isMe
                         ? 'bg-primary-600 text-white shadow-md shadow-primary-950/20'
-                        : 'border border-slate-600/80 bg-slate-700 text-slate-100'
+                        : 'border border-slate-200 bg-white text-slate-800 dark:border-slate-600/80 dark:bg-slate-700 dark:text-slate-100'
                     }`}
                   >
                     <p className="whitespace-pre-wrap break-words text-sm">{msg.content}</p>
@@ -294,7 +294,7 @@ export default function MessageThread({
           <button type="button" onClick={() => { setSendError(''); void handleSend({ preventDefault: () => undefined } as React.FormEvent) }} className="font-semibold underline hover:text-white">Tentar novamente</button>
         </div>
       )}
-      <form onSubmit={handleSend} className="border-t border-slate-700/80 bg-slate-800/80 p-3 sm:p-4">
+      <form onSubmit={handleSend} className="border-t border-slate-200 bg-white p-3 sm:p-4 dark:border-slate-700/80 dark:bg-slate-800/80">
         <div className="flex items-end gap-2">
           <input
             type="text"
@@ -302,7 +302,7 @@ export default function MessageThread({
             onChange={(e) => setNewMessage(e.target.value)}
             placeholder={inputPlaceholder}
             aria-label="Mensagem"
-            className="min-w-0 flex-1 rounded-xl border border-slate-600 bg-slate-900/70 px-4 py-3 text-white placeholder-slate-500 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/30 disabled:opacity-60"
+            className="min-w-0 flex-1 rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 text-slate-900 placeholder-slate-500 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/30 disabled:opacity-60 dark:border-slate-600 dark:bg-slate-900/70 dark:text-white"
             disabled={sendDisabled}
           />
           <button

@@ -159,10 +159,10 @@ export default function MensagensClient() {
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="mb-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary-400">Central de contato</p>
-          <h1 className="text-3xl font-bold text-white">Mensagens</h1>
-          <p className="mt-1 text-sm text-slate-400">Converse com seus contatos em um só lugar.</p>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Mensagens</h1>
+          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Converse com seus contatos em um só lugar.</p>
         </div>
-        <div className="flex items-center gap-2 text-sm text-slate-400">
+        <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
           <MessageSquare className="h-4 w-4" />
           {conversations.length} {conversations.length === 1 ? 'conversa' : 'conversas'}
         </div>
@@ -172,34 +172,34 @@ export default function MensagensClient() {
           {messagesSettings.notice || DEFAULT_INTERNAL_MESSAGES_NOTICE}
         </div>
       )}
-      <div className="overflow-hidden rounded-2xl border border-slate-700 bg-slate-800/70 shadow-xl shadow-slate-950/20">
-        <div className="flex items-center justify-between border-b border-slate-700/80 px-4 py-3">
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-900/10 dark:border-slate-700 dark:bg-slate-800/70 dark:shadow-slate-950/20">
+        <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-700/80">
           <div>
-            <h2 className="font-semibold text-white">Suas conversas</h2>
-            <p className="text-xs text-slate-400">As mais recentes aparecem primeiro</p>
+            <h2 className="font-semibold text-slate-900 dark:text-white">Suas conversas</h2>
+            <p className="text-xs text-slate-600 dark:text-slate-400">As mais recentes aparecem primeiro</p>
           </div>
-          <SlidersHorizontal className="h-4 w-4 text-slate-500" aria-hidden="true" />
+          <SlidersHorizontal className="h-4 w-4 text-slate-500 dark:text-slate-400" aria-hidden="true" />
         </div>
-        <div className="border-b border-slate-700 p-4">
+        <div className="border-b border-slate-200 p-4 dark:border-slate-700">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-500 dark:text-slate-400" />
             <input
               type="text"
               placeholder="Buscar conversas..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               aria-label="Buscar conversas"
-              className="w-full rounded-xl border border-slate-600 bg-slate-900/70 py-3 pl-10 pr-4 text-white placeholder-slate-500 transition focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/30"
+              className="w-full rounded-xl border border-slate-300 bg-slate-50 py-3 pl-10 pr-4 text-slate-900 placeholder-slate-500 transition focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/30 dark:border-slate-600 dark:bg-slate-900/70 dark:text-white"
             />
           </div>
         </div>
-        <div className="max-h-[65vh] divide-y divide-slate-700/50 overflow-y-auto">
+        <div className="max-h-[65vh] divide-y divide-slate-200 overflow-y-auto dark:divide-slate-700/50">
           {loading ? (
-            <div className="p-8 text-center text-slate-400">Carregando conversas...</div>
+            <div className="p-8 text-center text-slate-600 dark:text-slate-400">Carregando conversas...</div>
           ) : filtered.length === 0 ? (
             <div className="p-8 text-center">
-              <MessageSquare className="mx-auto mb-4 h-16 w-16 text-slate-600" />
-              <p className="font-medium text-slate-300">
+              <MessageSquare className="mx-auto mb-4 h-16 w-16 text-slate-400 dark:text-slate-600" />
+              <p className="font-medium text-slate-700 dark:text-slate-300">
                 {searchQuery ? 'Nenhuma conversa encontrada' : 'Nenhuma conversa ainda'}
               </p>
             </div>
@@ -215,7 +215,7 @@ export default function MensagensClient() {
                     otherUserAvatar: conv.otherUserAvatar,
                   })
                 }
-                className={`flex w-full items-center gap-3 px-4 py-4 text-left transition hover:bg-slate-700/40 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500 ${
+                className={`flex w-full items-center gap-3 px-4 py-4 text-left transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500 dark:hover:bg-slate-700/40 ${
                   conv.unread ? 'bg-primary-500/10' : ''
                 }`}
               >
@@ -223,10 +223,10 @@ export default function MensagensClient() {
                   <img
                     src={conv.otherUserAvatar}
                     alt={conv.otherUserName}
-                    className="h-12 w-12 rounded-full object-cover ring-2 ring-slate-700"
+                    className="h-12 w-12 rounded-full object-cover ring-2 ring-slate-200 dark:ring-slate-700"
                   />
                 ) : (
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-700 text-lg font-semibold text-slate-300">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-200 text-lg font-semibold text-slate-700 dark:bg-slate-700 dark:text-slate-300">
                     {conv.otherUserName.charAt(0).toUpperCase()}
                   </div>
                 )}
@@ -234,7 +234,7 @@ export default function MensagensClient() {
                   <div className="flex items-center justify-between gap-2">
                     <span
                     className={`truncate font-semibold ${
-                        conv.unread ? 'text-white' : 'text-slate-200'
+                        conv.unread ? 'text-slate-900 dark:text-white' : 'text-slate-800 dark:text-slate-200'
                       }`}
                     >
                       {conv.otherUserName}
@@ -245,7 +245,7 @@ export default function MensagensClient() {
                   </div>
                   <p
                     className={`mt-1 truncate text-sm ${
-                      conv.unread ? 'font-medium text-slate-200' : 'text-slate-400'
+                      conv.unread ? 'font-medium text-slate-800 dark:text-slate-200' : 'text-slate-600 dark:text-slate-400'
                     }`}
                   >
                     {conv.lastMessage.content}
