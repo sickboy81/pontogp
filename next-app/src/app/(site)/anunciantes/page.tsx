@@ -219,17 +219,35 @@ export default function AnunciantesPage() {
               })}
             </div>
           </div>
-          <div className="advertiser-link-bio-preview mx-auto w-full max-w-sm rounded-[2rem] border border-primary-400/40 bg-gradient-to-b from-slate-800 via-slate-900 to-slate-950 p-5 shadow-2xl shadow-black/40">
-            <div className="mx-auto flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border-4 border-white/20 bg-slate-950 shadow-lg"><img src="/logo-header.png" alt="CerejaVIP" className="w-16 object-contain" /></div>
-            <div className="mt-4 flex items-center justify-center gap-1"><p className="text-center text-xl font-bold text-white">Seu nome de perfil</p><BadgeCheck className="h-4 w-4 text-emerald-400" /></div>
-            <p className="text-center text-xs text-slate-400">@usuario · Rio de Janeiro</p>
-            <p className="mt-2 text-center text-sm text-slate-300">Sua frase de apresentação aparece aqui.</p>
-            <div className="mt-6 space-y-3">
-              {['WhatsApp', 'Enviar mensagem', 'Instagram', 'Ver perfil completo'].map((label) => (
-                <div key={label} className="rounded-xl border border-white/15 bg-white/10 px-4 py-3 text-center text-sm font-semibold text-white">{label}</div>
+          <div className="advertiser-link-bio-mockup mx-auto w-full max-w-sm rounded-[2rem] border border-rose-300/50 bg-gradient-to-b from-rose-800 via-rose-900 to-rose-950 px-5 py-8 text-white shadow-2xl shadow-rose-950/30">
+            <div className="mx-auto flex h-28 w-28 items-center justify-center overflow-hidden rounded-full border-4 border-rose-200/70 bg-slate-900 shadow-lg">
+              <img src="/logo-header.png" alt="CerejaVIP" className="w-20 object-contain" />
+            </div>
+            <div className="mt-5 flex items-center justify-center gap-1.5">
+              <p className="text-center text-2xl font-bold text-white">Luiza Menescal</p>
+              <BadgeCheck className="h-5 w-5 text-emerald-300" />
+            </div>
+            <p className="text-center text-sm text-rose-100">Rio de Janeiro, RJ</p>
+            <p className="mt-3 text-center text-sm text-white/90">Realizo seus fetiches, conto com local</p>
+            <div className="mt-3 flex justify-center gap-2 text-[11px] font-semibold">
+              <span className="rounded bg-emerald-500/80 px-2 py-1 text-white">Verificado</span>
+              <span className="rounded bg-emerald-500/80 px-2 py-1 text-white">Online</span>
+            </div>
+            <div className="mt-7 space-y-3">
+              {['WhatsApp', 'Ligar'].map((label) => (
+                <div key={label} className="rounded-xl border border-rose-200/70 bg-rose-200/25 px-4 py-3 text-center text-sm font-semibold text-white">{label}</div>
               ))}
             </div>
-            <p className="mt-5 text-center text-xs font-semibold text-primary-300">cerejavip.com/@usuario</p>
+            <p className="mt-6 text-center text-xs font-semibold uppercase tracking-wider text-rose-200/80">Redes sociais</p>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              {['Instagram', 'X', 'Privacy', 'OnlyFans'].map((label) => (
+                <div key={label} className="rounded-xl border border-rose-200/70 bg-rose-200/25 px-3 py-3 text-center text-sm font-semibold text-white">{label}</div>
+              ))}
+            </div>
+            <p className="mt-7 text-center text-sm font-semibold text-white underline">Ver perfil completo</p>
+            <p className="mt-8 text-center text-sm text-rose-100">Faça parte do</p>
+            <img src="/logo-header.png" alt="CerejaVIP" className="mx-auto mt-2 w-28 object-contain" />
+            <p className="mt-4 text-center text-[10px] text-rose-200/80">cerejavip.com · 2026</p>
           </div>
         </div>
       </section>

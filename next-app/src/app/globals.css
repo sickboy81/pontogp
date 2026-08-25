@@ -795,6 +795,15 @@ html.light .anunciantes-page .advertiser-link-bio-preview .bg-white\/10 {
   color: #0f172a !important;
   box-shadow: 0 3px 10px rgba(15, 23, 42, 0.05) !important;
 }
+html.light .anunciantes-page .advertiser-link-bio-mockup .text-white {
+  color: #ffffff !important;
+}
+html.light .anunciantes-page .advertiser-link-bio-mockup .text-rose-100 {
+  color: #ffe4e6 !important;
+}
+html.light .anunciantes-page .advertiser-link-bio-mockup .text-rose-200 {
+  color: #fecdd3 !important;
+}
 
 .profile-reveal {
   animation: profile-reveal-up 0.55s ease both;
