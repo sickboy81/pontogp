@@ -89,8 +89,8 @@ function RegisterPageContent() {
       toast.error('As senhas não coincidem')
       return
     }
-    if (password.length < 6) {
-      toast.error('A senha deve ter no mínimo 6 caracteres')
+    if (password.length < 8) {
+      toast.error('A senha deve ter no mínimo 8 caracteres')
       return
     }
     const parsedAge = Number(age)
@@ -168,7 +168,6 @@ function RegisterPageContent() {
             {submitError}
           </div>
         )}
-        <div className="grid gap-2.5 min-[420px]:grid-cols-2">
         <div>
           <label className="block text-sm font-medium text-slate-300">Nome completo</label>
           <input
@@ -184,7 +183,6 @@ function RegisterPageContent() {
           <label className="block text-sm font-medium text-slate-300">Nome no perfil</label>
           <input type="text" value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white placeholder-slate-500 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" placeholder="Como aparecerá publicamente" maxLength={100} required />
           <p className="mt-1 text-xs text-slate-500">Este nome será exibido no seu anúncio.</p>
-        </div>
         </div>
         <div>
           <label className="block text-sm font-medium text-slate-300">Idade</label>
@@ -210,8 +208,8 @@ function RegisterPageContent() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full rounded-lg border border-slate-600 bg-slate-800 py-2 pl-3 pr-10 text-white placeholder-slate-500 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-              placeholder="Mínimo 6 caracteres"
-              minLength={6}
+              placeholder="Mínimo 8 caracteres"
+              minLength={8}
               required
             />
             <button
@@ -232,7 +230,7 @@ function RegisterPageContent() {
               onChange={(e) => setConfirmPassword(e.target.value)}
               className="w-full rounded-lg border border-slate-600 bg-slate-800 py-2 pl-3 pr-10 text-white placeholder-slate-500 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
               placeholder="Repita a senha"
-              minLength={6}
+              minLength={8}
               required
             />
             <button
@@ -243,6 +241,13 @@ function RegisterPageContent() {
               {showConfirm ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
             </button>
           </div>
+        </div>
+        <div className="rounded-lg border border-slate-700 bg-slate-900/40 px-3 py-2 text-xs text-slate-400">
+          <p className="font-medium text-slate-300">Requisitos da senha</p>
+          <ul className="mt-1 space-y-0.5">
+            <li className={password.length >= 8 ? 'text-emerald-400' : ''}>• Pelo menos 8 caracteres</li>
+            <li className={password && password === confirmPassword ? 'text-emerald-400' : ''}>• A confirmação deve ser igual à senha</li>
+          </ul>
         </div>
         <label className="flex items-start gap-2">
           <input
