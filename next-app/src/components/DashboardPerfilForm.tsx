@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, CheckCircle2, ImagePlus, Loader2, Mic, Plus, Save, Trash2, Video, Settings, BarChart3, Link2, Copy, TrendingUp, Clock, Target, Lightbulb, GripVertical, AlertTriangle, RefreshCw } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, ImagePlus, Loader2, Mic, Plus, Save, Trash2, Video, Settings, BarChart3, Link2, Copy, TrendingUp, Clock, Target, Lightbulb, GripVertical, AlertTriangle, RefreshCw, Square, Upload } from 'lucide-react'
 import type { Profile, Schedule } from '@/lib/types'
 import {
   CATEGORIES, GENDERS, STATES, ETHNICITIES, HAIR_COLORS, BODY_TYPES, BREAST_TYPES, PUBIS_TYPES,
@@ -344,6 +344,12 @@ export default function DashboardPerfilForm() {
   const [videoDeleting, setVideoDeleting] = useState<string | null>(null)
   const [audioUploading, setAudioUploading] = useState(false)
   const [audioDeleting, setAudioDeleting] = useState(false)
+  const [audioRecording, setAudioRecording] = useState(false)
+  const [audioRecordSeconds, setAudioRecordSeconds] = useState(0)
+  const audioRecorderRef = useRef<MediaRecorder | null>(null)
+  const audioStreamRef = useRef<MediaStream | null>(null)
+  const audioChunksRef = useRef<Blob[]>([])
+  const audioTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const [schedule, setSchedule] = useState<Schedule[]>([])
   const [stats, setStats] = useState<ProfileStats | null>(null)
   const [statsLoading, setStatsLoading] = useState(false)
@@ -708,12 +714,28 @@ export default function DashboardPerfilForm() {
     }
   }
 
-  const handleAudioUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file || !profile) return
+  const uploadAudioFile = async (file: File) => {
+    if (!profile) return
+    const duration = await new Promise<number | null>((resolve) => {
+      const audio = document.createElement('audio')
+      const url = URL.createObjectURL(file)
+      audio.preload = 'metadata'
+      audio.onloadedmetadata = () => {
+        URL.revokeObjectURL(url)
+        resolve(Number.isFinite(audio.duration) ? audio.duration : null)
+      }
+      audio.onerror = () => {
+        URL.revokeObjectURL(url)
+        resolve(null)
+      }
+      audio.src = url
+    })
+    if (duration !== null && duration > 30.5) {
+      setError('O áudio deve ter no máximo 30 segundos.')
+      return
+    }
     if (file.size > 10 * 1024 * 1024) {
       setError('O áudio ultrapassa o limite de 10 MB.')
-      e.target.value = ''
       return
     }
     setAudioUploading(true)
@@ -740,7 +762,67 @@ export default function DashboardPerfilForm() {
       setError(err instanceof Error ? err.message : 'Erro ao enviar áudio')
     } finally {
       setAudioUploading(false)
-      e.target.value = ''
+    }
+  }
+
+  const handleAudioUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) await uploadAudioFile(file)
+    e.target.value = ''
+  }
+
+  const stopAudioRecording = () => {
+    audioRecorderRef.current?.stop()
+    audioStreamRef.current?.getTracks().forEach((track) => track.stop())
+    audioRecorderRef.current = null
+    audioStreamRef.current = null
+    if (audioTimerRef.current) clearInterval(audioTimerRef.current)
+    audioTimerRef.current = null
+    setAudioRecording(false)
+  }
+
+  const handleAudioRecord = async () => {
+    if (audioRecording) {
+      stopAudioRecording()
+      return
+    }
+    if (!profile || !navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+      setError('Seu navegador não permite gravar áudio. Use o botão de carregar um arquivo.')
+      return
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const mimeType = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'].find((type) => MediaRecorder.isTypeSupported(type)) || ''
+      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined)
+      audioChunksRef.current = []
+      audioStreamRef.current = stream
+      audioRecorderRef.current = recorder
+      setAudioRecordSeconds(0)
+      setAudioRecording(true)
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) audioChunksRef.current.push(event.data)
+      }
+      recorder.onstop = async () => {
+        const blob = new Blob(audioChunksRef.current, { type: recorder.mimeType || 'audio/webm' })
+        audioChunksRef.current = []
+        if (blob.size > 0) {
+          const extension = recorder.mimeType.includes('mp4') ? 'm4a' : 'webm'
+          await uploadAudioFile(new File([blob], `gravacao-cerejavip.${extension}`, { type: blob.type }))
+        }
+      }
+      recorder.start()
+      audioTimerRef.current = setInterval(() => {
+        setAudioRecordSeconds((seconds) => {
+          if (seconds >= 29) {
+            stopAudioRecording()
+            return 30
+          }
+          return seconds + 1
+        })
+      }, 1000)
+    } catch {
+      setError('Não foi possível acessar o microfone. Permita o acesso ou carregue um arquivo de áudio.')
+      stopAudioRecording()
     }
   }
 
@@ -2068,26 +2150,34 @@ export default function DashboardPerfilForm() {
                 </button>
               </div>
             ) : (
-              <label className="flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-slate-600 bg-slate-800/50 p-8 transition hover:border-primary-500 hover:bg-slate-800">
-                <input
-                  type="file"
-                  accept="audio/mpeg,audio/mp3,audio/wav,audio/ogg,audio/webm,audio/x-m4a"
-                  className="hidden"
-                  onChange={handleAudioUpload}
-                  disabled={audioUploading}
-                />
-                {audioUploading ? (
-                  <Loader2 className="h-10 w-10 animate-spin text-slate-400" />
-                ) : (
-                  <Mic className="h-10 w-10 text-slate-400" />
-                )}
-                <span className="mt-2 text-sm text-slate-500">
-                  {audioUploading ? 'Enviando...' : 'Adicionar áudio de apresentação'}
-                </span>
-              </label>
+              <div className="rounded-xl border border-slate-600 bg-slate-800/50 p-4">
+                <p className="text-sm leading-6 text-slate-400">Grave uma apresentação de até 30 segundos ou envie um arquivo pronto. O áudio só ficará disponível conforme as regras e recursos do seu plano.</p>
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <button
+                    type="button"
+                    onClick={handleAudioRecord}
+                    disabled={audioUploading}
+                    className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition disabled:opacity-50 ${audioRecording ? 'bg-red-600 hover:bg-red-700' : 'bg-primary-500 hover:bg-primary-600'}`}
+                  >
+                    {audioRecording ? <Square className="h-4 w-4 fill-current" /> : <Mic className="h-4 w-4" />}
+                    {audioRecording ? `Parar gravação (${audioRecordSeconds}s)` : 'Gravar áudio'}
+                  </button>
+                  <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-500 px-4 py-2.5 text-sm font-semibold text-slate-200 transition hover:border-slate-300 hover:bg-slate-700">
+                    <input
+                      type="file"
+                      accept="audio/mpeg,audio/mp3,audio/wav,audio/ogg,audio/webm,audio/x-m4a,audio/mp4"
+                      className="hidden"
+                      onChange={handleAudioUpload}
+                      disabled={audioUploading || audioRecording}
+                    />
+                    {audioUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                    {audioUploading ? 'Enviando...' : 'Carregar arquivo'}
+                  </label>
+                </div>
+              </div>
             )}
             <p className="mt-2 text-xs text-slate-500">
-              MP3, WAV, OGG ou M4A. Máximo 10 MB.
+              MP3, WAV, OGG, WebM ou M4A. Máximo 10 MB. A gravação pede permissão para usar o microfone.
             </p>
           </div>
           </>
