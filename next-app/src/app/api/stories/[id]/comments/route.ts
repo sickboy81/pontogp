@@ -46,7 +46,7 @@ export async function GET(
     if (!res.ok) {
       return Response.json({ error: 'Não foi possível carregar comentários' }, { status: res.status })
     }
-    const data = (await res.json()) as { items?: Array<{ id: string; content: string; created: string; parent?: string; expand?: { user?: { name?: string } } }> }
+    const data = (await res.json()) as { items?: Array<{ id: string; content: string; created: string; parent?: string; user?: string; expand?: { user?: { id?: string; name?: string; display_name?: string; avatar?: string } } }> }
     const items = data.items || []
     const commentIds = items.map((r) => r.id)
     const viewerId = getUserIdFromToken(getToken(request) || '')
@@ -67,7 +67,8 @@ export async function GET(
       content: r.content,
       created: r.created,
       parentId: r.parent || null,
-      userName: r.expand?.user?.name ?? 'Anônimo',
+      userId: r.user || r.expand?.user?.id || null,
+      userName: r.expand?.user?.display_name || r.expand?.user?.name || 'Anônimo',
       likesCount: likeItems.filter((like) => like.comment === r.id).length,
       liked: !!viewerId && likeItems.some((like) => like.comment === r.id && like.user === viewerId),
     }))
