@@ -1,15 +1,11 @@
 import { NextRequest } from 'next/server'
 import { getAuthCookieFromHeader, getUserIdFromToken } from '@/lib/auth-cookie'
 import { getAdminToken } from '@/lib/pocketbase-admin'
+import { blockKey } from '@/lib/story-moderation.mjs'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
 export const dynamic = 'force-dynamic'
-
-/** Ordena os dois IDs para chave única da conversa (user_a <= user_b). */
-function blockKey(a: string, b: string): [string, string] {
-  return a <= b ? [a, b] : [b, a]
-}
 
 function getToken(request: NextRequest): string | null {
   return getAuthCookieFromHeader(request.headers.get('cookie'))

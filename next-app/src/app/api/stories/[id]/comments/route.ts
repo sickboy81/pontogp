@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { getAuthCookieFromHeader, getUserIdFromToken } from '@/lib/auth-cookie'
 import { getAdminToken } from '@/lib/pocketbase-admin'
 import { canInteractWithStory, normalizeStoryComment } from '@/lib/story-interactions.mjs'
+import { blockKey, canModerateStory } from '@/lib/story-moderation.mjs'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
@@ -9,6 +10,10 @@ export const dynamic = 'force-dynamic'
 
 function getToken(request: NextRequest): string | null {
   return getAuthCookieFromHeader(request.headers.get('cookie'))
+}
+
+function relationId(value: unknown): string {
+  return Array.isArray(value) ? String(value[0] || '') : typeof value === 'string' ? value : ''
 }
 
 /** GET: lista comentários da story. */
@@ -25,7 +30,7 @@ export async function GET(
       return Response.json({ error: 'Não foi possível validar a story' }, { status: 503 })
     }
     const storyRes = await fetch(
-      `${PB_URL}/api/collections/stories/records/${storyId}?fields=id,active,expires_at`,
+      `${PB_URL}/api/collections/stories/records/${storyId}?fields=id,profile,active,expires_at`,
       { headers: { Authorization: `Bearer ${adminToken}` }, cache: 'no-store' },
     )
     if (storyRes.status === 404) {
@@ -34,7 +39,7 @@ export async function GET(
     if (!storyRes.ok) {
       return Response.json({ error: 'Não foi possível validar a story' }, { status: 502 })
     }
-    const story = (await storyRes.json()) as { active?: boolean; expires_at?: string }
+    const story = (await storyRes.json()) as { profile?: unknown; active?: boolean; expires_at?: string }
     if (!canInteractWithStory(story)) {
       return Response.json({ error: 'Esta story não aceita mais interações' }, { status: 410 })
     }
@@ -72,7 +77,16 @@ export async function GET(
       likesCount: likeItems.filter((like) => like.comment === r.id).length,
       liked: !!viewerId && likeItems.some((like) => like.comment === r.id && like.user === viewerId),
     }))
-    return Response.json({ items: normalizedItems })
+    let ownerId = ''
+    const profileId = relationId(story.profile)
+    if (profileId) {
+      const profileRes = await fetch(
+        `${PB_URL}/api/collections/profiles/records/${encodeURIComponent(profileId)}?fields=user`,
+        { headers: { Authorization: `Bearer ${adminToken}` }, cache: 'no-store' },
+      )
+      if (profileRes.ok) ownerId = relationId(((await profileRes.json()) as { user?: unknown }).user)
+    }
+    return Response.json({ items: normalizedItems, canModerate: canModerateStory({ storyOwnerId: ownerId, viewerId }) })
   } catch {
     return Response.json({ error: 'Erro ao carregar comentários' }, { status: 500 })
   }
@@ -109,7 +123,7 @@ export async function POST(
     return Response.json({ error: 'Não foi possível validar a story' }, { status: 503 })
   }
   const storyRes = await fetch(
-    `${PB_URL}/api/collections/stories/records/${storyId}?fields=id,active,expires_at`,
+    `${PB_URL}/api/collections/stories/records/${storyId}?fields=id,profile,active,expires_at`,
     { headers: { Authorization: `Bearer ${adminToken}` }, cache: 'no-store' },
   )
   if (storyRes.status === 404) {
@@ -118,9 +132,28 @@ export async function POST(
   if (!storyRes.ok) {
     return Response.json({ error: 'Não foi possível validar a story' }, { status: 502 })
   }
-  const story = (await storyRes.json()) as { active?: boolean; expires_at?: string }
+  const story = (await storyRes.json()) as { profile?: unknown; active?: boolean; expires_at?: string }
   if (!canInteractWithStory(story)) {
     return Response.json({ error: 'Esta story não aceita mais interações' }, { status: 410 })
+  }
+
+  const profileId = relationId(story.profile)
+  if (profileId) {
+    const profileRes = await fetch(
+      `${PB_URL}/api/collections/profiles/records/${encodeURIComponent(profileId)}?fields=user`,
+      { headers: { Authorization: `Bearer ${adminToken}` }, cache: 'no-store' },
+    )
+    if (profileRes.ok) {
+      const ownerId = relationId(((await profileRes.json()) as { user?: unknown }).user)
+      const [userA, userB] = blockKey(ownerId, userId)
+      const blockRes = await fetch(
+        `${PB_URL}/api/collections/message_blocks/records?perPage=1&filter=${encodeURIComponent(`user_a = "${userA}" && user_b = "${userB}" && blocked = true`)}`,
+        { headers: { Authorization: `Bearer ${adminToken}` }, cache: 'no-store' },
+      )
+      if (blockRes.ok && ((await blockRes.json()) as { totalItems?: number }).totalItems) {
+        return Response.json({ error: 'Você está bloqueado para interagir com esta anunciante' }, { status: 403 })
+      }
+    }
   }
 
   if (parentId) {

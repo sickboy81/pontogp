@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { X, Heart, MessageCircle, Volume2, VolumeX, MoreVertical, Share2, Reply } from 'lucide-react'
+import { X, Heart, MessageCircle, Volume2, VolumeX, MoreVertical, Share2, Reply, Trash2, Ban } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAuthStore } from '@/store/auth'
 import { formatRelativeTime, parsePocketBaseDateInput } from '@/utils/format'
@@ -68,10 +68,12 @@ export default function StoryViewer({
   const [comments, setComments] = useState<StoryComment[]>([])
   const [likesError, setLikesError] = useState<string | null>(null)
   const [commentsError, setCommentsError] = useState<string | null>(null)
+  const [canModerateComments, setCanModerateComments] = useState(false)
   const [commentInput, setCommentInput] = useState('')
   const [replyTo, setReplyTo] = useState<StoryComment | null>(null)
   const [commentSending, setCommentSending] = useState(false)
   const [commentLikeLoading, setCommentLikeLoading] = useState<string | null>(null)
+  const [commentActionLoading, setCommentActionLoading] = useState<string | null>(null)
   const [likeLoading, setLikeLoading] = useState(false)
   const [showComments, setShowComments] = useState(false)
   const [isPaused, setIsPaused] = useState(false)
@@ -153,10 +155,12 @@ export default function StoryViewer({
       .then(async (r) => {
         const d = (await r.json().catch(() => ({}))) as {
           items?: StoryComment[]
+          canModerate?: boolean
           error?: string
         }
         if (!r.ok) throw new Error(d.error || 'Não foi possível carregar comentários')
         setComments(Array.isArray(d.items) ? d.items : [])
+        setCanModerateComments(d.canModerate === true)
       })
       .catch((error: unknown) => {
         setCommentsError(error instanceof Error ? error.message : 'Não foi possível carregar comentários')
@@ -227,6 +231,7 @@ export default function StoryViewer({
     if (!story?.id) return
     setLikes({ count: 0, liked: false })
     setComments([])
+    setCanModerateComments(false)
     setReplyTo(null)
     setLikesError(null)
     setCommentsError(null)
@@ -390,6 +395,45 @@ export default function StoryViewer({
       setCommentLikeLoading(null)
     }
   }, [commentLikeLoading, isAuthenticated, story?.id])
+
+  const handleDeleteComment = useCallback(async (comment: StoryComment) => {
+    if (!story?.id || commentActionLoading) return
+    if (!window.confirm('Excluir este comentário e suas respostas?')) return
+    setCommentActionLoading(comment.id)
+    try {
+      const res = await fetch(`/api/stories/${story.id}/comments/${comment.id}`, { method: 'DELETE', credentials: 'include' })
+      const data = (await res.json().catch(() => ({}))) as { error?: string }
+      if (!res.ok) {
+        toast.error(data.error || 'Não foi possível excluir o comentário')
+        return
+      }
+      setComments((current) => current.filter((item) => item.id !== comment.id && item.parentId !== comment.id))
+      if (replyTo?.id === comment.id) setReplyTo(null)
+      toast.success('Comentário excluído')
+    } finally {
+      setCommentActionLoading(null)
+    }
+  }, [commentActionLoading, replyTo?.id, story?.id])
+
+  const handleBlockCommentAuthor = useCallback(async (comment: StoryComment) => {
+    if (!story?.id || !comment.userId || commentActionLoading) return
+    if (!window.confirm(`Bloquear ${comment.userName}? Essa pessoa não poderá enviar mensagens nem comentar nas suas Stories.`)) return
+    setCommentActionLoading(`block:${comment.id}`)
+    try {
+      const res = await fetch(`/api/stories/${story.id}/comments/${comment.id}/block`, {
+        method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+      })
+      const data = (await res.json().catch(() => ({}))) as { error?: string }
+      if (!res.ok) {
+        toast.error(data.error || 'Não foi possível bloquear o usuário')
+        return
+      }
+      setComments((current) => current.filter((item) => item.userId !== comment.userId))
+      toast.success('Usuário bloqueado')
+    } finally {
+      setCommentActionLoading(null)
+    }
+  }, [commentActionLoading, story?.id])
 
   useEffect(() => {
     if (!optionsOpen) return
@@ -877,9 +921,21 @@ export default function StoryViewer({
                 comments.filter((c) => !c.parentId).map((c) => (
                   <div key={c.id}>
                     <div className="rounded-xl border border-white/15 bg-white/[0.1] px-3 py-2.5 text-sm shadow-sm">
-                      <div className="flex items-baseline justify-between gap-2">
-                        {c.userId ? <Link href={`/usuario/${encodeURIComponent(c.userId)}`} className="font-semibold text-white hover:underline">{c.userName}</Link> : <p className="font-semibold text-white">{c.userName}</p>}
-                        {c.created && <span className="shrink-0 text-[10px] text-white/70">{formatRelativeTime(c.created) || new Date(c.created).toLocaleString('pt-BR')}</span>}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex min-w-0 items-baseline gap-2">
+                          {c.userId ? <Link href={`/usuario/${encodeURIComponent(c.userId)}`} className="truncate font-semibold text-white hover:underline">{c.userName}</Link> : <p className="truncate font-semibold text-white">{c.userName}</p>}
+                          {c.created && <span className="shrink-0 text-[10px] text-white/70">{formatRelativeTime(c.created) || new Date(c.created).toLocaleString('pt-BR')}</span>}
+                        </div>
+                        {canModerateComments && c.userId && c.userId !== user?.id && (
+                          <div className="flex shrink-0 items-center gap-1">
+                            <button type="button" disabled={!!commentActionLoading} onClick={() => void handleDeleteComment(c)} className="rounded-full p-1.5 text-white/70 hover:bg-white/10 hover:text-red-300 disabled:opacity-40" aria-label="Excluir comentário" title="Excluir comentário">
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                            <button type="button" disabled={!!commentActionLoading} onClick={() => void handleBlockCommentAuthor(c)} className="rounded-full p-1.5 text-white/70 hover:bg-white/10 hover:text-amber-300 disabled:opacity-40" aria-label={`Bloquear ${c.userName}`} title="Bloquear usuário">
+                              <Ban className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        )}
                       </div>
                       <p className="mt-1 whitespace-pre-wrap break-words text-white">{c.content}</p>
                       <div className="mt-2 flex items-center gap-3 text-xs text-white/70">
@@ -894,9 +950,21 @@ export default function StoryViewer({
                     <div className="ml-5 mt-2 space-y-2 border-l border-white/15 pl-3">
                       {comments.filter((reply) => reply.parentId === c.id).map((reply) => (
                         <div key={reply.id} className="rounded-xl border border-white/10 bg-white/[0.07] px-3 py-2 text-sm">
-                          <div className="flex items-baseline justify-between gap-2">
-                            {reply.userId ? <Link href={`/usuario/${encodeURIComponent(reply.userId)}`} className="font-semibold text-white hover:underline">{reply.userName}</Link> : <p className="font-semibold text-white">{reply.userName}</p>}
-                            {reply.created && <span className="shrink-0 text-[10px] text-white/65">{formatRelativeTime(reply.created) || new Date(reply.created).toLocaleString('pt-BR')}</span>}
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex min-w-0 items-baseline gap-2">
+                              {reply.userId ? <Link href={`/usuario/${encodeURIComponent(reply.userId)}`} className="truncate font-semibold text-white hover:underline">{reply.userName}</Link> : <p className="truncate font-semibold text-white">{reply.userName}</p>}
+                              {reply.created && <span className="shrink-0 text-[10px] text-white/65">{formatRelativeTime(reply.created) || new Date(reply.created).toLocaleString('pt-BR')}</span>}
+                            </div>
+                            {canModerateComments && reply.userId && reply.userId !== user?.id && (
+                              <div className="flex shrink-0 items-center gap-1">
+                                <button type="button" disabled={!!commentActionLoading} onClick={() => void handleDeleteComment(reply)} className="rounded-full p-1.5 text-white/70 hover:bg-white/10 hover:text-red-300 disabled:opacity-40" aria-label="Excluir resposta" title="Excluir resposta">
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                                <button type="button" disabled={!!commentActionLoading} onClick={() => void handleBlockCommentAuthor(reply)} className="rounded-full p-1.5 text-white/70 hover:bg-white/10 hover:text-amber-300 disabled:opacity-40" aria-label={`Bloquear ${reply.userName}`} title="Bloquear usuário">
+                                  <Ban className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                            )}
                           </div>
                           <p className="mt-1 whitespace-pre-wrap break-words text-white">{reply.content}</p>
                           <button type="button" onClick={() => void handleCommentLike(reply)} className={`mt-1 inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs text-white/70 hover:bg-white/10 ${reply.liked ? 'text-red-300' : ''}`} aria-label={`Curtir comentário de ${reply.userName}`}>
