@@ -22,6 +22,7 @@ interface StoryComment {
   content: string
   created: string
   userName: string
+  userId?: string | null
   parentId?: string | null
   likesCount: number
   liked: boolean
@@ -877,7 +878,7 @@ export default function StoryViewer({
                   <div key={c.id}>
                     <div className="rounded-xl border border-white/15 bg-white/[0.1] px-3 py-2.5 text-sm shadow-sm">
                       <div className="flex items-baseline justify-between gap-2">
-                        <p className="font-semibold text-white">{c.userName}</p>
+                        {c.userId ? <Link href={`/usuario/${encodeURIComponent(c.userId)}`} className="font-semibold text-white hover:underline">{c.userName}</Link> : <p className="font-semibold text-white">{c.userName}</p>}
                         {c.created && <span className="shrink-0 text-[10px] text-white/70">{formatRelativeTime(c.created) || new Date(c.created).toLocaleString('pt-BR')}</span>}
                       </div>
                       <p className="mt-1 whitespace-pre-wrap break-words text-white">{c.content}</p>
@@ -894,7 +895,7 @@ export default function StoryViewer({
                       {comments.filter((reply) => reply.parentId === c.id).map((reply) => (
                         <div key={reply.id} className="rounded-xl border border-white/10 bg-white/[0.07] px-3 py-2 text-sm">
                           <div className="flex items-baseline justify-between gap-2">
-                            <p className="font-semibold text-white">{reply.userName}</p>
+                            {reply.userId ? <Link href={`/usuario/${encodeURIComponent(reply.userId)}`} className="font-semibold text-white hover:underline">{reply.userName}</Link> : <p className="font-semibold text-white">{reply.userName}</p>}
                             {reply.created && <span className="shrink-0 text-[10px] text-white/65">{formatRelativeTime(reply.created) || new Date(reply.created).toLocaleString('pt-BR')}</span>}
                           </div>
                           <p className="mt-1 whitespace-pre-wrap break-words text-white">{reply.content}</p>

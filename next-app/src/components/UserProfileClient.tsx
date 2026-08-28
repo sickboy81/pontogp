@@ -1,0 +1,14 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import Link from 'next/link'
+import { ArrowLeft, CalendarDays, ShieldCheck, UserRound } from 'lucide-react'
+
+type Profile = { id: string; name: string; avatar?: string; created?: string }
+export default function UserProfileClient({ userId }: { userId: string }) {
+  const [profile, setProfile] = useState<Profile | null>(null); const [error, setError] = useState('');
+  useEffect(() => { fetch(`/api/users/${encodeURIComponent(userId)}/profile`, { credentials: 'include' }).then(async r => { const data = await r.json(); if (!r.ok) throw new Error(data.error); setProfile(data.profile) }).catch(e => setError(e instanceof Error ? e.message : 'Não foi possível carregar o perfil.')) }, [userId])
+  if (error) return <div className="mx-auto max-w-lg px-4 py-10"><Link href="/" className="inline-flex items-center gap-2 text-sm text-primary-700 dark:text-primary-300"><ArrowLeft className="h-4 w-4" />Voltar</Link><div className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 text-center dark:border-slate-700 dark:bg-slate-800"><p className="text-slate-700 dark:text-slate-200">{error}</p></div></div>
+  if (!profile) return <div className="mx-auto max-w-lg p-10 text-center text-slate-500">Carregando perfil...</div>
+  return <div className="mx-auto max-w-lg px-4 py-8"><Link href="/" className="inline-flex items-center gap-2 text-sm text-primary-700 dark:text-primary-300"><ArrowLeft className="h-4 w-4" />Voltar</Link><section className="mt-6 overflow-hidden rounded-3xl border border-slate-200 bg-white text-center shadow-sm dark:border-slate-700 dark:bg-slate-800"><div className="h-28 bg-gradient-to-r from-primary-100 via-rose-100 to-sky-100 dark:from-primary-950 dark:via-slate-800 dark:to-slate-900" /><div className="-mt-14 px-6 pb-7"><div className="mx-auto flex h-28 w-28 items-center justify-center overflow-hidden rounded-full border-4 border-white bg-slate-100 text-slate-400 shadow-md dark:border-slate-800 dark:bg-slate-700">{profile.avatar ? <img src={profile.avatar} alt="" className="h-full w-full object-cover" /> : <UserRound className="h-12 w-12" />}</div><h1 className="mt-4 text-2xl font-bold text-slate-900 dark:text-white">{profile.name}</h1><p className="mt-1 inline-flex items-center gap-1 text-sm text-slate-500 dark:text-slate-400"><ShieldCheck className="h-4 w-4 text-emerald-500" />Usuário CerejaVIP</p>{profile.created && <p className="mt-4 inline-flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400"><CalendarDays className="h-4 w-4" />Membro desde {new Date(profile.created).toLocaleDateString('pt-BR')}</p>}</div></section><p className="mt-4 text-center text-xs text-slate-500 dark:text-slate-400">Este perfil mostra apenas informações públicas escolhidas para identificação no site.</p></div>
+}

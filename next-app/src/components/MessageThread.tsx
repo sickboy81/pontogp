@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import Link from 'next/link'
 import { Send, ArrowLeft, Check, CheckCheck, Ban, ShieldOff, MessageCircle } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
 import { getPb } from '@/lib/pb'
@@ -224,7 +225,7 @@ export default function MessageThread({
           </div>
         )}
         <div className="min-w-0">
-          <span className="block truncate font-semibold text-slate-900 dark:text-white">{displayName}</span>
+          <Link href={`/usuario/${encodeURIComponent(otherUserId)}`} className="block truncate font-semibold text-slate-900 hover:underline dark:text-white">{displayName}</Link>
           <span className="text-xs text-slate-600 dark:text-slate-400">Conversa privada</span>
         </div>
         <button
