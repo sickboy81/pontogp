@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
   const headers = { Authorization: `Bearer ${adminToken}` }
   const one = (collection: string, field: string) => fetch(`${PB_URL}/api/collections/${collection}/records?filter=${q(field, userId)}&perPage=500`, { headers, cache: 'no-store' }).then(async r => r.ok ? (await r.json()).items || [] : [])
   const [userRes, profiles, payments, favorites, notifications, sentMessages, receivedMessages] = await Promise.all([
-    fetch(`${PB_URL}/api/collections/users/records/${userId}?fields=id,email,name,full_name,display_name,role,verified,created,updated`, { headers, cache: 'no-store' }),
+    fetch(`${PB_URL}/api/collections/users/records/${userId}?fields=id,email,name,full_name,display_name,city,state,age,bio,role,verified,created,updated`, { headers, cache: 'no-store' }),
     one('profiles', 'user'), one('payments', 'user'), one('favorites', 'user'), one('notifications', 'recipient'), one('messages', 'sender'), one('messages', 'recipient'),
   ])
   if (!userRes.ok) return Response.json({ error: 'Sessão inválida.' }, { status: 401 })

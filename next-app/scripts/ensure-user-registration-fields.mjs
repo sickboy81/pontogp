@@ -23,6 +23,9 @@ const additions = [
   { name: 'full_name', type: 'text', required: false, presentable: false, max: 255 },
   { name: 'display_name', type: 'text', required: false, presentable: false, max: 100 },
   { name: 'age', type: 'number', required: false, presentable: false, min: 18, max: 100 },
+  { name: 'city', type: 'text', required: false, presentable: false, max: 100 },
+  { name: 'state', type: 'text', required: false, presentable: false, max: 2 },
+  { name: 'bio', type: 'text', required: false, presentable: false, max: 300 },
 ]
 const schema = [...(users.schema || []), ...additions.filter((field) => !existing.has(field.name))]
 if (schema.length !== (users.schema || []).length) {
