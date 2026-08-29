@@ -18,6 +18,19 @@ interface UserRow {
   created?: string
 }
 
+interface ProfileSummary {
+  id: string
+  name: string
+  status: string
+  category: string
+  city: string
+  state: string
+  plan: string
+  bioLength: number
+  photoCount: number
+  created: string
+}
+
 type EditForm = {
   name: string
   full_name: string
@@ -124,6 +137,7 @@ export default function AdminUsuarios() {
   const [saving, setSaving] = useState(false)
   const [loadDetail, setLoadDetail] = useState(false)
   const [userCreated, setUserCreated] = useState<string | null>(null)
+  const [profileSummary, setProfileSummary] = useState<ProfileSummary | null>(null)
   const [originalRole, setOriginalRole] = useState('')
 
   useEffect(() => {
@@ -183,6 +197,7 @@ export default function AdminUsuarios() {
         setForm(rowToForm({} as UserRow, detail))
         setUserEmail((detail as { email?: string }).email || '')
         setUserCreated((detail as { created?: string }).created || null)
+        setProfileSummary((detail as { profile?: ProfileSummary | null }).profile || null)
         setOriginalRole((detail as { role?: string }).role || '')
       })
       .catch(() => {})
@@ -199,6 +214,7 @@ export default function AdminUsuarios() {
     setForm(rowToForm(u))
     setUserEmail(u.email || '')
     setUserCreated(null)
+    setProfileSummary(null)
     setOriginalRole(u.role || '')
   }
 
@@ -206,6 +222,7 @@ export default function AdminUsuarios() {
     setEditId(null)
     setForm(EMPTY)
     setUserEmail('')
+    setProfileSummary(null)
     setOriginalRole('')
   }
 
@@ -421,7 +438,10 @@ export default function AdminUsuarios() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b border-slate-700 p-4">
-              <h2 className="text-lg font-semibold text-white">Gerir utilizador</h2>
+              <div>
+                <h2 className="text-lg font-semibold text-white">Gerir conta</h2>
+                <p className="mt-0.5 text-xs text-slate-500">Identidade, permissões e situação do anúncio</p>
+              </div>
               <button
                 type="button"
                 onClick={closeEdit}
@@ -438,6 +458,56 @@ export default function AdminUsuarios() {
               </div>
             ) : (
               <div className="space-y-3 p-4 text-sm">
+                <section className="rounded-xl border border-slate-700 bg-slate-800/60 p-4" aria-labelledby="account-summary-title">
+                  <div className="mb-3 flex items-start justify-between gap-3">
+                    <div>
+                      <p id="account-summary-title" className="text-xs font-semibold uppercase tracking-wide text-slate-400">Resumo da conta</p>
+                      <p className="mt-1 text-base font-semibold text-white">{form.display_name || form.name || userEmail || 'Conta sem nome'}</p>
+                      <p className="text-xs text-slate-400">{userEmail || 'Email não informado'}</p>
+                    </div>
+                    <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${form.status === 'active' ? 'bg-emerald-500/15 text-emerald-300' : 'bg-amber-500/15 text-amber-300'}`}>
+                      {form.status === 'active' ? 'Ativa' : form.status === 'suspended' ? 'Bloqueada' : 'Inativa'}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 text-xs sm:grid-cols-4">
+                    <div><p className="text-slate-500">Função</p><p className="mt-1 text-slate-200">{ROLE_CHOICES.find((choice) => choice.value === form.role)?.label || form.role || '—'}</p></div>
+                    <div><p className="text-slate-500">Email</p><p className={form.verified ? 'mt-1 text-emerald-300' : 'mt-1 text-amber-300'}>{form.verified ? 'Verificado' : 'Pendente'}</p></div>
+                    <div><p className="text-slate-500">Documento</p><p className={form.document_verified ? 'mt-1 text-emerald-300' : 'mt-1 text-slate-300'}>{form.document_verified ? 'Verificado' : 'Não verificado'}</p></div>
+                    <div><p className="text-slate-500">Plano</p><p className="mt-1 capitalize text-slate-200">{form.plan || 'grátis'}</p></div>
+                  </div>
+                </section>
+
+                {profileSummary ? (
+                  <section className="rounded-xl border border-primary-500/30 bg-primary-500/5 p-4" aria-labelledby="profile-summary-title">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p id="profile-summary-title" className="text-xs font-semibold uppercase tracking-wide text-primary-300">Perfil de anunciante</p>
+                        <p className="mt-1 text-base font-semibold text-white">{profileSummary.name || 'Sem nome público'}</p>
+                        <p className="text-xs text-slate-400">{profileSummary.city || 'Cidade não informada'}{profileSummary.state ? `, ${profileSummary.state}` : ''} · {profileSummary.category || 'Categoria não informada'}</p>
+                      </div>
+                      <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${profileSummary.status === 'active' ? 'bg-emerald-500/15 text-emerald-300' : 'bg-amber-500/15 text-amber-300'}`}>
+                        {profileSummary.status === 'active' ? 'Publicado' : profileSummary.status === 'suspended' ? 'Suspenso' : profileSummary.status === 'archived' ? 'Arquivado' : 'Rascunho'}
+                      </span>
+                    </div>
+                    <div className="mt-3 grid grid-cols-2 gap-3 text-xs sm:grid-cols-4">
+                      <div><p className="text-slate-500">Fotos</p><p className="mt-1 text-slate-200">{profileSummary.photoCount}</p></div>
+                      <div><p className="text-slate-500">Bio</p><p className="mt-1 text-slate-200">{profileSummary.bioLength} caracteres</p></div>
+                      <div><p className="text-slate-500">Plano</p><p className="mt-1 capitalize text-slate-200">{profileSummary.plan}</p></div>
+                      <div><p className="text-slate-500">ID do perfil</p><p className="mt-1 truncate font-mono text-slate-300" title={profileSummary.id}>{profileSummary.id}</p></div>
+                    </div>
+                    {profileSummary.status === 'active' && (
+                      <Link href={`/perfil/${profileSummary.id}`} target="_blank" rel="noreferrer" className="mt-3 inline-flex rounded-lg border border-primary-400/40 px-3 py-2 text-xs font-medium text-primary-300 hover:bg-primary-500/10">
+                        Abrir página pública
+                      </Link>
+                    )}
+                  </section>
+                ) : (
+                  <section className="rounded-xl border border-dashed border-slate-700 p-4 text-xs text-slate-400">
+                    Esta conta não possui perfil de anunciante associado.
+                  </section>
+                )}
+
+                <div className="border-b border-slate-800 pb-1 pt-2"><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Dados editáveis</p></div>
                 <div>
                   <p className="text-xs text-slate-500">Email (só leitura)</p>
                   <p className="text-white">{userEmail || '—'}</p>

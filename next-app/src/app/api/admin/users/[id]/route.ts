@@ -45,6 +45,31 @@ function mapUserPublic(r: Record<string, unknown>) {
   }
 }
 
+async function getProfileSummary(token: string, userId: string) {
+  const filter = encodeURIComponent(`user = "${userId}"`)
+  const res = await fetch(`${PB_URL}/api/collections/profiles/records?filter=${filter}&perPage=1&fields=id,name,status,category,city,state,plan,bio,created&expand=photos`, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: 'no-store',
+  })
+  if (!res.ok) return null
+  const data = await res.json() as { items?: Record<string, unknown>[] }
+  const profile = data.items?.[0]
+  if (!profile) return null
+  const expanded = profile.expand as { photos?: unknown[] } | undefined
+  return {
+    id: String(profile.id || ''),
+    name: String(profile.name || ''),
+    status: String(profile.status || 'inactive'),
+    category: String(profile.category || ''),
+    city: String(profile.city || ''),
+    state: String(profile.state || ''),
+    plan: String(profile.plan || 'gratis'),
+    bioLength: String(profile.bio || '').trim().length,
+    photoCount: Array.isArray(expanded?.photos) ? expanded.photos.length : 0,
+    created: String(profile.created || ''),
+  }
+}
+
 const ALLOWED_PATCH = new Set([
   'name',
   'full_name',
@@ -80,7 +105,7 @@ export async function GET(
       return Response.json({ error: 'Erro ao carregar' }, { status: res.status })
     }
     const r = (await res.json()) as Record<string, unknown>
-    return Response.json(mapUserPublic(r))
+    return Response.json({ ...mapUserPublic(r), profile: await getProfileSummary(token, id) })
   } catch {
     return Response.json({ error: 'Erro ao carregar utilizador' }, { status: 500 })
   }
