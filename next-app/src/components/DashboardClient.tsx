@@ -152,6 +152,8 @@ export default function DashboardClient() {
   const [dailyBumps, setDailyBumps] = useState(0)
   const [currentPlanName, setCurrentPlanName] = useState<string | null>(null)
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const user = useAuthStore((s) => s.user)
+  const isAdvertiser = user?.role === 'advertiser'
 
   useEffect(() => {
     const persistence = useAuthStore.persist
@@ -164,6 +166,12 @@ export default function DashboardClient() {
     const access = resolveProtectedAccess({ hydrated: authHydrated, authenticated: isAuthenticated })
     if (access === 'loading') return
     if (access === 'login') {
+      setProfile(null)
+      setLoadError(null)
+      setLoading(false)
+      return
+    }
+    if (!isAdvertiser) {
       setProfile(null)
       setLoadError(null)
       setLoading(false)
@@ -189,7 +197,7 @@ export default function DashboardClient() {
         if (!cancelled) setLoading(false)
       })
     return () => { cancelled = true }
-  }, [authHydrated, isAuthenticated, reloadKey])
+  }, [authHydrated, isAuthenticated, isAdvertiser, reloadKey])
 
   useEffect(() => {
     if (!profile) return
@@ -359,6 +367,37 @@ export default function DashboardClient() {
   }
 
   if (!profile) {
+    if (!isAdvertiser) {
+      const firstName = user?.first_name || user?.name?.split(' ')[0] || 'você'
+      return (
+        <div className="mx-auto max-w-4xl">
+          <h1 className="text-2xl font-bold text-white">Minha conta</h1>
+          <p className="mt-2 text-slate-400">Olá, {firstName}. Aqui você encontra seus acessos como cliente.</p>
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Link href="/anunciantes" className="rounded-xl border border-primary-500/40 bg-primary-500/10 p-5 transition hover:bg-primary-500/15">
+              <Eye className="h-6 w-6 text-primary-300" />
+              <h2 className="mt-4 font-semibold text-white">Explorar anunciantes</h2>
+              <p className="mt-1 text-sm text-slate-300">Encontre perfis por cidade e categoria.</p>
+            </Link>
+            <Link href="/favoritos" className="rounded-xl border border-slate-700 bg-slate-800/50 p-5 transition hover:border-slate-500 hover:bg-slate-800">
+              <Heart className="h-6 w-6 text-rose-300" />
+              <h2 className="mt-4 font-semibold text-white">Meus favoritos</h2>
+              <p className="mt-1 text-sm text-slate-400">Reveja os perfis que você salvou.</p>
+            </Link>
+            <Link href="/mensagens" className="rounded-xl border border-slate-700 bg-slate-800/50 p-5 transition hover:border-slate-500 hover:bg-slate-800">
+              <MessageCircle className="h-6 w-6 text-sky-300" />
+              <h2 className="mt-4 font-semibold text-white">Mensagens</h2>
+              <p className="mt-1 text-sm text-slate-400">Acompanhe suas conversas.</p>
+            </Link>
+            <Link href="/conta" className="rounded-xl border border-slate-700 bg-slate-800/50 p-5 transition hover:border-slate-500 hover:bg-slate-800">
+              <User className="h-6 w-6 text-emerald-300" />
+              <h2 className="mt-4 font-semibold text-white">Dados da conta</h2>
+              <p className="mt-1 text-sm text-slate-400">Gerencie suas informações e preferências.</p>
+            </Link>
+          </div>
+        </div>
+      )
+    }
     return (
       <div className="mx-auto max-w-2xl">
         <h1 className="mb-6 text-2xl font-bold text-white">Dashboard</h1>
@@ -665,6 +704,31 @@ export default function DashboardClient() {
             </div>
           </div>
         </div>
+      )}
+
+      {hasAnyExpirationIssue && (
+        <section className="mb-6 rounded-2xl border-2 border-red-500/70 bg-red-500/10 p-5 shadow-lg shadow-red-950/20" role="alert" aria-labelledby="expired-announcement-title">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="mt-0.5 h-7 w-7 shrink-0 text-red-300" />
+              <div>
+                <h2 id="expired-announcement-title" className="text-lg font-bold text-white">Seu anúncio precisa ser renovado</h2>
+                <p className="mt-1 text-sm leading-6 text-red-100">
+                  {searchExpired && contactExpired
+                    ? 'O anúncio saiu da busca e os contatos foram desativados porque o plano venceu.'
+                    : searchExpired
+                      ? 'Seu anúncio não aparece mais na busca porque o período de divulgação venceu.'
+                      : 'Os contatos do seu anúncio foram desativados porque o período contratado venceu.'}
+                </p>
+                <p className="mt-2 text-sm font-semibold text-white">Renove agora para voltar a aparecer e receber contatos.</p>
+              </div>
+            </div>
+            <Link href="/planos" className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg bg-red-600 px-5 py-2.5 font-semibold text-white transition hover:bg-red-500">
+              <CreditCard className="h-5 w-5" />
+              Renovar anúncio
+            </Link>
+          </div>
+        </section>
       )}
 
       <div className="rounded-xl border border-slate-700 bg-slate-800/50 overflow-hidden">

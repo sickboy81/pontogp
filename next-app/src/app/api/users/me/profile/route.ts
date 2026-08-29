@@ -8,13 +8,20 @@ export const dynamic = 'force-dynamic'
 export async function GET(request: NextRequest) {
   const token = getAuthCookieFromHeader(request.headers.get('cookie')); const id = token ? getUserIdFromToken(token) : null; const admin = await getAdminToken()
   if (!id || !admin) return Response.json({ error: 'Não autorizado' }, { status: 401 })
-  const res = await fetch(`${PB_URL}/api/collections/users/records/${id}?fields=id,city,state,age,bio`, { headers: { Authorization: `Bearer ${admin}` }, cache: 'no-store' })
-  return res.ok ? Response.json(await res.json()) : Response.json({ error: 'Não foi possível carregar seu perfil.' }, { status: 502 })
+  const res = await fetch(`${PB_URL}/api/collections/users/records/${id}?fields=id,role,city,state,age,bio`, { headers: { Authorization: `Bearer ${admin}` }, cache: 'no-store' })
+  if (!res.ok) return Response.json({ error: 'Não foi possível carregar seu perfil.' }, { status: 502 })
+  const user = await res.json() as { role?: string; city?: string; state?: string; age?: number; bio?: string }
+  if (user.role !== 'user') return Response.json({ error: 'Este perfil é exclusivo para contas de usuário.' }, { status: 403 })
+  return Response.json({ city: user.city || '', state: user.state || '', age: user.age || null, bio: user.bio || '' })
 }
 
 export async function PATCH(request: NextRequest) {
   const token = getAuthCookieFromHeader(request.headers.get('cookie')); const id = token ? getUserIdFromToken(token) : null; const admin = await getAdminToken()
   if (!id || !admin) return Response.json({ error: 'Não autorizado' }, { status: 401 })
+  const userRes = await fetch(`${PB_URL}/api/collections/users/records/${id}?fields=id,role`, { headers: { Authorization: `Bearer ${admin}` }, cache: 'no-store' })
+  if (!userRes.ok) return Response.json({ error: 'Não foi possível validar a conta.' }, { status: 502 })
+  const user = await userRes.json() as { role?: string }
+  if (user.role !== 'user') return Response.json({ error: 'Este perfil é exclusivo para contas de usuário.' }, { status: 403 })
   const body = await request.json().catch(() => null) as { city?: unknown; state?: unknown; age?: unknown; bio?: unknown } | null
   const city = typeof body?.city === 'string' ? body.city.trim().slice(0, 100) : ''
   const state = typeof body?.state === 'string' ? body.state.trim().toUpperCase().slice(0, 2) : ''

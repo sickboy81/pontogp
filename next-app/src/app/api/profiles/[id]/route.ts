@@ -30,6 +30,24 @@ const ALLOWED_KEYS = new Set([
   'hair_color', 'body_type', 'height', 'display_mode', 'bio_theme', 'bio_button_color', 'bio_links', 'bio_avatar_index', 'bio_show_full_profile',
 ])
 
+const PRICE_KEYS = ['price_30min', 'price_1h', 'price_2h', 'price_overnight']
+
+function hasInvalidPriceValues(update: Record<string, unknown>): boolean {
+  for (const key of PRICE_KEYS) {
+    const value = update[key]
+    if (value != null && (!Number.isInteger(Number(value)) || Number(value) < 0)) return true
+  }
+  if (update.prices != null) {
+    if (!Array.isArray(update.prices)) return true
+    if (update.prices.some((row) => {
+      if (!row || typeof row !== 'object') return true
+      const price = (row as { price?: unknown }).price
+      return !Number.isInteger(Number(price)) || Number(price) < 0
+    })) return true
+  }
+  return false
+}
+
 function prepareUpdateBody(data: Record<string, unknown>): Record<string, unknown> {
   const out: Record<string, unknown> = {}
   for (const [key, val] of Object.entries(data)) {
@@ -87,6 +105,9 @@ export async function PATCH(
     const update = prepareUpdateBody(body)
     if (Object.keys(update).length === 0) {
       return Response.json({ error: 'Nenhum campo válido para atualizar' }, { status: 400 })
+    }
+    if (hasInvalidPriceValues(update)) {
+      return Response.json({ error: 'Os preços devem ser informados apenas como valores inteiros em reais, sem centavos.' }, { status: 400 })
     }
 
     if (!canSaveProfileContacts(record.status ?? '', { ...record, ...update })) {

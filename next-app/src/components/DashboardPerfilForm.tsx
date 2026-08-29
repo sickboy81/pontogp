@@ -883,8 +883,9 @@ export default function DashboardPerfilForm() {
       }
 
       const parsePrice = (s: string) => {
-        const t = s.trim().replace(/\s/g, '').replace(',', '.')
+        const t = s.trim()
         if (!t) return NaN
+        if (!/^\d+$/.test(t)) return NaN
         return Number(t)
       }
       const halfRow = form.price_rows.some((r) => {
@@ -903,7 +904,7 @@ export default function DashboardPerfilForm() {
         return !Number.isFinite(pr) || pr < 0
       })
       if (badPrice) {
-        setError('Verifique os valores em R$ (use números, por exemplo 150 ou 199,90).')
+        setError('Verifique os valores em R$ (use apenas números inteiros, por exemplo 150 ou 350).')
         setSaving(false)
         return
       }
@@ -1890,7 +1891,7 @@ export default function DashboardPerfilForm() {
           <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
             <h3 className="font-medium text-slate-300">Preços (R$)</h3>
             <p className="max-w-md text-xs leading-relaxed text-slate-500 sm:text-right">
-              Informe apenas o nome do serviço e o preço em reais. Ex.: <span className="text-slate-400">1 hora</span> e <span className="text-slate-400">350</span>. Você pode usar vírgula ou ponto nos centavos.
+              Informe apenas o nome do serviço e o preço inteiro em reais. Ex.: <span className="text-slate-400">1 hora</span> e <span className="text-slate-400">350</span>. Centavos não são aceitos.
             </p>
           </div>
           <div className="space-y-3">
@@ -1916,16 +1917,16 @@ export default function DashboardPerfilForm() {
                   <label className="mb-1 block text-xs text-slate-500">Preço em reais</label>
                   <input
                     type="text"
-                    inputMode="decimal"
+                    inputMode="numeric"
                     value={row.price}
                     onChange={(e) =>
                       setForm((f) => {
                         const price_rows = [...f.price_rows]
-                        price_rows[idx] = { ...price_rows[idx], price: e.target.value }
+                        price_rows[idx] = { ...price_rows[idx], price: e.target.value.replace(/\D/g, '') }
                         return { ...f, price_rows }
                       })
                     }
-                    placeholder="Ex.: 350 ou 350,50"
+                    placeholder="Ex.: 350"
                     className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white placeholder-slate-600 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
                   />
                 </div>
