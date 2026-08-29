@@ -1,7 +1,7 @@
-import { notFound, permanentRedirect } from 'next/navigation'
+import { notFound } from 'next/navigation'
 import { getProfile } from '@/lib/api/profiles'
 import { getProfileOgImageUrl } from '@/lib/og'
-import { getProfileMetadataDescription, getPublicProfilePath } from '@/lib/profile-url'
+import { getProfileMetadataDescription } from '@/lib/profile-url'
 import { SEO_CITIES } from '@/lib/seo-cities'
 import { findSeoStateByUf } from '@/lib/seo-states'
 import ProfileView from '@/components/ProfileView'
@@ -56,16 +56,10 @@ export default async function PerfilByIdPage({ params, searchParams }: Props) {
   const openStories = sp?.stories === '1' || Boolean(initialStoryId)
   const profile = await getProfile(id)
   if (!profile) notFound()
+  // The ID route is the stable fallback for every public profile. Do not
+  // redirect it to a user-provided slug: a malformed, stale, or unsupported
+  // slug must never turn a profile that is visible in listings into a 404.
   const legacyPath = `/perfil/${encodeURIComponent(id)}`
-  // The ID route is always the full profile. Link Bio is only entered through
-  // the direct @slug route, never through search or profile cards.
-  const canonicalPath = profile.display_mode === 'link_bio' ? legacyPath : getPublicProfilePath(profile)
-  if (canonicalPath !== legacyPath) {
-    const query = new URLSearchParams()
-    if (openStories) query.set('stories', '1')
-    if (initialStoryId) query.set('story', initialStoryId)
-    permanentRedirect(`${canonicalPath}${query.size > 0 ? `?${query}` : ''}`)
-  }
 
   const profileUrl = `${SITE_URL}${legacyPath}`
   const cityLanding = SEO_CITIES.find(

@@ -5,6 +5,7 @@ import { buildProfilePlanRenewalFromPlanRef } from '@/lib/plan-renewal-dates'
 import { canSaveProfileContacts } from '@/lib/profile-publication.mjs'
 import { isProfileBumpEligible } from '@/lib/profile-bump-eligibility.mjs'
 import { profileVisualEntitlementPatch } from '@/lib/plan-entitlements.mjs'
+import { normalizePublicProfileSlug } from '@/lib/profile-slug.mjs'
 import type { Profile } from '@/lib/types'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
@@ -38,7 +39,7 @@ function prepareUpdateBody(data: Record<string, unknown>): Record<string, unknow
       out[key] = null
       continue
     }
-    out[key] = val
+    out[key] = key === 'slug' ? normalizePublicProfileSlug(val) : val
   }
   return out
 }

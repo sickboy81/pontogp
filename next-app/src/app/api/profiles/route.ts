@@ -9,6 +9,7 @@ import {
 } from '@/lib/api/profiles'
 import { getAuthCookieFromHeader, getUserIdFromToken } from '@/lib/auth-cookie'
 import { getProfileDraftValidationError } from '@/lib/profile-publication.mjs'
+import { normalizePublicProfileSlug } from '@/lib/profile-slug.mjs'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 const PUBLIC_CACHE_CONTROL = 'public, max-age=10, s-maxage=20, stale-while-revalidate=60'
@@ -191,7 +192,7 @@ export async function POST(request: NextRequest) {
     if (body.instagram != null) data.instagram = body.instagram
     if (body.twitter != null) data.twitter = body.twitter
     if (body.privacy != null) data.privacy = body.privacy
-    if (body.slug != null) data.slug = body.slug
+    if (body.slug != null) data.slug = normalizePublicProfileSlug(body.slug)
     if (body.short_description != null) data.short_description = body.short_description
     if (body.hair_color != null) data.hair_color = body.hair_color
     if (body.body_type != null) data.body_type = body.body_type
