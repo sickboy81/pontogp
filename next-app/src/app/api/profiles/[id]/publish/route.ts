@@ -69,6 +69,12 @@ export async function POST(
     }
 
     const bioLength = String(profile.bio ?? '').trim().length
+    const bioQualityError = bioLength >= MIN_PROFILE_BIO_LENGTH && !hasPublishableProfileBio(profile.bio)
+      ? 'Remova sequências repetidas de caracteres da bio.'
+      : null
+    if (bioQualityError) {
+      return Response.json({ error: bioQualityError, bioLength, minimumBioLength: MIN_PROFILE_BIO_LENGTH }, { status: 400 })
+    }
     if (!hasPublishableProfileBio(profile.bio)) {
       return Response.json(
         {

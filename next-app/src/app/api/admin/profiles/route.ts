@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { requireAdmin } from '@/lib/api/admin-auth'
 import { getAdminToken } from '@/lib/pocketbase-admin'
+import { getAdminProfileStatus } from '@/lib/admin-profile-status.mjs'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
@@ -16,7 +17,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const res = await fetch(
-      `${PB_URL}/api/collections/profiles/records?page=${page}&perPage=${perPage}&sort=-created&expand=photos`,
+      `${PB_URL}/api/collections/profiles/records?page=${page}&perPage=${perPage}&sort=-created&expand=photos&fields=id,user,name,city,state,category,plan,status,verified,created,bio,whatsapp,telegram,phone,show_whatsapp,show_telegram,show_phone,expand.photos.id,expand.photos.file,expand.photos.collectionId`,
       {
         headers: { Authorization: `Bearer ${(await getAdminToken()) || auth.token}` },
         cache: 'no-store',
@@ -31,8 +32,10 @@ export async function GET(request: NextRequest) {
       const thumbnail = firstPhoto?.file
         ? `${PB_URL}/api/files/${firstPhoto.collectionId}/${firstPhoto.id}/${firstPhoto.file}?thumb=200x300`
         : undefined
+      const publication = getAdminProfileStatus({ ...r, photoCount: Array.isArray(photos) ? photos.length : 0 })
       return {
         id: r.id,
+        user_id: r.user,
         name: r.name,
         city: r.city,
         state: r.state,
@@ -42,6 +45,9 @@ export async function GET(request: NextRequest) {
         verified: r.verified,
         created: r.created,
         thumbnail,
+        publication_label: publication.label,
+        publication_tone: publication.tone,
+        publication_reasons: publication.reasons,
       }
     })
     return Response.json({

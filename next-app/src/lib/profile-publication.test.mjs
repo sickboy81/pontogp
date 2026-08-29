@@ -9,12 +9,30 @@ import {
   canRemoveProfilePhoto,
   getMissingProfilePhotos,
   hasPublicProfileContact,
+  getProfileBioQualityError,
   isPublicProfileStatus,
 } from './profile-publication.mjs'
 
+test('rejects long repeated punctuation used to fake the bio minimum', () => {
+  assert.equal(
+    getProfileBioQualityError(`Atendo em hotel. ${'>'.repeat(40)}`),
+    'Remova sequências repetidas de caracteres da bio.'
+  )
+})
+
+test('rejects long repeated letters used as filler', () => {
+  assert.equal(getProfileBioQualityError(`Perfil real ${'a'.repeat(20)}`), 'Remova sequências repetidas de caracteres da bio.')
+})
+
+test('accepts normal punctuation and natural text', () => {
+  assert.equal(getProfileBioQualityError('Atendo de segunda a sexta. Consulte horários e valores.'), null)
+})
+
+const naturalBio = Array.from({ length: 400 }, (_, index) => String.fromCharCode(97 + (index % 26))).join('')
+
 test('uses the current bio while deciding whether the draft is ready to publish', () => {
   assert.equal(
-    canPublishProfileDraft(3, 'a'.repeat(400), {
+    canPublishProfileDraft(3, naturalBio, {
       whatsapp: '11999999999',
       show_whatsapp: true,
     }),
@@ -39,7 +57,7 @@ test('allows saving a complete draft before contact and bio are ready for public
 test('reports the first missing field required to create a profile draft', () => {
   assert.equal(
     profilePublication.getProfileDraftValidationError?.({ name: '', state: '', city: '' }),
-    'Informe o nome do perfil.'
+    'Informe o nome público do perfil.'
   )
   assert.equal(
     profilePublication.getProfileDraftValidationError?.({ name: 'Perfil', state: '', city: '' }),
@@ -51,10 +69,10 @@ test('reports the first missing field required to create a profile draft', () =>
   )
 })
 
-test('requires 400 characters in the saved bio before publication', () => {
-  assert.equal(profilePublication.hasPublishableProfileBio?.('a'.repeat(399)), false)
-  assert.equal(profilePublication.hasPublishableProfileBio?.('a'.repeat(400)), true)
-  assert.equal(profilePublication.getMissingProfileBioCharacters?.('a'.repeat(350)), 50)
+test('requires 300 characters in the saved bio before publication', () => {
+  assert.equal(profilePublication.hasPublishableProfileBio?.('a'.repeat(299)), false)
+  assert.equal(profilePublication.hasPublishableProfileBio?.(naturalBio), true)
+  assert.equal(profilePublication.getMissingProfileBioCharacters?.('a'.repeat(50)), 250)
 })
 
 test('detects contact changes that must be saved before publication', () => {

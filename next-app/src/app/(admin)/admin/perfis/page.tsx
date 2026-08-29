@@ -16,6 +16,9 @@ interface ProfileRow {
   verified?: boolean
   created?: string
   thumbnail?: string
+  publication_label?: string
+  publication_tone?: 'success' | 'danger' | 'warning' | 'muted'
+  publication_reasons?: string[]
 }
 
 export default function AdminPerfisPage() {
@@ -125,7 +128,19 @@ export default function AdminPerfisPage() {
                       <td className="p-4 text-slate-300">{p.city}, {p.state}</td>
                       <td className="p-4 text-slate-300">{p.category ?? '-'}</td>
                       <td className="p-4 text-slate-300">{p.plan ?? '-'}</td>
-                      <td className="p-4 text-slate-300">{p.status ?? '-'}</td>
+                      <td className="p-4">
+                        <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
+                          p.publication_tone === 'success' ? 'bg-emerald-500/15 text-emerald-300' :
+                          p.publication_tone === 'danger' ? 'bg-red-500/15 text-red-300' :
+                          p.publication_tone === 'warning' ? 'bg-amber-500/15 text-amber-300' :
+                          'bg-slate-700 text-slate-300'
+                        }`} title={p.publication_reasons?.join(' ')}>
+                          {p.publication_label || p.status || 'Desconhecido'}
+                        </span>
+                        {p.publication_reasons && p.publication_reasons.length > 0 && p.status === 'inactive' && (
+                          <p className="mt-1 max-w-56 text-xs text-amber-400/80">{p.publication_reasons[0]}</p>
+                        )}
+                      </td>
                       <td className="p-4">
                         {p.verified ? (
                           <span className="text-green-400">Sim</span>
@@ -135,21 +150,22 @@ export default function AdminPerfisPage() {
                       </td>
                       <td className="p-4">
                         <div className="flex items-center gap-2">
-                          <Link
-                            href={`/perfil/${p.id}`}
-                            className="text-primary-500 hover:underline"
-                          >
-                            Ver
-                          </Link>
+                          {p.status === 'active' ? (
+                            <Link href={`/perfil/${p.id}`} className="text-primary-500 hover:underline">Ver perfil</Link>
+                          ) : (
+                            <span className="rounded bg-amber-500/10 px-2 py-1 text-xs font-semibold text-amber-300" title={p.publication_reasons?.join(' ')}>
+                              Rascunho
+                            </span>
+                          )}
                           <div className="relative">
                             <button
                               type="button"
                               onClick={() => setMenuOpenId(menuOpenId === p.id ? null : p.id)}
                               disabled={updatingId === p.id}
-                              className="rounded p-1 text-slate-400 hover:bg-slate-700 hover:text-white disabled:opacity-50"
-                              aria-label="Ações"
+                              className="inline-flex items-center gap-1 rounded border border-slate-600 px-2 py-1 text-xs text-slate-300 hover:bg-slate-700 hover:text-white disabled:opacity-50"
+                              aria-label="Abrir edição"
                             >
-                              <MoreVertical className="h-4 w-4" />
+                              <MoreVertical className="h-3.5 w-3.5" /> Abrir edição
                             </button>
                             {menuOpenId === p.id && (
                               <>

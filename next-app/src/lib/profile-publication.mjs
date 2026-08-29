@@ -1,4 +1,4 @@
-export const MIN_PROFILE_BIO_LENGTH = 400
+export const MIN_PROFILE_BIO_LENGTH = 300
 export const MIN_PROFILE_PHOTOS = 3
 
 function normalizeBioLength(bio) {
@@ -11,7 +11,16 @@ function normalizePhotoCount(photoCount) {
 }
 
 export function hasPublishableProfileBio(bio) {
-  return normalizeBioLength(bio) >= MIN_PROFILE_BIO_LENGTH
+  return normalizeBioLength(bio) >= MIN_PROFILE_BIO_LENGTH && !getProfileBioQualityError(bio)
+}
+
+/** Rejects obvious character spam used to inflate the publication minimum. */
+export function getProfileBioQualityError(bio) {
+  const text = String(bio ?? '').trim()
+  if (/([^\p{L}\p{N}\s])\1{5,}/u.test(text) || /([\p{L}\p{N}])\1{11,}/iu.test(text)) {
+    return 'Remova sequências repetidas de caracteres da bio.'
+  }
+  return null
 }
 
 export function getMissingProfileBioCharacters(bio) {
@@ -23,7 +32,7 @@ export function canPublishProfile(photoCount) {
 }
 
 export function getProfileDraftValidationError(profile) {
-  if (!String(profile?.name ?? '').trim()) return 'Informe o nome do perfil.'
+  if (!String(profile?.name ?? '').trim()) return 'Informe o nome público do perfil.'
   if (!String(profile?.state ?? '').trim()) return 'Selecione o estado.'
   if (!String(profile?.city ?? '').trim()) return 'Selecione a cidade.'
   return null

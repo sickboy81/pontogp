@@ -29,6 +29,7 @@ import {
   canPublishProfileDraft,
   canRemoveProfilePhoto,
   canSaveProfileContacts,
+  hasPublishableProfileBio,
   getMissingProfileBioCharacters,
   getMissingProfilePhotos,
   getProfileDraftValidationError,
@@ -444,6 +445,9 @@ export default function DashboardPerfilForm() {
   const photoCount = profile?.photos?.length || 0
   const missingPhotoCount = getMissingProfilePhotos(photoCount)
   const bioLength = form.bio.trim().length
+  const bioQualityError = /([^\p{L}\p{N}\s])\1{5,}/u.test(form.bio.trim()) || /([\p{L}\p{N}])\1{11,}/iu.test(form.bio.trim())
+    ? 'Remova sequências repetidas de caracteres da bio.'
+    : null
   const persistedBio = profile?.bio ?? ''
   const missingBioCharacters = getMissingProfileBioCharacters(form.bio)
   const hasUnsavedBioChanges = Boolean(profile) && form.bio.trim() !== persistedBio.trim()
@@ -459,6 +463,7 @@ export default function DashboardPerfilForm() {
     missingBioCharacters > 0
       ? `${missingBioCharacters} ${missingBioCharacters === 1 ? 'caractere na bio' : 'caracteres na bio'}`
       : null,
+    bioQualityError,
     !hasPublicContact ? 'um contato público' : null,
   ].filter((message): message is string => Boolean(message))
   const canRemovePhoto = profile
@@ -1148,10 +1153,12 @@ export default function DashboardPerfilForm() {
           <>
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-300">Nome *</label>
+            <label className="mb-1 block text-sm font-medium text-slate-300">Nome público *</label>
             <input
               type="text"
               required
+              aria-label="Nome público"
+              placeholder="Como você quer ser apresentada"
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
               className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
@@ -1675,11 +1682,13 @@ export default function DashboardPerfilForm() {
             className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
           />
           <p
-            className={`mt-1 text-xs ${bioLength >= MIN_PROFILE_BIO_LENGTH ? 'text-slate-500' : 'text-amber-400'}`}
+            className={`mt-1 text-xs ${bioLength >= MIN_PROFILE_BIO_LENGTH && !bioQualityError ? 'text-slate-500' : 'text-amber-400'}`}
             aria-live="polite"
           >
             {bioLength}/{MIN_PROFILE_BIO_LENGTH} caracteres.
-            {bioLength < MIN_PROFILE_BIO_LENGTH
+            {bioQualityError
+              ? ` ${bioQualityError}`
+              : bioLength < MIN_PROFILE_BIO_LENGTH
               ? ` Faltam ${MIN_PROFILE_BIO_LENGTH - bioLength} para publicar; o rascunho pode ser salvo agora.`
               : ' Bio pronta para publicação.'}
             {hasUnsavedBioChanges ? ' Ao publicar, esta alteração será salva automaticamente.' : ''}
