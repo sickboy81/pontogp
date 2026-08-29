@@ -1,5 +1,7 @@
 import { NextRequest } from 'next/server'
 import { getAuthCookieFromHeader, getUserIdFromToken } from '@/lib/auth-cookie'
+import { getAdminToken } from '@/lib/pocketbase-admin'
+import { getPlanLifecycleEvents } from '@/lib/plan-reminder.mjs'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
@@ -7,6 +9,51 @@ export const dynamic = 'force-dynamic'
 
 function getToken(request: NextRequest): string | null {
   return getAuthCookieFromHeader(request.headers.get('cookie'))
+}
+
+const LIFECYCLE_TITLES: Record<string, string> = {
+  plan_expiring: 'Seu plano está perto de vencer',
+  plan_expired: 'Seu plano venceu',
+  contact_expiring: 'Seus contatos estão perto de expirar',
+  contact_expired: 'Seus contatos foram desativados',
+  search_removed: 'Seu perfil saiu da busca',
+  profile_archived: 'Seu perfil foi arquivado',
+}
+
+/** Recupera lembretes mesmo quando o cron esteve indisponível. A chave é o link,
+ * portanto a operação é idempotente e não cria avisos repetidos. */
+async function ensureLifecycleNotifications(userId: string, adminToken: string) {
+  const headers = { Authorization: `Bearer ${adminToken}` }
+  const profilesRes = await fetch(
+    `${PB_URL}/api/collections/profiles/records?filter=${encodeURIComponent(`user = "${userId}" && (search_expires_at != "" || contact_expires_at != "")`)}&perPage=50&sort=-updated&fields=id,name,search_expires_at,contact_expires_at`,
+    { headers, cache: 'no-store' },
+  )
+  if (!profilesRes.ok) return
+  const data = (await profilesRes.json()) as { items?: Array<{ id: string; name?: string; search_expires_at?: string; contact_expires_at?: string }> }
+  for (const profile of data.items || []) {
+    for (const event of getPlanLifecycleEvents(profile, new Date())) {
+      const link = `/planos?renew=1&profile=${profile.id}&event=${event.type}`
+      const existingRes = await fetch(
+        `${PB_URL}/api/collections/notifications/records?perPage=1&filter=${encodeURIComponent(`recipient = "${userId}" && type = "${event.type}" && link = "${link.replace(/"/g, '\\"')}"`)}&fields=id`,
+        { headers, cache: 'no-store' },
+      )
+      if (!existingRes.ok || ((await existingRes.json()) as { totalItems?: number }).totalItems) continue
+      const title = LIFECYCLE_TITLES[event.type] || 'Atualização do seu anúncio'
+      await fetch(`${PB_URL}/api/collections/notifications/records`, {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipient: userId,
+          title,
+          message: `${title}. Acesse os planos para ver os detalhes.`,
+          type: event.type,
+          read: false,
+          link,
+          created_at: new Date().toISOString(),
+        }),
+      })
+    }
+  }
 }
 
 /** GET: lista notificações do usuário logado. Query: page=1, perPage=20, unreadOnly=false. */
@@ -25,6 +72,8 @@ export async function GET(request: NextRequest) {
     : `recipient = "${userId}"`
 
   try {
+    const adminToken = await getAdminToken()
+    if (adminToken) await ensureLifecycleNotifications(userId, adminToken)
     const res = await fetch(
       `${PB_URL}/api/collections/notifications/records?page=${page}&perPage=${perPage}&filter=${encodeURIComponent(filter)}`,
       { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' }

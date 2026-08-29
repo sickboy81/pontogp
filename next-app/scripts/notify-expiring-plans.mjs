@@ -31,7 +31,7 @@ async function sendEmail(payload) {
 async function main() {
   await pb.collection('_superusers').authWithPassword(ADMIN_EMAIL, ADMIN_PASSWORD)
   const profiles = await pb.collection('profiles').getFullList({
-    filter: '(status = "active" || status = "archived") && (search_expires_at != "" || contact_expires_at != "")',
+    filter: '(search_expires_at != "" || contact_expires_at != "")',
     fields: 'id,name,user,search_expires_at,contact_expires_at',
     expand: 'user',
   })

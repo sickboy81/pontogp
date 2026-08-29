@@ -64,7 +64,7 @@ RUN printf '%s\n' \
 RUN /usr/local/bin/export-cron-env.sh && \
     echo "0 0 * * * . /etc/environment.sh && cd /app && node /app/scripts/reset-daily-bumps.mjs >> /var/log/cron.log 2>&1" > /etc/crontabs/root && \
     echo "0 1 * * * . /etc/environment.sh && cd /app && node /app/scripts/cleanup_profiles.mjs >> /var/log/cleanup_profiles.log 2>&1" >> /etc/crontabs/root && \
-    echo "0 8 * * * . /etc/environment.sh && cd /app && node /app/scripts/notify-expiring-plans.mjs >> /var/log/plan_reminders.log 2>&1" >> /etc/crontabs/root && \
+    echo "0 * * * * . /etc/environment.sh && cd /app && node /app/scripts/notify-expiring-plans.mjs >> /var/log/plan_reminders.log 2>&1" >> /etc/crontabs/root && \
     echo "*/5 * * * * . /etc/environment.sh && cd /app && node /app/auto_bump.cjs >> /var/log/auto_bump.log 2>&1" >> /etc/crontabs/root
 
 EXPOSE 3000
