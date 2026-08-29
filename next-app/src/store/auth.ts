@@ -93,29 +93,26 @@ export const useAuthStore = create<AuthState>()(
         role: string = 'user',
         details?: { fullName?: string; displayName?: string; age?: number }
       ) => {
-        const pb = getPb()
         const normalizedEmail = email.toLowerCase().trim()
-        const safeRole = isAdminRole(role) ? 'user' : role
-        const data = {
-          email: normalizedEmail,
-          emailVisibility: true,
-          password,
-          passwordConfirm: password,
-          name: details?.displayName?.trim() || [firstName, lastName].filter(Boolean).join(' ').trim(),
-          full_name: details?.fullName?.trim() || [firstName, lastName].filter(Boolean).join(' ').trim(),
-          display_name: details?.displayName?.trim() || [firstName, lastName].filter(Boolean).join(' ').trim(),
-          age: details?.age,
-          first_name: firstName,
-          last_name: lastName,
-          verified: false,
-          document_verified: false,
-          role: safeRole,
-          status: 'active',
+        const response = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: normalizedEmail,
+            password,
+            passwordConfirm: password,
+            role: isAdminRole(role) ? 'user' : role,
+            firstName,
+            lastName,
+            fullName: details?.fullName,
+            displayName: details?.displayName,
+            age: details?.age,
+          }),
+        })
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({})) as { error?: string }
+          throw new Error(data.error || 'Não foi possível criar a conta.')
         }
-        await pb.collection('users').create(data)
-        try {
-          await pb.collection('users').requestVerification(normalizedEmail)
-        } catch {}
       },
 
       refresh: async () => {

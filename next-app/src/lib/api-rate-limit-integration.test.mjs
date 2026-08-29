@@ -20,7 +20,7 @@ test('proxy applies the general API rate limit', async () => {
 test('public sensitive routes use dedicated IP policies', async () => {
   const routes = [
     ['app/api/contact/route.ts', 'contact'],
-    ['app/api/auth/registration-ip/route.ts', 'registration'],
+    ['app/api/auth/register/route.ts', 'registration'],
     ['app/api/payments/pix/webhook/route.ts', 'webhook'],
   ]
 

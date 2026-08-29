@@ -3,9 +3,11 @@ import assert from 'node:assert/strict'
 import {
   buildContactEmail,
   buildLoginAlertEmail,
+  buildProfileCompletionReminderEmail,
   buildPocketBaseEmailTemplates,
   buildPocketBaseResendSettings,
   getResendEmailConfig,
+  getResendTransactionalConfig,
 } from './resend-email.mjs'
 
 test('builds a login alert with the real IP and timestamp', () => {
@@ -36,6 +38,26 @@ test('requires the Resend key, sender and contact recipient', () => {
       contactTo: 'contato@cerejavip.com',
     }
   )
+})
+
+test('builds a branded profile completion reminder with a safe recipient link', () => {
+  assert.deepEqual(
+    getResendTransactionalConfig({ RESEND_API_KEY: 're_test', RESEND_FROM_EMAIL: 'CerejaVIP <no-reply@cerejavip.com>' }),
+    { apiKey: 're_test', from: 'CerejaVIP <no-reply@cerejavip.com>' }
+  )
+  const email = buildProfileCompletionReminderEmail({
+    email: 'anunciante@example.com',
+    name: '<Ana>',
+    appUrl: 'https://cerejavip.com/',
+    from: 'CerejaVIP <no-reply@cerejavip.com>',
+  })
+  assert.deepEqual(email.to, ['anunciante@example.com'])
+  assert.equal(email.subject, 'Finalize seu anúncio no CerejaVIP')
+  assert.match(email.html, /Cereja<span style="color:#f04b5a">VIP<\/span>/)
+  assert.match(email.html, /background:#fff7ed/)
+  assert.match(email.html, /href="https:\/\/cerejavip\.com\/dashboard\/perfil"/)
+  assert.match(email.html, /&lt;Ana&gt;/)
+  assert.match(email.text, /dashboard\/perfil/)
 })
 
 test('builds a safe contact email with reply-to set to the visitor', () => {

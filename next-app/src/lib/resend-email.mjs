@@ -17,6 +17,13 @@ export function getResendEmailConfig(env = process.env) {
   return { apiKey, from, contactTo }
 }
 
+export function getResendTransactionalConfig(env = process.env) {
+  const apiKey = String(env.RESEND_API_KEY ?? '').trim()
+  const from = String(env.RESEND_FROM_EMAIL ?? '').trim()
+  if (!apiKey || !from) return null
+  return { apiKey, from }
+}
+
 export function buildContactEmail(contact, config) {
   const name = String(contact.name ?? '').trim()
   const email = String(contact.email ?? '').trim()
@@ -50,6 +57,19 @@ export function buildLoginAlertEmail(user, ip, occurredAt = new Date(), config) 
     subject: 'Novo acesso detectado na sua conta CerejaVIP',
     html,
     text: `Novo login detectado na sua conta CerejaVIP.\n\nData e hora: ${occurred}\nEndereço IP: ${ip || 'Não identificado'}\n\nSe esse acesso não foi seu, altere sua senha imediatamente e entre em contato conosco.`,
+  }
+}
+
+export function buildProfileCompletionReminderEmail({ email, name, appUrl = 'https://cerejavip.com', from }) {
+  const recipient = String(email ?? '').trim()
+  const safeName = escapeHtml(String(name ?? '').trim() || 'anunciante')
+  const url = `${String(appUrl).replace(/\/$/, '')}/dashboard/perfil`
+  return {
+    from,
+    to: [recipient],
+    subject: 'Finalize seu anúncio no CerejaVIP',
+    html: `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0;background:#f4f6fb;color:#1e293b;font-family:Arial,Helvetica,sans-serif"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f4f6fb;padding:28px 12px"><tr><td align="center"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;background:#fff;border:1px solid #e2e8f0;border-radius:18px;overflow:hidden;box-shadow:0 8px 30px rgba(15,23,42,.08)"><tr><td style="background:#172033;padding:24px 28px"><div style="color:#fff;font-size:24px;font-weight:800;letter-spacing:-.5px">Cereja<span style="color:#f04b5a">VIP</span></div><div style="margin-top:6px;color:#cbd5e1;font-size:11px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase">Seu anúncio merece ser visto</div></td></tr><tr><td style="padding:34px 28px 30px"><div style="display:inline-block;background:#fff1f2;color:#c81e35;border-radius:999px;padding:7px 12px;font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase">Cadastro pendente</div><h1 style="margin:20px 0 12px;color:#172033;font-size:27px;line-height:1.2">Finalize seu anúncio</h1><p style="margin:0;color:#334155;font-size:16px;line-height:1.7">Olá, ${safeName}.</p><p style="margin:14px 0 0;color:#475569;font-size:16px;line-height:1.7">Você começou a criar seu anúncio no CerejaVIP, mas ele ainda está em rascunho e não aparece para os clientes.</p><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:24px 0;background:#fff7ed;border:1px solid #fed7aa;border-radius:12px"><tr><td style="padding:16px 18px;color:#9a3412;font-size:14px;line-height:1.6"><strong>Para publicar:</strong><br>complete as informações, adicione as fotos necessárias e confirme a publicação do perfil.</td></tr></table><table role="presentation" cellspacing="0" cellpadding="0" style="margin:26px 0 10px"><tr><td style="background:#df2635;border-radius:10px"><a href="${url}" style="display:inline-block;padding:15px 24px;color:#fff;text-decoration:none;font-size:15px;font-weight:700">Continuar meu cadastro &nbsp;→</a></td></tr></table><p style="margin:22px 0 0;color:#64748b;font-size:13px;line-height:1.6">Se você já concluiu essa etapa, pode ignorar este email.</p></td></tr><tr><td style="border-top:1px solid #e2e8f0;padding:20px 28px;color:#94a3b8;font-size:12px;line-height:1.6">Este email foi enviado automaticamente pelo CerejaVIP.<br>Conexões com mais confiança.</td></tr></table></td></tr></table></body></html>`,
+    text: `Olá, ${name || 'anunciante'}!\n\nVocê começou a criar seu anúncio no CerejaVIP, mas ele ainda está em rascunho e não aparece para os clientes.\n\nContinue seu cadastro: ${url}\n\nSe você já concluiu essa etapa, pode ignorar este email.`,
   }
 }
 

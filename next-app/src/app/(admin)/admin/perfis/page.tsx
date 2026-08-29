@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Loader2, MoreVertical } from 'lucide-react'
+import { ArrowLeft, Loader2, Mail, MoreVertical } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 interface ProfileRow {
@@ -32,6 +32,7 @@ export default function AdminPerfisPage() {
   const [page, setPage] = useState(1)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null)
+  const [remindingId, setRemindingId] = useState<string | null>(null)
 
   const fetchData = useCallback(() => {
     setLoading(true)
@@ -71,6 +72,21 @@ export default function AdminPerfisPage() {
   }
 
   const totalPages = data ? Math.max(1, Math.ceil(data.totalItems / data.perPage)) : 1
+
+  const sendReminder = async (profile: ProfileRow) => {
+    if (profile.status !== 'inactive' || !window.confirm(`Enviar um lembrete para completar o anúncio de ${profile.name || 'esta anunciante'}?`)) return
+    setRemindingId(profile.id)
+    try {
+      const res = await fetch(`/api/admin/profiles/${profile.id}/reminder`, { method: 'POST', credentials: 'include' })
+      const body = await res.json().catch(() => ({})) as { message?: string; error?: string }
+      if (!res.ok) throw new Error(body.error || 'Não foi possível enviar o lembrete.')
+      toast.success(body.message || 'Lembrete enviado.')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Não foi possível enviar o lembrete.')
+    } finally {
+      setRemindingId(null)
+    }
+  }
 
   return (
     <div>
@@ -156,6 +172,11 @@ export default function AdminPerfisPage() {
                             <span className="rounded bg-amber-500/10 px-2 py-1 text-xs font-semibold text-amber-300" title={p.publication_reasons?.join(' ')}>
                               Rascunho
                             </span>
+                          )}
+                          {p.status === 'inactive' && (
+                            <button type="button" onClick={() => sendReminder(p)} disabled={remindingId === p.id} className="inline-flex items-center gap-1 rounded border border-amber-500/50 px-2 py-1 text-xs text-amber-300 hover:bg-amber-500/10 disabled:opacity-50" title="Enviar lembrete por email">
+                              <Mail className="h-3.5 w-3.5" /> {remindingId === p.id ? 'Enviando…' : 'Enviar lembrete'}
+                            </button>
                           )}
                           <div className="relative">
                             <button

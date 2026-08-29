@@ -102,15 +102,6 @@ function RegisterPageContent() {
     try {
       setLoading(true)
       await register(email.trim().toLowerCase(), password, '', '', role)
-      try {
-        await fetch('/api/auth/registration-ip', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: email.trim().toLowerCase() }),
-        })
-      } catch {
-        // ignora falha
-      }
       toast.success('Conta criada! Entre para continuar.')
       router.push(getRegistrationNextUrl(role))
     } catch (err: unknown) {
