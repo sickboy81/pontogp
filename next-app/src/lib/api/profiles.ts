@@ -441,15 +441,27 @@ export async function getProfileByUserId(
   token: string
 ): Promise<Profile | null> {
   try {
-    const filter = `user = "${userId}"`
-    const res = await fetch(
-      `${PB_URL}/api/collections/profiles/records?filter=${encodeURIComponent(filter)}&sort=-updated&perPage=50&expand=photos,videos,audio,plan`,
-      { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' }
-    )
-    if (!res.ok) throw new Error(`PocketBase profile lookup failed: ${res.status}`)
-    const data = await res.json()
-    const item = selectOwnerProfileRecord(data.items || [])
-    return item ? mapProfile(item) : null
+    const headers = { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' as const }
+    const filters = [`user = "${escapeDoubleQuotes(userId)}"`, `user.id = "${escapeDoubleQuotes(userId)}"`]
+    for (const filter of filters) {
+      const res = await fetch(
+        `${PB_URL}/api/collections/profiles/records?filter=${encodeURIComponent(filter)}&sort=-updated&perPage=50&expand=photos,videos,audio,plan`,
+        headers,
+      )
+      if (!res.ok) {
+        if (filter === filters[filters.length - 1]) throw new Error(`PocketBase profile lookup failed: ${res.status}`)
+        continue
+      }
+      const data = await res.json()
+      const item = selectOwnerProfileRecord(data.items || [])
+      if (item) return mapProfile(item)
+    }
+
+    // Recupera um perfil ativo que já é público caso a relação do proprietário
+    // esteja inconsistente no PocketBase. A consulta continua restrita ao user
+    // autenticado e não transforma um rascunho em perfil público.
+    const publicProfiles = await getProfiles({ filters: { user_id: userId }, limit: 50 })
+    return publicProfiles.find((profile) => profile.user_id === userId) || null
   } catch (error) {
     throw error
   }
