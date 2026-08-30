@@ -78,8 +78,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const template = (loaded as { template: string }).template
     const email = buildTemplateEmail(template, loaded.profile, loaded.user.email || '', config.from)
     const lastSend = await getLastSuccessfulSend(id, template, token).catch(() => null)
-    const cooldown = getResendCooldownState(lastSend?.created)
-    return Response.json({ template, recipient: loaded.user.email || '', profileName: loaded.profile.name || '', subject: email.subject, html: email.html, text: email.text, lastSentAt: lastSend?.created || null, cooldown })
+    const cooldown = getResendCooldownState(lastSend?.created, new Date(), getEmailTemplate(template)?.cooldownDays ?? 7)
+    return Response.json({ template, recipient: loaded.user.email || '', from: config.from, profileName: loaded.profile.name || '', subject: email.subject, html: email.html, text: email.text, lastSentAt: lastSend?.created || null, cooldown })
   } catch {
     return Response.json({ error: 'Não foi possível gerar a prévia do lembrete.' }, { status: 502 })
   }
@@ -100,10 +100,16 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const template = (loaded as { template: string }).template
 
     const lastSend = await getLastSuccessfulSend(id, template, token).catch(() => null)
-    const cooldown = getResendCooldownState(lastSend?.created)
+    const cooldown = getResendCooldownState(lastSend?.created, new Date(), getEmailTemplate(template)?.cooldownDays ?? 7)
     if (!cooldown.allowed) return Response.json({ error: `Este template já foi enviado. Aguarde ${cooldown.remainingHours} horas para reenviar.`, lastSentAt: lastSend?.created || null }, { status: 429 })
     const email = buildTemplateEmail(template, loaded.profile, loaded.user.email || '', config.from)
-    const providerResult = await sendResendEmail(email, config.apiKey) as { id?: string }
+    let providerResult: { id?: string }
+    try {
+      providerResult = await sendResendEmail(email, config.apiKey) as { id?: string }
+    } catch (error) {
+      await createSendLog({ template, recipient_email: loaded.user.email, profile: id, recipient_user: loaded.profile.user, sender_admin: auth.userId, subject: email.subject, status: 'failed', error: error instanceof Error ? error.message.slice(0, 500) : 'Falha no provedor de email' }, token).catch(() => null)
+      return Response.json({ error: 'O provedor recusou o envio do email. Consulte o histórico para mais detalhes.' }, { status: 502 })
+    }
     const logRes = await createSendLog({ template, recipient_email: loaded.user.email, profile: id, recipient_user: loaded.profile.user, sender_admin: auth.userId, subject: email.subject, status: 'sent', provider_id: providerResult?.id || '' }, token).catch(() => null)
     return Response.json({ ok: true, message: logRes?.ok === false ? 'Email enviado, mas não foi possível registrar o histórico.' : 'Email enviado individualmente.' })
   } catch {

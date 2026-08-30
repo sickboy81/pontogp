@@ -15,10 +15,13 @@ export async function GET(request: NextRequest) {
 
   const page = Math.max(1, Number(request.nextUrl.searchParams.get('page')) || 1)
   const perPage = Math.min(50, Math.max(1, Number(request.nextUrl.searchParams.get('perPage')) || 20))
+  const query = request.nextUrl.searchParams.get('q')?.trim().slice(0, 100) || ''
 
   try {
+    const escapedQuery = query.replaceAll('"', '\\"')
+    const searchFilter = query ? ` && (name ~ "${escapedQuery}" || city ~ "${escapedQuery}" || user.email ~ "${escapedQuery}")` : ''
     const res = await fetch(
-      `${PB_URL}/api/collections/profiles/records?page=${page}&perPage=${perPage}&sort=-created&filter=${encodeURIComponent(ADVERTISER_PROFILE_OWNER_FILTER)}&expand=user,photos&fields=id,user,name,city,state,category,plan,status,verified,created,search_expires_at,contact_expires_at,bio,whatsapp,telegram,phone,show_whatsapp,show_telegram,show_phone,expand.user.id,expand.user.role,expand.user.email,expand.photos.id,expand.photos.file,expand.photos.collectionId`,
+      `${PB_URL}/api/collections/profiles/records?page=${page}&perPage=${perPage}&sort=-created&filter=${encodeURIComponent(`${ADVERTISER_PROFILE_OWNER_FILTER}${searchFilter}`)}&expand=user,photos&fields=id,user,name,city,state,category,plan,status,verified,created,search_expires_at,contact_expires_at,bio,whatsapp,telegram,phone,show_whatsapp,show_telegram,show_phone,expand.user.id,expand.user.role,expand.user.email,expand.photos.id,expand.photos.file,expand.photos.collectionId`,
       {
         headers: { Authorization: `Bearer ${(await getAdminToken()) || auth.token}` },
         cache: 'no-store',
