@@ -166,6 +166,7 @@ export default function AdminDashboard() {
       lead: 'Tráfego agregado, anúncios a todos e parâmetros do site.',
       cards: [
         { title: 'Analytics (views, cliques, top perfis)', value: '→', href: '/admin/analytics', icon: BarChart3, color: 'text-cyan-400' },
+        { title: 'Central de emails (templates e histórico)', value: '→', href: '/admin/emails', icon: Mail, color: 'text-rose-400' },
         { title: 'Broadcast (notificação / push)', value: '→', href: '/admin/broadcast', icon: Megaphone, color: 'text-amber-400' },
         { title: 'Configurações gerais', value: '→', href: '/admin/configuracao', icon: Settings, color: 'text-slate-400' },
         { title: 'Modo manutenção', value: '→', href: '/admin/configuracao#manutencao', icon: Wrench, color: 'text-orange-400' },

@@ -12,6 +12,10 @@ interface HistoryItem { id: string; template?: string; recipient_email?: string;
 
 const TEMPLATES = [
   { id: 'profile-completion', label: 'Cadastro de anunciante incompleto', description: 'Convida uma anunciante com perfil em rascunho a finalizar o cadastro.', audience: 'Anunciantes com perfil em rascunho', cooldownDays: 7 },
+  { id: 'plan-expiring', label: 'Plano próximo do vencimento', description: 'Lembra a anunciante de renovar antes de perder visibilidade.', audience: 'Planos que vencem nos próximos 7 dias', cooldownDays: 3 },
+  { id: 'plan-expired', label: 'Plano vencido', description: 'Convida a anunciante a renovar um plano já vencido.', audience: 'Anunciantes com plano vencido', cooldownDays: 7 },
+  { id: 'profile-suspended', label: 'Perfil suspenso', description: 'Informa sobre a suspensão e orienta a revisão do perfil.', audience: 'Anunciantes com perfil suspenso', cooldownDays: 7 },
+  { id: 'payment-confirmation', label: 'Confirmação de pagamento', description: 'Confirma manualmente o recebimento de um pagamento.', audience: 'Anunciante selecionada pelo admin', cooldownDays: 0 },
 ]
 
 export default function AdminEmailsPage() {
@@ -28,7 +32,7 @@ export default function AdminEmailsPage() {
   const [logsConfigured, setLogsConfigured] = useState(true)
   const [resendConfigured, setResendConfigured] = useState(true)
 
-  const drafts = useMemo(() => profiles.filter((profile) => profile.status === 'inactive' && profile.owner_role === 'advertiser' && (!search.trim() || `${profile.name || ''} ${profile.owner_email || ''} ${profile.city || ''}`.toLocaleLowerCase().includes(search.toLocaleLowerCase()))), [profiles, search])
+  const recipients = useMemo(() => profiles.filter((profile) => profile.owner_role === 'advertiser' && (!search.trim() || `${profile.name || ''} ${profile.owner_email || ''} ${profile.city || ''}`.toLocaleLowerCase().includes(search.toLocaleLowerCase()))), [profiles, search])
 
   useEffect(() => {
     fetch('/api/admin/profiles?page=1&perPage=50', { credentials: 'include', cache: 'no-store' })
@@ -45,7 +49,7 @@ export default function AdminEmailsPage() {
   useEffect(() => {
     if (!profileId || template !== 'profile-completion') { setPreview(null); return }
     setPreviewLoading(true)
-    fetch(`/api/admin/profiles/${encodeURIComponent(profileId)}/reminder`, { credentials: 'include', cache: 'no-store' })
+    fetch(`/api/admin/profiles/${encodeURIComponent(profileId)}/reminder?template=${encodeURIComponent(template)}`, { credentials: 'include', cache: 'no-store' })
       .then(async (response) => {
         const data = await response.json().catch(() => ({})) as Preview & { error?: string }
         if (!response.ok) throw new Error(data.error || 'Não foi possível gerar a prévia.')
@@ -61,12 +65,12 @@ export default function AdminEmailsPage() {
     if (!window.confirm(`Enviar este email individualmente para ${preview.recipient}?`)) return
     setSending(true)
     try {
-      const response = await fetch(`/api/admin/profiles/${encodeURIComponent(profileId)}/reminder`, { method: 'POST', credentials: 'include' })
+      const response = await fetch(`/api/admin/profiles/${encodeURIComponent(profileId)}/reminder?template=${encodeURIComponent(template)}`, { method: 'POST', credentials: 'include' })
       const data = await response.json().catch(() => ({})) as { message?: string; error?: string }
       if (!response.ok) throw new Error(data.error || 'Não foi possível enviar o email.')
       toast.success(data.message || 'Email enviado individualmente.')
       const [updatedPreview, updatedHistory] = await Promise.all([
-        fetch(`/api/admin/profiles/${encodeURIComponent(profileId)}/reminder`, { credentials: 'include', cache: 'no-store' }).then((response) => response.ok ? response.json() : null),
+        fetch(`/api/admin/profiles/${encodeURIComponent(profileId)}/reminder?template=${encodeURIComponent(template)}`, { credentials: 'include', cache: 'no-store' }).then((response) => response.ok ? response.json() : null),
         fetch('/api/admin/emails?page=1&perPage=10', { credentials: 'include', cache: 'no-store' }).then((response) => response.json()),
       ])
       if (updatedPreview) setPreview(updatedPreview)
@@ -95,10 +99,10 @@ export default function AdminEmailsPage() {
           <div className="mb-4 flex flex-wrap gap-2 text-xs"><span className={`rounded-full px-2 py-1 ${resendConfigured ? 'bg-emerald-500/15 text-emerald-300' : 'bg-red-500/15 text-red-300'}`}>Resend: {resendConfigured ? 'configurado' : 'não configurado'}</span><span className={`rounded-full px-2 py-1 ${logsConfigured ? 'bg-emerald-500/15 text-emerald-300' : 'bg-amber-500/15 text-amber-300'}`}>Histórico: {logsConfigured ? 'ativo' : 'indisponível'}</span></div>
           <label className="mb-2 block text-sm font-medium text-slate-300" htmlFor="recipient">Destinatária</label>
           <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Pesquisar nome, email ou cidade" className="mb-2 w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-white placeholder:text-slate-500" aria-label="Pesquisar destinatária" />
-          {loading ? <Loader2 className="h-5 w-5 animate-spin text-primary-400" /> : <select id="recipient" value={profileId} onChange={(event) => setProfileId(event.target.value)} className="mb-5 w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-3 text-sm text-white"><option value="">Selecione uma anunciante em rascunho</option>{drafts.map((profile) => <option key={profile.id} value={profile.id}>{profile.name || 'Sem nome'} — {profile.owner_email || 'sem email'} — {profile.city || 'sem cidade'}{profile.publication_reasons?.[0] ? ` — ${profile.publication_reasons[0]}` : ''}</option>)}</select>}
+          {loading ? <Loader2 className="h-5 w-5 animate-spin text-primary-400" /> : <select id="recipient" value={profileId} onChange={(event) => setProfileId(event.target.value)} className="mb-5 w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-3 text-sm text-white"><option value="">Selecione uma anunciante</option>{recipients.map((profile) => <option key={profile.id} value={profile.id}>{profile.name || 'Sem nome'} — {profile.owner_email || 'sem email'} — {profile.city || 'sem cidade'}{profile.status ? ` — ${profile.status}` : ''}</option>)}</select>}
           {previewLoading && <div className="flex items-center gap-2 text-sm text-slate-400"><Loader2 className="h-4 w-4 animate-spin" /> Gerando prévia...</div>}
           {preview && !previewLoading && <>
-            <div className="mb-4 rounded-lg border border-slate-700 bg-slate-900/60 p-3 text-sm"><p className="text-slate-400">Template: <span className="text-white">Cadastro de anunciante incompleto</span></p><p className="mt-1 text-slate-400">Para: <span className="text-white">{preview.recipient}</span></p><p className="mt-1 text-slate-400">Assunto: <span className="text-white">{preview.subject}</span></p>{preview.lastSentAt && <p className="mt-1 text-amber-300">Último envio: {new Date(preview.lastSentAt).toLocaleString('pt-BR')} {preview.cooldown?.allowed ? '(pode reenviar)' : `(aguarde ${preview.cooldown?.remainingHours}h)`}</p>}</div>
+            <div className="mb-4 rounded-lg border border-slate-700 bg-slate-900/60 p-3 text-sm"><p className="text-slate-400">Template: <span className="text-white">{TEMPLATES.find((item) => item.id === template)?.label || template}</span></p><p className="mt-1 text-slate-400">Para: <span className="text-white">{preview.recipient}</span></p><p className="mt-1 text-slate-400">Assunto: <span className="text-white">{preview.subject}</span></p>{preview.lastSentAt && <p className="mt-1 text-amber-300">Último envio: {new Date(preview.lastSentAt).toLocaleString('pt-BR')} {preview.cooldown?.allowed ? '(pode reenviar)' : `(aguarde ${preview.cooldown?.remainingHours}h)`}</p>}</div>
             <div className="overflow-hidden rounded-lg border border-slate-600 bg-white"><iframe title="Prévia do email" srcDoc={preview.html} sandbox="" className="h-[620px] w-full" /></div>
             <details className="mt-4 rounded-lg border border-slate-700 p-3"><summary className="cursor-pointer text-sm text-slate-300">Ver versão de texto</summary><pre className="mt-3 whitespace-pre-wrap text-xs text-slate-400">{preview.text}</pre></details>
             <button type="button" onClick={sendEmail} disabled={sending || preview.cooldown?.allowed === false} className="mt-5 inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-3 text-sm font-semibold text-white hover:bg-primary-500 disabled:opacity-50"><Send className="h-4 w-4" />{sending ? 'Enviando...' : preview.cooldown?.allowed === false ? 'Aguardar para reenviar' : 'Confirmar envio individual'}</button>

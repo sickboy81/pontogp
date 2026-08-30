@@ -2,18 +2,18 @@ import { NextRequest } from 'next/server'
 import { requireAdmin } from '@/lib/api/admin-auth'
 import { getAdminToken } from '@/lib/pocketbase-admin'
 import { buildProfileCompletionReminderEmail, getResendTransactionalConfig, sendResendEmail } from '@/lib/resend-email.mjs'
-import { getResendCooldownState } from '@/lib/email-center.mjs'
+import * as resendEmail from '@/lib/resend-email.mjs'
+import { getEmailTemplate, getResendCooldownState } from '@/lib/email-center.mjs'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 export const dynamic = 'force-dynamic'
 
-type ReminderProfile = { user?: string; name?: string; status?: string }
+type ReminderProfile = { user?: string; name?: string; status?: string; search_expires_at?: string; contact_expires_at?: string }
 
 async function loadReminderData(id: string, token: string) {
-  const profileRes = await fetch(`${PB_URL}/api/collections/profiles/records/${encodeURIComponent(id)}?fields=id,user,name,status`, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
+  const profileRes = await fetch(`${PB_URL}/api/collections/profiles/records/${encodeURIComponent(id)}?fields=id,user,name,status,search_expires_at,contact_expires_at`, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
   if (!profileRes.ok) return { error: Response.json({ error: 'Perfil não encontrado.' }, { status: 404 }) }
   const profile = await profileRes.json() as ReminderProfile
-  if (profile.status !== 'inactive') return { error: Response.json({ error: 'O lembrete só pode ser enviado para perfis em rascunho.' }, { status: 400 }) }
   if (!profile.user) return { error: Response.json({ error: 'Perfil sem anunciante associado.' }, { status: 400 }) }
 
   const userRes = await fetch(`${PB_URL}/api/collections/users/records/${encodeURIComponent(profile.user)}?fields=id,email,role`, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
@@ -24,13 +24,39 @@ async function loadReminderData(id: string, token: string) {
   return { profile, user }
 }
 
-async function getLastSuccessfulSend(profileId: string, token: string) {
+async function getLastSuccessfulSend(profileId: string, template: string, token: string) {
   const collection = process.env.EMAIL_LOGS_COLLECTION || 'email_delivery_logs'
-  const filter = encodeURIComponent(`profile = "${profileId}" && template = "profile-completion" && status = "sent"`)
+  const filter = encodeURIComponent(`profile = "${profileId}" && template = "${template}" && status = "sent"`)
   const response = await fetch(`${PB_URL}/api/collections/${collection}/records?filter=${filter}&sort=-created&perPage=1&fields=created,provider_id`, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
   if (!response.ok) return null
   const data = await response.json() as { items?: Array<{ created?: string; provider_id?: string }> }
   return data.items?.[0] || null
+}
+
+function buildTemplateEmail(template: string, profile: ReminderProfile, email: string, from: string) {
+  if (template === 'profile-completion') return buildProfileCompletionReminderEmail({ email, name: profile.name, appUrl: process.env.NEXT_PUBLIC_APP_URL, from })
+  const buildAdminProfileEmail = (resendEmail as unknown as { buildAdminProfileEmail: typeof buildProfileCompletionReminderEmail }).buildAdminProfileEmail
+  return buildAdminProfileEmail({ email, name: profile.name, appUrl: process.env.NEXT_PUBLIC_APP_URL, from, template, expiresAt: profile.search_expires_at } as Parameters<typeof buildProfileCompletionReminderEmail>[0])
+}
+
+function validateTemplateEligibility(template: string, profile: ReminderProfile) {
+  const expiry = profile.search_expires_at ? new Date(profile.search_expires_at).getTime() : NaN
+  const days = Number.isNaN(expiry) ? null : Math.ceil((expiry - Date.now()) / 86400000)
+  if (template === 'profile-completion' && profile.status !== 'inactive') return 'O template só pode ser enviado para perfis em rascunho.'
+  if (template === 'plan-expiring' && (days == null || days < 0 || days > 7)) return 'Este template só pode ser enviado para planos que vencem nos próximos 7 dias.'
+  if (template === 'plan-expired' && (days == null || days >= 0)) return 'Este template só pode ser enviado para planos vencidos.'
+  if (template === 'profile-suspended' && profile.status !== 'suspended') return 'Este template só pode ser enviado para perfis suspensos.'
+  return null
+}
+
+async function getLoadedTemplate(request: NextRequest, id: string, token: string) {
+  const template = request.nextUrl.searchParams.get('template') || 'profile-completion'
+  if (!getEmailTemplate(template)) return { error: Response.json({ error: 'Template de email inválido.' }, { status: 400 }) }
+  const loaded = await loadReminderData(id, token)
+  if ('error' in loaded) return loaded
+  const eligibilityError = validateTemplateEligibility(template, loaded.profile)
+  if (eligibilityError) return { error: Response.json({ error: eligibilityError }, { status: 400 }) }
+  return { template, ...loaded }
 }
 
 async function createSendLog(payload: Record<string, unknown>, token: string) {
@@ -47,12 +73,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   try {
     const { id } = await params
     const token = (await getAdminToken()) || auth.token
-    const loaded = await loadReminderData(id, token)
+    const loaded = await getLoadedTemplate(request, id, token)
     if ('error' in loaded) return loaded.error
-    const email = buildProfileCompletionReminderEmail({ email: loaded.user.email, name: loaded.profile.name, appUrl: process.env.NEXT_PUBLIC_APP_URL, from: config.from })
-    const lastSend = await getLastSuccessfulSend(id, token).catch(() => null)
+    const template = (loaded as { template: string }).template
+    const email = buildTemplateEmail(template, loaded.profile, loaded.user.email || '', config.from)
+    const lastSend = await getLastSuccessfulSend(id, template, token).catch(() => null)
     const cooldown = getResendCooldownState(lastSend?.created)
-    return Response.json({ recipient: loaded.user.email, profileName: loaded.profile.name || '', subject: email.subject, html: email.html, text: email.text, lastSentAt: lastSend?.created || null, cooldown })
+    return Response.json({ template, recipient: loaded.user.email || '', profileName: loaded.profile.name || '', subject: email.subject, html: email.html, text: email.text, lastSentAt: lastSend?.created || null, cooldown })
   } catch {
     return Response.json({ error: 'Não foi possível gerar a prévia do lembrete.' }, { status: 502 })
   }
@@ -68,15 +95,16 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (!config) return Response.json({ error: 'Email não configurado para envio.' }, { status: 503 })
 
   try {
-    const loaded = await loadReminderData(id, token)
+    const loaded = await getLoadedTemplate(request, id, token)
     if ('error' in loaded) return loaded.error
+    const template = (loaded as { template: string }).template
 
-    const lastSend = await getLastSuccessfulSend(id, token).catch(() => null)
+    const lastSend = await getLastSuccessfulSend(id, template, token).catch(() => null)
     const cooldown = getResendCooldownState(lastSend?.created)
     if (!cooldown.allowed) return Response.json({ error: `Este template já foi enviado. Aguarde ${cooldown.remainingHours} horas para reenviar.`, lastSentAt: lastSend?.created || null }, { status: 429 })
-    const email = buildProfileCompletionReminderEmail({ email: loaded.user.email, name: loaded.profile.name, appUrl: process.env.NEXT_PUBLIC_APP_URL, from: config.from })
+    const email = buildTemplateEmail(template, loaded.profile, loaded.user.email || '', config.from)
     const providerResult = await sendResendEmail(email, config.apiKey) as { id?: string }
-    const logRes = await createSendLog({ template: 'profile-completion', recipient_email: loaded.user.email, profile: id, recipient_user: loaded.profile.user, sender_admin: auth.userId, subject: email.subject, status: 'sent', provider_id: providerResult?.id || '' }, token).catch(() => null)
+    const logRes = await createSendLog({ template, recipient_email: loaded.user.email, profile: id, recipient_user: loaded.profile.user, sender_admin: auth.userId, subject: email.subject, status: 'sent', provider_id: providerResult?.id || '' }, token).catch(() => null)
     return Response.json({ ok: true, message: logRes?.ok === false ? 'Email enviado, mas não foi possível registrar o histórico.' : 'Email enviado individualmente.' })
   } catch {
     return Response.json({ error: 'Não foi possível enviar o lembrete.' }, { status: 502 })

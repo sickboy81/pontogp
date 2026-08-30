@@ -73,6 +73,24 @@ export function buildProfileCompletionReminderEmail({ email, name, appUrl = 'htt
   }
 }
 
+export function buildAdminProfileEmail({ email, name, appUrl = 'https://cerejavip.com', from, template, expiresAt }) {
+  const safeName = escapeHtml(String(name ?? '').trim() || 'anunciante')
+  const normalizedUrl = String(appUrl).replace(/\/$/, '')
+  const date = new Date(expiresAt)
+  const formattedDate = Number.isNaN(date.getTime()) ? 'em breve' : date.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+  const content = {
+    'plan-expiring': ['Seu plano está perto de vencer', `Seu plano vence em ${formattedDate}. Renove via PIX para continuar aparecendo e recebendo contatos.`, 'Renovar meu plano', `${normalizedUrl}/planos`],
+    'plan-expired': ['Seu plano venceu', 'Seu período terminou. Renove via PIX para reativar a visibilidade e os contatos.', 'Renovar meu plano', `${normalizedUrl}/planos`],
+    'profile-suspended': ['Seu perfil foi suspenso', 'Seu perfil está temporariamente suspenso e não aparece publicamente. Revise as informações do anúncio ou entre em contato com o suporte.', 'Revisar meu perfil', `${normalizedUrl}/dashboard/perfil`],
+    'payment-confirmation': ['Pagamento recebido', 'Identificamos o recebimento do seu pagamento. O processamento e a ativação do anúncio podem levar alguns instantes.', 'Acessar meu painel', `${normalizedUrl}/dashboard`],
+  }[template] || ['Atualização do seu anúncio', 'Há uma atualização importante sobre o seu anúncio.', 'Acessar meu painel', `${normalizedUrl}/dashboard`]
+  return {
+    from, to: [email], subject: `${content[0]} | CerejaVIP`,
+    html: `<!doctype html><html lang="pt-BR"><body style="margin:0;background:#f4f6fb;color:#1e293b;font-family:Arial,Helvetica,sans-serif"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f4f6fb;padding:28px 12px"><tr><td align="center"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;background:#fff;border:1px solid #e2e8f0;border-radius:18px;overflow:hidden"><tr><td style="background:#172033;padding:24px 28px;color:#fff;font-size:24px;font-weight:800">Cereja<span style="color:#f04b5a">VIP</span></td></tr><tr><td style="padding:34px 28px"><div style="display:inline-block;background:#fff1f2;color:#c81e35;border-radius:999px;padding:7px 12px;font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase">CerejaVIP</div><h1 style="color:#172033;font-size:27px">${content[0]}</h1><p style="color:#334155;font-size:16px;line-height:1.7">Olá, ${safeName}.</p><p style="color:#475569;font-size:16px;line-height:1.7">${content[1]}</p><p><a href="${content[3]}" style="display:inline-block;background:#df2635;border-radius:10px;padding:15px 24px;color:#fff;text-decoration:none;font-weight:700">${content[2]} →</a></p></td></tr><tr><td style="border-top:1px solid #e2e8f0;padding:20px 28px;color:#94a3b8;font-size:12px">Este email foi enviado pelo CerejaVIP.</td></tr></table></td></tr></table></body></html>`,
+    text: `Olá, ${name || 'anunciante'}!\n\n${content[0]}\n\n${content[1]}\n\nAcesse: ${content[3]}`,
+  }
+}
+
 export async function sendResendEmail(payload, apiKey, fetchImpl = fetch) {
   const response = await fetchImpl(RESEND_API_URL, {
     method: 'POST',

@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const res = await fetch(
-      `${PB_URL}/api/collections/profiles/records?page=${page}&perPage=${perPage}&sort=-created&filter=${encodeURIComponent(ADVERTISER_PROFILE_OWNER_FILTER)}&expand=user,photos&fields=id,user,name,city,state,category,plan,status,verified,created,bio,whatsapp,telegram,phone,show_whatsapp,show_telegram,show_phone,expand.user.id,expand.user.role,expand.user.email,expand.photos.id,expand.photos.file,expand.photos.collectionId`,
+      `${PB_URL}/api/collections/profiles/records?page=${page}&perPage=${perPage}&sort=-created&filter=${encodeURIComponent(ADVERTISER_PROFILE_OWNER_FILTER)}&expand=user,photos&fields=id,user,name,city,state,category,plan,status,verified,created,search_expires_at,contact_expires_at,bio,whatsapp,telegram,phone,show_whatsapp,show_telegram,show_phone,expand.user.id,expand.user.role,expand.user.email,expand.photos.id,expand.photos.file,expand.photos.collectionId`,
       {
         headers: { Authorization: `Bearer ${(await getAdminToken()) || auth.token}` },
         cache: 'no-store',
@@ -40,6 +40,8 @@ export async function GET(request: NextRequest) {
         user_id: r.user,
         owner_role: (expand?.user as Record<string, unknown> | undefined)?.role,
         owner_email: (expand?.user as Record<string, unknown> | undefined)?.email,
+        search_expires_at: r.search_expires_at,
+        contact_expires_at: r.contact_expires_at,
         name: r.name,
         city: r.city,
         state: r.state,
