@@ -12,6 +12,7 @@ const ADMIN_LINKS = [
   { href: '/admin', label: 'Painel' },
   { href: '/admin/usuarios', label: 'Usuários' },
   { href: '/admin/perfis', label: 'Perfis' },
+  { href: '/admin/emails', label: 'Central de emails' },
   { href: '/admin/verificacao', label: 'Verificação' },
   { href: '/admin/mensagens', label: 'Chats (interno)' },
   { href: '/admin/contatos', label: 'Contatos (Fale Conosco)' },
