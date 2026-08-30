@@ -10,6 +10,7 @@ interface ProfileRow { id: string; name?: string; status?: string; city?: string
 interface Preview { recipient: string; from?: string; profileName: string; subject: string; html: string; text: string; lastSentAt?: string | null; cooldown?: { allowed: boolean; remainingHours: number } }
 interface HistoryItem { id: string; template?: string; recipient_email?: string; subject?: string; status?: string; created?: string; expand?: { profile?: { name?: string }; sender_admin?: { email?: string } } }
 type TemplateOverride = { subject: string; body: string }
+type TemplateVersion = TemplateOverride & { id: string; templateId: string; savedAt: string; savedBy?: string }
 
 const TEMPLATES = [
   { id: 'profile-completion', label: 'Cadastro de anunciante incompleto', description: 'Convida uma anunciante com perfil em rascunho a finalizar o cadastro.', audience: 'Anunciantes com perfil em rascunho', cooldownDays: 7 },
@@ -38,6 +39,7 @@ export default function AdminEmailsPage() {
   const [nowMs, setNowMs] = useState(0)
   const cancelButtonRef = useRef<HTMLButtonElement>(null)
   const [templateOverrides, setTemplateOverrides] = useState<Record<string, TemplateOverride>>({})
+  const [templateVersions, setTemplateVersions] = useState<TemplateVersion[]>([])
   const [editingTemplate, setEditingTemplate] = useState(false)
   const [savingTemplate, setSavingTemplate] = useState(false)
   const [historyPage, setHistoryPage] = useState(1)
@@ -85,7 +87,7 @@ export default function AdminEmailsPage() {
   }, [historyPage, historyStatus, historyTemplate])
 
   useEffect(() => {
-    fetch('/api/admin/email-templates', { credentials: 'include', cache: 'no-store' }).then((response) => response.ok ? response.json() : null).then((data: Record<string, TemplateOverride> | null) => { if (data) setTemplateOverrides(data) }).catch(() => toast.error('Não foi possível carregar os templates salvos.'))
+    fetch('/api/admin/email-templates', { credentials: 'include', cache: 'no-store' }).then((response) => response.ok ? response.json() : null).then((data: { templates?: Record<string, TemplateOverride>; versions?: TemplateVersion[] } | null) => { if (data) { setTemplateOverrides(data.templates || {}); setTemplateVersions(data.versions || []) } }).catch(() => toast.error('Não foi possível carregar os templates salvos.'))
   }, [])
 
   useEffect(() => { setRecipientPage(1) }, [search])
@@ -134,10 +136,10 @@ export default function AdminEmailsPage() {
   const saveTemplate = async () => {
     setSavingTemplate(true)
     try {
-      const response = await fetch('/api/admin/email-templates', { method: 'PATCH', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(templateOverrides) })
+      const response = await fetch('/api/admin/email-templates', { method: 'PATCH', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ templates: templateOverrides, templateId: template }) })
       const data = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(data.error || 'Não foi possível salvar o template.')
-      setTemplateOverrides(data); setEditingTemplate(false); toast.success('Template salvo.')
+      setTemplateOverrides(data.templates || {}); setTemplateVersions(data.versions || []); setEditingTemplate(false); toast.success('Template salvo e versionado.')
       if (profileId) { const refreshed = await fetch(`/api/admin/profiles/${encodeURIComponent(profileId)}/reminder?template=${encodeURIComponent(template)}`, { credentials: 'include', cache: 'no-store' }); if (refreshed.ok) setPreview(await refreshed.json()) }
     } catch (error) { toast.error(error instanceof Error ? error.message : 'Não foi possível salvar o template.') } finally { setSavingTemplate(false) }
   }
@@ -158,7 +160,7 @@ export default function AdminEmailsPage() {
 
         <section className="rounded-xl border border-slate-700 bg-slate-800/40 p-5">
           <div className="mb-5 flex items-center justify-between gap-2"><div className="flex items-center gap-2"><Eye className="h-5 w-5 text-primary-400" /><h2 className="text-lg font-semibold text-white">Revisar e enviar</h2></div><button type="button" onClick={() => setEditingTemplate((value) => !value)} className="rounded-lg border border-slate-600 px-3 py-2 text-xs text-slate-300 hover:bg-slate-700">{editingTemplate ? 'Fechar editor' : 'Editar template'}</button></div>
-          {editingTemplate && <div className="mb-5 rounded-lg border border-primary-400/40 bg-primary-500/5 p-4"><p className="mb-3 text-xs text-slate-400">Variáveis permitidas: <code>{'{{nome}}'}</code>, <code>{'{{link}}'}</code> e <code>{'{{data_vencimento}}'}</code>. O corpo aceita texto simples.</p><label className="block text-xs text-slate-300">Assunto<input value={templateOverrides[template]?.subject || ''} onChange={(event) => setTemplateOverrides((all) => ({ ...all, [template]: { subject: event.target.value, body: all[template]?.body || '' } }))} className="mt-1 w-full rounded border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-white" maxLength={180} /></label><label className="mt-3 block text-xs text-slate-300">Corpo<textarea value={templateOverrides[template]?.body || ''} onChange={(event) => setTemplateOverrides((all) => ({ ...all, [template]: { subject: all[template]?.subject || '', body: event.target.value } }))} className="mt-1 min-h-32 w-full rounded border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-white" maxLength={5000} /></label><button type="button" onClick={saveTemplate} disabled={savingTemplate} className="mt-3 rounded-lg bg-primary-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">{savingTemplate ? 'Salvando...' : 'Salvar template'}</button></div>}
+          {editingTemplate && <div className="mb-5 rounded-lg border border-primary-400/40 bg-primary-500/5 p-4"><p className="mb-3 text-xs text-slate-400">Variáveis permitidas: <code>{'{{nome}}'}</code>, <code>{'{{link}}'}</code> e <code>{'{{data_vencimento}}'}</code>. O corpo aceita texto simples.</p><label className="block text-xs text-slate-300">Assunto<input value={templateOverrides[template]?.subject || ''} onChange={(event) => setTemplateOverrides((all) => ({ ...all, [template]: { subject: event.target.value, body: all[template]?.body || '' } }))} className="mt-1 w-full rounded border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-white" maxLength={180} /></label><label className="mt-3 block text-xs text-slate-300">Corpo<textarea value={templateOverrides[template]?.body || ''} onChange={(event) => setTemplateOverrides((all) => ({ ...all, [template]: { subject: all[template]?.subject || '', body: event.target.value } }))} className="mt-1 min-h-32 w-full rounded border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-white" maxLength={5000} /></label><button type="button" onClick={saveTemplate} disabled={savingTemplate} className="mt-3 rounded-lg bg-primary-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">{savingTemplate ? 'Salvando...' : 'Salvar nova versão'}</button>{templateVersions.filter((version) => version.templateId === template).length > 0 && <div className="mt-4 border-t border-slate-700 pt-3"><p className="mb-2 text-xs font-semibold text-slate-400">Versões anteriores</p>{templateVersions.filter((version) => version.templateId === template).map((version) => <div key={version.id} className="mb-2 flex items-center justify-between gap-2 rounded border border-slate-700 p-2"><span className="truncate text-xs text-slate-400">{new Date(version.savedAt).toLocaleString('pt-BR')} · {version.subject || 'Assunto padrão'}</span><button type="button" onClick={() => setTemplateOverrides((all) => ({ ...all, [template]: { subject: version.subject, body: version.body } }))} className="shrink-0 rounded border border-slate-600 px-2 py-1 text-xs text-slate-300">Restaurar</button></div>)}</div>}</div>}
           <div className="mb-4 flex flex-wrap gap-2 text-xs"><span className={`rounded-full px-2 py-1 ${resendConfigured ? 'bg-emerald-500/15 text-emerald-300' : 'bg-red-500/15 text-red-300'}`}>Resend: {resendConfigured ? 'configurado' : 'não configurado'}</span><span className={`rounded-full px-2 py-1 ${logsConfigured ? 'bg-emerald-500/15 text-emerald-300' : 'bg-amber-500/15 text-amber-300'}`}>Histórico: {logsConfigured ? 'ativo' : 'indisponível'}</span></div>
           <label className="mb-2 block text-sm font-medium text-slate-300" htmlFor="recipient">Destinatária</label>
           <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Pesquisar nome, email ou cidade" className="mb-2 w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-white placeholder:text-slate-500" aria-label="Pesquisar destinatária" />
