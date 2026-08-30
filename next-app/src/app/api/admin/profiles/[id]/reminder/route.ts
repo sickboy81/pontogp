@@ -4,6 +4,7 @@ import { getAdminToken } from '@/lib/pocketbase-admin'
 import { buildProfileCompletionReminderEmail, getResendTransactionalConfig, sendResendEmail } from '@/lib/resend-email.mjs'
 import * as resendEmail from '@/lib/resend-email.mjs'
 import { getEmailTemplate, getResendCooldownState } from '@/lib/email-center.mjs'
+import { applyEmailTemplateOverride, normalizeEmailTemplateOverrides } from '@/lib/email-template-settings.mjs'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 export const dynamic = 'force-dynamic'
@@ -33,10 +34,12 @@ async function getLastSuccessfulSend(profileId: string, template: string, token:
   return data.items?.[0] || null
 }
 
-function buildTemplateEmail(template: string, profile: ReminderProfile, email: string, from: string) {
-  if (template === 'profile-completion') return buildProfileCompletionReminderEmail({ email, name: profile.name, appUrl: process.env.NEXT_PUBLIC_APP_URL, from })
+type EmailPayload = { subject: string; html: string; text: string; from: string; to: string[] }
+
+function buildTemplateEmail(template: string, profile: ReminderProfile, email: string, from: string): EmailPayload {
+  if (template === 'profile-completion') return buildProfileCompletionReminderEmail({ email, name: profile.name, appUrl: process.env.NEXT_PUBLIC_APP_URL, from }) as unknown as EmailPayload
   const buildAdminProfileEmail = (resendEmail as unknown as { buildAdminProfileEmail: typeof buildProfileCompletionReminderEmail }).buildAdminProfileEmail
-  return buildAdminProfileEmail({ email, name: profile.name, appUrl: process.env.NEXT_PUBLIC_APP_URL, from, template, expiresAt: profile.search_expires_at } as Parameters<typeof buildProfileCompletionReminderEmail>[0])
+  return buildAdminProfileEmail({ email, name: profile.name, appUrl: process.env.NEXT_PUBLIC_APP_URL, from, template, expiresAt: profile.search_expires_at } as Parameters<typeof buildProfileCompletionReminderEmail>[0]) as unknown as EmailPayload
 }
 
 function validateTemplateEligibility(template: string, profile: ReminderProfile) {
@@ -64,6 +67,21 @@ async function createSendLog(payload: Record<string, unknown>, token: string) {
   return fetch(`${PB_URL}/api/collections/${collection}/records`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(payload), cache: 'no-store' })
 }
 
+async function loadTemplateOverrides(token: string) {
+  const filter = encodeURIComponent('key = "email_templates"')
+  const response = await fetch(`${PB_URL}/api/collections/settings/records?filter=${filter}&sort=created,id&perPage=1&fields=value`, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
+  if (!response.ok) return normalizeEmailTemplateOverrides(null)
+  const data = await response.json() as { items?: Array<{ value?: unknown }> }
+  return normalizeEmailTemplateOverrides(data.items?.[0]?.value)
+}
+
+function applyConfiguredTemplate(email: EmailPayload, template: string, profile: ReminderProfile, overrides: Record<string, { subject: string; body: string }>): EmailPayload {
+  const appUrl = String(process.env.NEXT_PUBLIC_APP_URL || 'https://cerejavip.com').replace(/\/$/, '')
+  const link = template === 'plan-expiring' || template === 'plan-expired' ? `${appUrl}/planos` : `${appUrl}/dashboard/perfil`
+  const date = profile.search_expires_at ? new Date(profile.search_expires_at).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' }) : ''
+  return applyEmailTemplateOverride(email, overrides[template], { nome: profile.name || 'anunciante', link, data_vencimento: date })
+}
+
 /** GET: gera a prévia do lembrete sem enviar email. */
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireAdmin(request)
@@ -76,7 +94,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const loaded = await getLoadedTemplate(request, id, token)
     if ('error' in loaded) return loaded.error
     const template = (loaded as { template: string }).template
-    const email = buildTemplateEmail(template, loaded.profile, loaded.user.email || '', config.from)
+    const email = applyConfiguredTemplate(buildTemplateEmail(template, loaded.profile, loaded.user.email || '', config.from), template, loaded.profile, await loadTemplateOverrides(token))
     const lastSend = await getLastSuccessfulSend(id, template, token).catch(() => null)
     const cooldown = getResendCooldownState(lastSend?.created, new Date(), getEmailTemplate(template)?.cooldownDays ?? 7)
     return Response.json({ template, recipient: loaded.user.email || '', from: config.from, profileName: loaded.profile.name || '', subject: email.subject, html: email.html, text: email.text, lastSentAt: lastSend?.created || null, cooldown })
@@ -102,7 +120,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const lastSend = await getLastSuccessfulSend(id, template, token).catch(() => null)
     const cooldown = getResendCooldownState(lastSend?.created, new Date(), getEmailTemplate(template)?.cooldownDays ?? 7)
     if (!cooldown.allowed) return Response.json({ error: `Este template já foi enviado. Aguarde ${cooldown.remainingHours} horas para reenviar.`, lastSentAt: lastSend?.created || null }, { status: 429 })
-    const email = buildTemplateEmail(template, loaded.profile, loaded.user.email || '', config.from)
+    const email = applyConfiguredTemplate(buildTemplateEmail(template, loaded.profile, loaded.user.email || '', config.from), template, loaded.profile, await loadTemplateOverrides(token))
     let providerResult: { id?: string }
     try {
       providerResult = await sendResendEmail(email, config.apiKey) as { id?: string }
