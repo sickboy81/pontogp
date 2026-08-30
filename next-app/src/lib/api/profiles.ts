@@ -5,6 +5,7 @@ import { selectOwnerProfileRecord } from '@/lib/profile-owner-record.mjs'
 import { isProfileEffectivelyOnline } from '@/lib/profile-presence.mjs'
 import { buildPublicProfileLifecycleFilter } from '@/lib/profile-visibility.mjs'
 import { ADVERTISER_PROFILE_OWNER_FILTER } from '@/lib/advertiser-profile-access.mjs'
+import { getAdminToken } from '@/lib/pocketbase-admin'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
@@ -405,9 +406,13 @@ export async function getProfiles(options: {
     sort,
     fields: PROFILE_LIST_FIELDS,
   })
+  const adminToken = await getAdminToken()
   const res = await fetchPocketBase(
     `${PB_URL}/api/collections/profiles/records?${params}`,
-    { cache: 'no-store' }
+    {
+      headers: adminToken ? { Authorization: `Bearer ${adminToken}` } : undefined,
+      cache: 'no-store',
+    }
   )
   if (!res.ok) return []
   const data = await res.json()
@@ -474,9 +479,10 @@ export async function getProfile(id: string): Promise<Profile | null> {
   try {
     const policy = await getProfileVisibilityPolicy()
     const now = new Date()
+    const adminToken = await getAdminToken()
     const res = await fetch(
       `${PB_URL}/api/collections/profiles/records?filter=${encodeURIComponent(`id = "${escapeDoubleQuotes(id)}" && ${ADVERTISER_PROFILE_OWNER_FILTER}`)}&perPage=1&expand=photos,videos,audio,plan`,
-      { cache: 'no-store' }
+      { headers: adminToken ? { Authorization: `Bearer ${adminToken}` } : undefined, cache: 'no-store' }
     )
     if (!res.ok) return null
     const data = await res.json()
@@ -502,9 +508,10 @@ export async function getProfileBySlug(slug: string): Promise<Profile | null> {
     const policy = await getProfileVisibilityPolicy()
     const now = new Date()
     const filter = `slug = "${slug}" && ${ADVERTISER_PROFILE_OWNER_FILTER}`
+    const adminToken = await getAdminToken()
     const res = await fetch(
       `${PB_URL}/api/collections/profiles/records?filter=${encodeURIComponent(filter)}&perPage=1&expand=photos,videos,audio,plan`,
-    { cache: 'no-store' }
+    { headers: adminToken ? { Authorization: `Bearer ${adminToken}` } : undefined, cache: 'no-store' }
     )
     if (!res.ok) return null
     const data = await res.json()
@@ -537,9 +544,10 @@ export async function getProfileSitemapRecords(): Promise<ProfileSitemapRecord[]
     let totalPages = 1
 
     do {
+      const adminToken = await getAdminToken()
       const res = await fetch(
         `${PB_URL}/api/collections/profiles/records?page=${page}&perPage=500&fields=id,slug,display_mode,updated&filter=${encodeURIComponent(`${ADVERTISER_PROFILE_OWNER_FILTER} && (${lifecycleFilter})`)}`,
-        { next: { revalidate: 300 } }
+        { headers: adminToken ? { Authorization: `Bearer ${adminToken}` } : undefined, next: { revalidate: 300 } }
       )
       if (!res.ok) return []
       const data = await res.json()
