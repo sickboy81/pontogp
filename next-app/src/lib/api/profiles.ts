@@ -420,6 +420,9 @@ export async function getProfiles(options: {
   const mappedProfiles: Profile[] = (data.items || [])
     .map(mapProfile)
     .filter((p: Profile | null): p is Profile => p !== null)
+    // Defesa em profundidade: rascunhos nunca podem chegar à vitrine,
+    // mesmo que uma regra do PocketBase esteja permissiva ou desatualizada.
+    .filter((p: Profile) => isPublicProfileStatus(p.status))
     .map((p: Profile) => {
       const searchExpiredDays = getSearchExpiredDays(p.search_expires_at, now)
       return {
@@ -518,6 +521,7 @@ export async function getProfileBySlug(slug: string): Promise<Profile | null> {
     const item = data.items?.[0]
     const mapped = item ? mapProfile(item) : null
     if (!mapped) return null
+    if (!isPublicProfileStatus(mapped.status)) return null
     if (isProfileBeyondArchiveWindow(mapped, policy, now)) return null
     const searchExpiredDays = getSearchExpiredDays(mapped.search_expires_at, now)
     return {
