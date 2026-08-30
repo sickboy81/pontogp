@@ -34,6 +34,7 @@ import { isProfileBumpEligible } from '@/lib/profile-bump-eligibility.mjs'
 import { CEREJA_STORIES_DURATION_HOURS } from '@/lib/cereja-stories.mjs'
 import { resolveProtectedAccess } from '@/lib/protected-access.mjs'
 import { isProfileEffectivelyOnline } from '@/lib/profile-presence.mjs'
+import { isAdvertiserRole } from '@/lib/advertiser-profile-access.mjs'
 
 function formatExpiresAt(iso: string | undefined): string | null {
   if (!iso) return null
@@ -153,7 +154,7 @@ export default function DashboardClient() {
   const [currentPlanName, setCurrentPlanName] = useState<string | null>(null)
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const user = useAuthStore((s) => s.user)
-  const isAdvertiser = user?.role === 'advertiser'
+  const isAdvertiser = isAdvertiserRole(user?.role)
 
   useEffect(() => {
     const persistence = useAuthStore.persist

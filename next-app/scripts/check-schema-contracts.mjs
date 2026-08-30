@@ -58,11 +58,11 @@ if (users?.updateRule !== expectedUserUpdateRule) {
 }
 
 const expectedProfileCreateRule =
-  'user = @request.auth.id && @request.auth.role = "advertiser" && @request.body.status = "inactive"'
+  'user = @request.auth.id && (@request.auth.role = "advertiser" || @request.auth.role = "admin") && @request.body.status = "inactive"'
 const expectedProfileUpdateRule =
   '(user = @request.auth.id && @request.auth.role = "advertiser" && @request.body.status:changed = false) || @request.auth.role = "admin"'
-const expectedProfileListRule = 'status = "active" && user.role = "advertiser"'
-const expectedProfileViewRule = 'status = "active" && user.role = "advertiser"'
+const expectedProfileListRule = 'status = "active" && (user.role = "advertiser" || user.role = "admin")'
+const expectedProfileViewRule = 'status = "active" && (user.role = "advertiser" || user.role = "admin")'
 const expectedProfileDeleteRule = '(user = @request.auth.id && @request.auth.role = "advertiser") || @request.auth.role = "admin"'
 if (profiles?.listRule !== expectedProfileListRule) {
   failures.push('regra de listagem de profiles deve exigir perfil ativo de anunciante')

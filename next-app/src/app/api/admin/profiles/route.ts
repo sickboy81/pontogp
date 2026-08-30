@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server'
 import { requireAdmin } from '@/lib/api/admin-auth'
 import { getAdminToken } from '@/lib/pocketbase-admin'
 import { getAdminProfileStatus } from '@/lib/admin-profile-status.mjs'
-import { filterAdvertiserProfiles } from '@/lib/advertiser-profile-access.mjs'
+import { ADVERTISER_PROFILE_OWNER_FILTER, filterAdvertiserProfiles } from '@/lib/advertiser-profile-access.mjs'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const res = await fetch(
-      `${PB_URL}/api/collections/profiles/records?page=${page}&perPage=${perPage}&sort=-created&filter=${encodeURIComponent('user.role = "advertiser"')}&expand=user,photos&fields=id,user,name,city,state,category,plan,status,verified,created,bio,whatsapp,telegram,phone,show_whatsapp,show_telegram,show_phone,expand.user.id,expand.user.role,expand.photos.id,expand.photos.file,expand.photos.collectionId`,
+      `${PB_URL}/api/collections/profiles/records?page=${page}&perPage=${perPage}&sort=-created&filter=${encodeURIComponent(ADVERTISER_PROFILE_OWNER_FILTER)}&expand=user,photos&fields=id,user,name,city,state,category,plan,status,verified,created,bio,whatsapp,telegram,phone,show_whatsapp,show_telegram,show_phone,expand.user.id,expand.user.role,expand.photos.id,expand.photos.file,expand.photos.collectionId`,
       {
         headers: { Authorization: `Bearer ${(await getAdminToken()) || auth.token}` },
         cache: 'no-store',

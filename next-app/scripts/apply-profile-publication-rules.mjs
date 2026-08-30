@@ -9,11 +9,11 @@ const nextAppRoot = join(scriptDir, '..')
 const repoRoot = join(nextAppRoot, '..')
 
 const PROFILE_CREATE_RULE =
-  'user = @request.auth.id && @request.auth.role = "advertiser" && @request.body.status = "inactive"'
+  'user = @request.auth.id && (@request.auth.role = "advertiser" || @request.auth.role = "admin") && @request.body.status = "inactive"'
 const PROFILE_UPDATE_RULE =
   '(user = @request.auth.id && @request.auth.role = "advertiser" && @request.body.status:changed = false) || @request.auth.role = "admin"'
-const PROFILE_LIST_RULE = 'status = "active" && user.role = "advertiser"'
-const PROFILE_VIEW_RULE = 'status = "active" && user.role = "advertiser"'
+const PROFILE_LIST_RULE = 'status = "active" && (user.role = "advertiser" || user.role = "admin")'
+const PROFILE_VIEW_RULE = 'status = "active" && (user.role = "advertiser" || user.role = "admin")'
 const PROFILE_DELETE_RULE = '(user = @request.auth.id && @request.auth.role = "advertiser") || @request.auth.role = "admin"'
 
 function loadEnv(dir) {

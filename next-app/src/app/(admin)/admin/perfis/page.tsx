@@ -143,7 +143,7 @@ export default function AdminPerfisPage() {
                         )}
                       </td>
                       <td className="p-4 font-medium text-white">{p.name ?? '-'}</td>
-                      <td className="p-4"><span className="rounded-full bg-primary-500/15 px-2 py-1 text-xs font-semibold text-primary-300">Anunciante</span></td>
+                      <td className="p-4"><span className="rounded-full bg-primary-500/15 px-2 py-1 text-xs font-semibold text-primary-300">{p.owner_role === 'admin' ? 'Admin + anunciante' : 'Anunciante'}</span></td>
                       <td className="p-4 text-slate-300">{p.city}, {p.state}</td>
                       <td className="p-4 text-slate-300">{p.category ?? '-'}</td>
                       <td className="p-4 text-slate-300">{p.plan ?? '-'}</td>

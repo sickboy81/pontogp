@@ -4,6 +4,7 @@ import { isPublicProfileStatus } from '@/lib/profile-publication.mjs'
 import { selectOwnerProfileRecord } from '@/lib/profile-owner-record.mjs'
 import { isProfileEffectivelyOnline } from '@/lib/profile-presence.mjs'
 import { buildPublicProfileLifecycleFilter } from '@/lib/profile-visibility.mjs'
+import { ADVERTISER_PROFILE_OWNER_FILTER } from '@/lib/advertiser-profile-access.mjs'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
@@ -342,7 +343,7 @@ export async function getProfiles(options: {
   const policy = await getProfileVisibilityPolicy()
   const lifecycleFilter = buildLifecycleFilter(policy)
   const parts: string[] = []
-  parts.push('user.role = "advertiser"')
+  parts.push(ADVERTISER_PROFILE_OWNER_FILTER)
   Object.entries(filters).forEach(([key, val]) => {
     if (key === 'min_age' || key === 'max_age' || key === 'search' || key === 'location' || key === 'content' || key === 'min_price' || key === 'max_price') return
     const k = key === 'user_id' ? 'user' : key
@@ -474,7 +475,7 @@ export async function getProfile(id: string): Promise<Profile | null> {
     const policy = await getProfileVisibilityPolicy()
     const now = new Date()
     const res = await fetch(
-      `${PB_URL}/api/collections/profiles/records?filter=${encodeURIComponent(`id = "${escapeDoubleQuotes(id)}" && user.role = "advertiser"`)}&perPage=1&expand=photos,videos,audio,plan`,
+      `${PB_URL}/api/collections/profiles/records?filter=${encodeURIComponent(`id = "${escapeDoubleQuotes(id)}" && ${ADVERTISER_PROFILE_OWNER_FILTER}`)}&perPage=1&expand=photos,videos,audio,plan`,
       { cache: 'no-store' }
     )
     if (!res.ok) return null
@@ -500,7 +501,7 @@ export async function getProfileBySlug(slug: string): Promise<Profile | null> {
   try {
     const policy = await getProfileVisibilityPolicy()
     const now = new Date()
-    const filter = `slug = "${slug}" && user.role = "advertiser"`
+    const filter = `slug = "${slug}" && ${ADVERTISER_PROFILE_OWNER_FILTER}`
     const res = await fetch(
       `${PB_URL}/api/collections/profiles/records?filter=${encodeURIComponent(filter)}&perPage=1&expand=photos,videos,audio,plan`,
     { cache: 'no-store' }
@@ -537,7 +538,7 @@ export async function getProfileSitemapRecords(): Promise<ProfileSitemapRecord[]
 
     do {
       const res = await fetch(
-        `${PB_URL}/api/collections/profiles/records?page=${page}&perPage=500&fields=id,slug,display_mode,updated&filter=${encodeURIComponent(`user.role = "advertiser" && (${lifecycleFilter})`)}`,
+        `${PB_URL}/api/collections/profiles/records?page=${page}&perPage=500&fields=id,slug,display_mode,updated&filter=${encodeURIComponent(`${ADVERTISER_PROFILE_OWNER_FILTER} && (${lifecycleFilter})`)}`,
         { next: { revalidate: 300 } }
       )
       if (!res.ok) return []

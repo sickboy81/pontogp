@@ -1053,9 +1053,9 @@
       "name": "profiles",
       "type": "base",
       "authRule": null,
-      "listRule": "status = \"active\" && user.role = \"advertiser\"",
-      "viewRule": "status = \"active\" && user.role = \"advertiser\"",
-      "createRule": "user = @request.auth.id && @request.auth.role = \"advertiser\" && @request.body.status = \"inactive\"",
+      "listRule": "status = \"active\" && (user.role = \"advertiser\" || user.role = \"admin\")",
+      "viewRule": "status = \"active\" && (user.role = \"advertiser\" || user.role = \"admin\")",
+      "createRule": "user = @request.auth.id && (@request.auth.role = \"advertiser\" || @request.auth.role = \"admin\") && @request.body.status = \"inactive\"",
       "updateRule": "(user = @request.auth.id && @request.auth.role = \"advertiser\" && @request.body.status:changed = false) || @request.auth.role = \"admin\"",
       "deleteRule": "(user = @request.auth.id && @request.auth.role = \"advertiser\") || @request.auth.role = \"admin\"",
       "schema": [
