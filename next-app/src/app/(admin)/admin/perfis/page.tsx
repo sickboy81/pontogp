@@ -17,6 +17,7 @@ interface ProfileRow {
   created?: string
   thumbnail?: string
   owner_role?: string
+  owner_email?: string
   publication_label?: string
   publication_tone?: 'success' | 'danger' | 'warning' | 'muted'
   publication_reasons?: string[]

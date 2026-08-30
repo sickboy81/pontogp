@@ -6,11 +6,12 @@ import { ArrowLeft, Eye, Loader2, Mail, Send } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useSearchParams } from 'next/navigation'
 
-interface ProfileRow { id: string; name?: string; status?: string }
-interface Preview { recipient: string; profileName: string; subject: string; html: string; text: string }
+interface ProfileRow { id: string; name?: string; status?: string; city?: string; publication_reasons?: string[]; owner_email?: string; owner_role?: string }
+interface Preview { recipient: string; profileName: string; subject: string; html: string; text: string; lastSentAt?: string | null; cooldown?: { allowed: boolean; remainingHours: number } }
+interface HistoryItem { id: string; template?: string; recipient_email?: string; subject?: string; status?: string; created?: string; expand?: { profile?: { name?: string } } }
 
 const TEMPLATES = [
-  { id: 'profile-completion', label: 'Cadastro de anunciante incompleto', description: 'Convida uma anunciante com perfil em rascunho a finalizar o cadastro.' },
+  { id: 'profile-completion', label: 'Cadastro de anunciante incompleto', description: 'Convida uma anunciante com perfil em rascunho a finalizar o cadastro.', audience: 'Anunciantes com perfil em rascunho', cooldownDays: 7 },
 ]
 
 export default function AdminEmailsPage() {
@@ -22,8 +23,12 @@ export default function AdminEmailsPage() {
   const [loading, setLoading] = useState(true)
   const [previewLoading, setPreviewLoading] = useState(false)
   const [sending, setSending] = useState(false)
+  const [search, setSearch] = useState('')
+  const [history, setHistory] = useState<HistoryItem[]>([])
+  const [logsConfigured, setLogsConfigured] = useState(true)
+  const [resendConfigured, setResendConfigured] = useState(true)
 
-  const drafts = useMemo(() => profiles.filter((profile) => profile.status === 'inactive'), [profiles])
+  const drafts = useMemo(() => profiles.filter((profile) => profile.status === 'inactive' && profile.owner_role === 'advertiser' && (!search.trim() || `${profile.name || ''} ${profile.owner_email || ''} ${profile.city || ''}`.toLocaleLowerCase().includes(search.toLocaleLowerCase()))), [profiles, search])
 
   useEffect(() => {
     fetch('/api/admin/profiles?page=1&perPage=50', { credentials: 'include', cache: 'no-store' })
@@ -31,6 +36,10 @@ export default function AdminEmailsPage() {
       .then((data: { items?: ProfileRow[] } | null) => setProfiles(data?.items || []))
       .catch(() => toast.error('Não foi possível carregar as destinatárias.'))
       .finally(() => setLoading(false))
+    fetch('/api/admin/emails?page=1&perPage=10', { credentials: 'include', cache: 'no-store' })
+      .then((response) => response.json())
+      .then((data: { items?: HistoryItem[]; configured?: boolean; resendConfigured?: boolean }) => { setHistory(data.items || []); setLogsConfigured(data.configured !== false); setResendConfigured(data.resendConfigured !== false) })
+      .catch(() => setLogsConfigured(false))
   }, [])
 
   useEffect(() => {
@@ -56,6 +65,12 @@ export default function AdminEmailsPage() {
       const data = await response.json().catch(() => ({})) as { message?: string; error?: string }
       if (!response.ok) throw new Error(data.error || 'Não foi possível enviar o email.')
       toast.success(data.message || 'Email enviado individualmente.')
+      const [updatedPreview, updatedHistory] = await Promise.all([
+        fetch(`/api/admin/profiles/${encodeURIComponent(profileId)}/reminder`, { credentials: 'include', cache: 'no-store' }).then((response) => response.ok ? response.json() : null),
+        fetch('/api/admin/emails?page=1&perPage=10', { credentials: 'include', cache: 'no-store' }).then((response) => response.json()),
+      ])
+      if (updatedPreview) setPreview(updatedPreview)
+      setHistory(updatedHistory.items || [])
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Não foi possível enviar o email.')
     } finally { setSending(false) }
@@ -72,23 +87,26 @@ export default function AdminEmailsPage() {
       <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
         <aside className="rounded-xl border border-slate-700 bg-slate-800/40 p-4">
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">Templates</h2>
-          {TEMPLATES.map((item) => <button key={item.id} type="button" onClick={() => setTemplate(item.id)} className={`w-full rounded-lg border p-3 text-left ${template === item.id ? 'border-primary-400 bg-primary-500/10' : 'border-slate-700 hover:bg-slate-800'}`}><span className="text-sm font-semibold text-white">{item.label}</span><span className="mt-1 block text-xs text-slate-400">{item.description}</span></button>)}
+      {TEMPLATES.map((item) => <button key={item.id} type="button" aria-pressed={template === item.id} onClick={() => setTemplate(item.id)} className={`w-full rounded-lg border p-3 text-left focus:outline-none focus:ring-2 focus:ring-primary-400 ${template === item.id ? 'border-primary-400 bg-primary-500/10' : 'border-slate-700 hover:bg-slate-800'}`}><span className="text-sm font-semibold text-white">{item.label}</span><span className="mt-1 block text-xs text-slate-400">{item.description}</span><span className="mt-2 block text-xs text-slate-500">Público: {item.audience} · intervalo: {item.cooldownDays} dias</span></button>)}
         </aside>
 
         <section className="rounded-xl border border-slate-700 bg-slate-800/40 p-5">
           <div className="mb-5 flex items-center gap-2"><Eye className="h-5 w-5 text-primary-400" /><h2 className="text-lg font-semibold text-white">Revisar e enviar</h2></div>
+          <div className="mb-4 flex flex-wrap gap-2 text-xs"><span className={`rounded-full px-2 py-1 ${resendConfigured ? 'bg-emerald-500/15 text-emerald-300' : 'bg-red-500/15 text-red-300'}`}>Resend: {resendConfigured ? 'configurado' : 'não configurado'}</span><span className={`rounded-full px-2 py-1 ${logsConfigured ? 'bg-emerald-500/15 text-emerald-300' : 'bg-amber-500/15 text-amber-300'}`}>Histórico: {logsConfigured ? 'ativo' : 'indisponível'}</span></div>
           <label className="mb-2 block text-sm font-medium text-slate-300" htmlFor="recipient">Destinatária</label>
-          {loading ? <Loader2 className="h-5 w-5 animate-spin text-primary-400" /> : <select id="recipient" value={profileId} onChange={(event) => setProfileId(event.target.value)} className="mb-5 w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-3 text-sm text-white"><option value="">Selecione uma anunciante em rascunho</option>{drafts.map((profile) => <option key={profile.id} value={profile.id}>{profile.name || 'Sem nome'} — rascunho</option>)}</select>}
+          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Pesquisar nome, email ou cidade" className="mb-2 w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-white placeholder:text-slate-500" aria-label="Pesquisar destinatária" />
+          {loading ? <Loader2 className="h-5 w-5 animate-spin text-primary-400" /> : <select id="recipient" value={profileId} onChange={(event) => setProfileId(event.target.value)} className="mb-5 w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-3 text-sm text-white"><option value="">Selecione uma anunciante em rascunho</option>{drafts.map((profile) => <option key={profile.id} value={profile.id}>{profile.name || 'Sem nome'} — {profile.owner_email || 'sem email'} — {profile.city || 'sem cidade'}{profile.publication_reasons?.[0] ? ` — ${profile.publication_reasons[0]}` : ''}</option>)}</select>}
           {previewLoading && <div className="flex items-center gap-2 text-sm text-slate-400"><Loader2 className="h-4 w-4 animate-spin" /> Gerando prévia...</div>}
           {preview && !previewLoading && <>
-            <div className="mb-4 rounded-lg border border-slate-700 bg-slate-900/60 p-3 text-sm"><p className="text-slate-400">Para: <span className="text-white">{preview.recipient}</span></p><p className="mt-1 text-slate-400">Assunto: <span className="text-white">{preview.subject}</span></p></div>
+            <div className="mb-4 rounded-lg border border-slate-700 bg-slate-900/60 p-3 text-sm"><p className="text-slate-400">Template: <span className="text-white">Cadastro de anunciante incompleto</span></p><p className="mt-1 text-slate-400">Para: <span className="text-white">{preview.recipient}</span></p><p className="mt-1 text-slate-400">Assunto: <span className="text-white">{preview.subject}</span></p>{preview.lastSentAt && <p className="mt-1 text-amber-300">Último envio: {new Date(preview.lastSentAt).toLocaleString('pt-BR')} {preview.cooldown?.allowed ? '(pode reenviar)' : `(aguarde ${preview.cooldown?.remainingHours}h)`}</p>}</div>
             <div className="overflow-hidden rounded-lg border border-slate-600 bg-white"><iframe title="Prévia do email" srcDoc={preview.html} sandbox="" className="h-[620px] w-full" /></div>
             <details className="mt-4 rounded-lg border border-slate-700 p-3"><summary className="cursor-pointer text-sm text-slate-300">Ver versão de texto</summary><pre className="mt-3 whitespace-pre-wrap text-xs text-slate-400">{preview.text}</pre></details>
-            <button type="button" onClick={sendEmail} disabled={sending} className="mt-5 inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-3 text-sm font-semibold text-white hover:bg-primary-500 disabled:opacity-50"><Send className="h-4 w-4" />{sending ? 'Enviando...' : 'Confirmar envio individual'}</button>
+            <button type="button" onClick={sendEmail} disabled={sending || preview.cooldown?.allowed === false} className="mt-5 inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-3 text-sm font-semibold text-white hover:bg-primary-500 disabled:opacity-50"><Send className="h-4 w-4" />{sending ? 'Enviando...' : preview.cooldown?.allowed === false ? 'Aguardar para reenviar' : 'Confirmar envio individual'}</button>
           </>}
           {!preview && !previewLoading && <p className="rounded-lg border border-dashed border-slate-700 p-8 text-center text-sm text-slate-500">Selecione uma destinatária para visualizar o email antes do envio.</p>}
         </section>
       </div>
+      <section className="mt-6 rounded-xl border border-slate-700 bg-slate-800/40 p-5"><div className="mb-3 flex items-center justify-between"><h2 className="text-lg font-semibold text-white">Histórico recente</h2>{!logsConfigured && <span className="text-xs text-amber-300">Histórico ainda não configurado</span>}</div>{history.length === 0 ? <p className="text-sm text-slate-500">Nenhum envio registrado.</p> : <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead><tr className="border-b border-slate-700 text-slate-400"><th className="p-2">Data</th><th className="p-2">Template</th><th className="p-2">Destinatária</th><th className="p-2">Status</th></tr></thead><tbody>{history.map((item) => <tr key={item.id} className="border-b border-slate-800"><td className="p-2 text-slate-400">{item.created ? new Date(item.created).toLocaleString('pt-BR') : '-'}</td><td className="p-2 text-slate-300">{item.template || '-'}</td><td className="p-2 text-slate-300">{item.recipient_email || '-'}</td><td className={`p-2 ${item.status === 'sent' ? 'text-emerald-300' : 'text-red-300'}`}>{item.status === 'sent' ? 'Enviado' : item.status || '-'}</td></tr>)}</tbody></table></div>}</section>
     </div>
   )
 }
