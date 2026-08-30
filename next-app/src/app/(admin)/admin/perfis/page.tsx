@@ -16,6 +16,7 @@ interface ProfileRow {
   verified?: boolean
   created?: string
   thumbnail?: string
+  owner_role?: string
   publication_label?: string
   publication_tone?: 'success' | 'danger' | 'warning' | 'muted'
   publication_reasons?: string[]
@@ -111,6 +112,7 @@ export default function AdminPerfisPage() {
                 <tr>
                   <th className="p-4 font-medium text-slate-300">Foto</th>
                   <th className="p-4 font-medium text-slate-300">Nome</th>
+                  <th className="p-4 font-medium text-slate-300">Tipo de conta</th>
                   <th className="p-4 font-medium text-slate-300">Cidade/UF</th>
                   <th className="p-4 font-medium text-slate-300">Categoria</th>
                   <th className="p-4 font-medium text-slate-300">Plano</th>
@@ -122,7 +124,7 @@ export default function AdminPerfisPage() {
               <tbody className="divide-y divide-slate-700/50">
                 {data?.items.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="p-8 text-center text-slate-500">
+                  <td colSpan={9} className="p-8 text-center text-slate-500">
                       Nenhum perfil encontrado.
                     </td>
                   </tr>
@@ -141,6 +143,7 @@ export default function AdminPerfisPage() {
                         )}
                       </td>
                       <td className="p-4 font-medium text-white">{p.name ?? '-'}</td>
+                      <td className="p-4"><span className="rounded-full bg-primary-500/15 px-2 py-1 text-xs font-semibold text-primary-300">Anunciante</span></td>
                       <td className="p-4 text-slate-300">{p.city}, {p.state}</td>
                       <td className="p-4 text-slate-300">{p.category ?? '-'}</td>
                       <td className="p-4 text-slate-300">{p.plan ?? '-'}</td>

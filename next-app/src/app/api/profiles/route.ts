@@ -10,6 +10,8 @@ import {
 import { getAuthCookieFromHeader, getUserIdFromToken } from '@/lib/auth-cookie'
 import { getProfileDraftValidationError } from '@/lib/profile-publication.mjs'
 import { normalizePublicProfileSlug } from '@/lib/profile-slug.mjs'
+import { getAdminToken } from '@/lib/pocketbase-admin'
+import { isAdvertiserRole } from '@/lib/advertiser-profile-access.mjs'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 const PUBLIC_CACHE_CONTROL = 'public, max-age=10, s-maxage=20, stale-while-revalidate=60'
@@ -154,6 +156,17 @@ export async function POST(request: NextRequest) {
   if (!userId) return Response.json({ error: 'Token inválido' }, { status: 401 })
 
   try {
+    const roleToken = (await getAdminToken()) || token
+    const ownerRes = await fetch(
+      `${PB_URL}/api/collections/users/records/${encodeURIComponent(userId)}?fields=id,role`,
+      { headers: { Authorization: `Bearer ${roleToken}` }, cache: 'no-store' },
+    )
+    if (!ownerRes.ok) return Response.json({ error: 'Não foi possível validar o tipo da conta.' }, { status: 503 })
+    const owner = (await ownerRes.json()) as { role?: unknown }
+    if (!isAdvertiserRole(owner.role)) {
+      return Response.json({ error: 'Somente contas anunciantes podem criar perfis de anúncio.' }, { status: 403 })
+    }
+
     const existing = await getProfileByUserId(userId, token)
     if (existing) return Response.json(existing)
 

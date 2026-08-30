@@ -1053,11 +1053,11 @@
       "name": "profiles",
       "type": "base",
       "authRule": null,
-      "listRule": "status = \"active\"",
-      "viewRule": "",
-      "createRule": "user = @request.auth.id && @request.body.status = \"inactive\"",
-      "updateRule": "(user = @request.auth.id && @request.body.status:changed = false) || @request.auth.role = \"admin\"",
-      "deleteRule": "user = @request.auth.id || @request.auth.role = \"admin\"",
+      "listRule": "status = \"active\" && user.role = \"advertiser\"",
+      "viewRule": "status = \"active\" && user.role = \"advertiser\"",
+      "createRule": "user = @request.auth.id && @request.auth.role = \"advertiser\" && @request.body.status = \"inactive\"",
+      "updateRule": "(user = @request.auth.id && @request.auth.role = \"advertiser\" && @request.body.status:changed = false) || @request.auth.role = \"admin\"",
+      "deleteRule": "(user = @request.auth.id && @request.auth.role = \"advertiser\") || @request.auth.role = \"admin\"",
       "schema": [
         {
           "autogeneratePattern": "[a-z0-9]{15}",

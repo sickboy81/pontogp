@@ -342,6 +342,7 @@ export async function getProfiles(options: {
   const policy = await getProfileVisibilityPolicy()
   const lifecycleFilter = buildLifecycleFilter(policy)
   const parts: string[] = []
+  parts.push('user.role = "advertiser"')
   Object.entries(filters).forEach(([key, val]) => {
     if (key === 'min_age' || key === 'max_age' || key === 'search' || key === 'location' || key === 'content' || key === 'min_price' || key === 'max_price') return
     const k = key === 'user_id' ? 'user' : key
@@ -473,11 +474,12 @@ export async function getProfile(id: string): Promise<Profile | null> {
     const policy = await getProfileVisibilityPolicy()
     const now = new Date()
     const res = await fetch(
-      `${PB_URL}/api/collections/profiles/records/${id}?expand=photos,videos,audio,plan`,
+      `${PB_URL}/api/collections/profiles/records?filter=${encodeURIComponent(`id = "${escapeDoubleQuotes(id)}" && user.role = "advertiser"`)}&perPage=1&expand=photos,videos,audio,plan`,
       { cache: 'no-store' }
     )
     if (!res.ok) return null
-    const record = await res.json()
+    const data = await res.json()
+    const record = data.items?.[0]
     const mapped = mapProfile(record)
     if (!mapped) return null
     if (!isPublicProfileStatus(mapped.status)) return null
@@ -498,7 +500,7 @@ export async function getProfileBySlug(slug: string): Promise<Profile | null> {
   try {
     const policy = await getProfileVisibilityPolicy()
     const now = new Date()
-    const filter = `slug = "${slug}"`
+    const filter = `slug = "${slug}" && user.role = "advertiser"`
     const res = await fetch(
       `${PB_URL}/api/collections/profiles/records?filter=${encodeURIComponent(filter)}&perPage=1&expand=photos,videos,audio,plan`,
     { cache: 'no-store' }
@@ -535,7 +537,7 @@ export async function getProfileSitemapRecords(): Promise<ProfileSitemapRecord[]
 
     do {
       const res = await fetch(
-        `${PB_URL}/api/collections/profiles/records?page=${page}&perPage=500&fields=id,slug,display_mode,updated&filter=${encodeURIComponent(lifecycleFilter)}`,
+        `${PB_URL}/api/collections/profiles/records?page=${page}&perPage=500&fields=id,slug,display_mode,updated&filter=${encodeURIComponent(`user.role = "advertiser" && (${lifecycleFilter})`)}`,
         { next: { revalidate: 300 } }
       )
       if (!res.ok) return []

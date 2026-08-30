@@ -58,14 +58,26 @@ if (users?.updateRule !== expectedUserUpdateRule) {
 }
 
 const expectedProfileCreateRule =
-  'user = @request.auth.id && @request.body.status = "inactive"'
+  'user = @request.auth.id && @request.auth.role = "advertiser" && @request.body.status = "inactive"'
 const expectedProfileUpdateRule =
-  '(user = @request.auth.id && @request.body.status:changed = false) || @request.auth.role = "admin"'
+  '(user = @request.auth.id && @request.auth.role = "advertiser" && @request.body.status:changed = false) || @request.auth.role = "admin"'
+const expectedProfileListRule = 'status = "active" && user.role = "advertiser"'
+const expectedProfileViewRule = 'status = "active" && user.role = "advertiser"'
+const expectedProfileDeleteRule = '(user = @request.auth.id && @request.auth.role = "advertiser") || @request.auth.role = "admin"'
+if (profiles?.listRule !== expectedProfileListRule) {
+  failures.push('regra de listagem de profiles deve exigir perfil ativo de anunciante')
+}
+if (profiles?.viewRule !== expectedProfileViewRule) {
+  failures.push('regra de visualização de profiles deve exigir perfil ativo de anunciante')
+}
 if (profiles?.createRule !== expectedProfileCreateRule) {
   failures.push('regra de criação de profiles não obriga status inactive')
 }
 if (profiles?.updateRule !== expectedProfileUpdateRule) {
   failures.push('regra de atualização de profiles permite alteração direta de status')
+}
+if (profiles?.deleteRule !== expectedProfileDeleteRule) {
+  failures.push('regra de exclusão de profiles deve limitar a conta anunciante ou admin')
 }
 
 const storyLikes = collections.get('story_likes')

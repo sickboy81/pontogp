@@ -9,9 +9,12 @@ const nextAppRoot = join(scriptDir, '..')
 const repoRoot = join(nextAppRoot, '..')
 
 const PROFILE_CREATE_RULE =
-  'user = @request.auth.id && @request.body.status = "inactive"'
+  'user = @request.auth.id && @request.auth.role = "advertiser" && @request.body.status = "inactive"'
 const PROFILE_UPDATE_RULE =
-  '(user = @request.auth.id && @request.body.status:changed = false) || @request.auth.role = "admin"'
+  '(user = @request.auth.id && @request.auth.role = "advertiser" && @request.body.status:changed = false) || @request.auth.role = "admin"'
+const PROFILE_LIST_RULE = 'status = "active" && user.role = "advertiser"'
+const PROFILE_VIEW_RULE = 'status = "active" && user.role = "advertiser"'
+const PROFILE_DELETE_RULE = '(user = @request.auth.id && @request.auth.role = "advertiser") || @request.auth.role = "admin"'
 
 function loadEnv(dir) {
   const path = join(dir, '.env')
@@ -71,6 +74,9 @@ async function main() {
     body: JSON.stringify({
       createRule: PROFILE_CREATE_RULE,
       updateRule: PROFILE_UPDATE_RULE,
+      listRule: PROFILE_LIST_RULE,
+      viewRule: PROFILE_VIEW_RULE,
+      deleteRule: PROFILE_DELETE_RULE,
     }),
   })
 
@@ -81,8 +87,11 @@ async function main() {
 
   const collection = await response.json()
   if (
+    collection.listRule !== PROFILE_LIST_RULE ||
+    collection.viewRule !== PROFILE_VIEW_RULE ||
     collection.createRule !== PROFILE_CREATE_RULE ||
     collection.updateRule !== PROFILE_UPDATE_RULE
+    || collection.deleteRule !== PROFILE_DELETE_RULE
   ) {
     throw new Error('PocketBase respondeu sem confirmar as regras esperadas.')
   }

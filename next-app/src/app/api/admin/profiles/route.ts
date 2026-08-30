@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { requireAdmin } from '@/lib/api/admin-auth'
 import { getAdminToken } from '@/lib/pocketbase-admin'
 import { getAdminProfileStatus } from '@/lib/admin-profile-status.mjs'
+import { filterAdvertiserProfiles } from '@/lib/advertiser-profile-access.mjs'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
@@ -17,7 +18,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const res = await fetch(
-      `${PB_URL}/api/collections/profiles/records?page=${page}&perPage=${perPage}&sort=-created&expand=photos&fields=id,user,name,city,state,category,plan,status,verified,created,bio,whatsapp,telegram,phone,show_whatsapp,show_telegram,show_phone,expand.photos.id,expand.photos.file,expand.photos.collectionId`,
+      `${PB_URL}/api/collections/profiles/records?page=${page}&perPage=${perPage}&sort=-created&filter=${encodeURIComponent('user.role = "advertiser"')}&expand=user,photos&fields=id,user,name,city,state,category,plan,status,verified,created,bio,whatsapp,telegram,phone,show_whatsapp,show_telegram,show_phone,expand.user.id,expand.user.role,expand.photos.id,expand.photos.file,expand.photos.collectionId`,
       {
         headers: { Authorization: `Bearer ${(await getAdminToken()) || auth.token}` },
         cache: 'no-store',
@@ -25,7 +26,8 @@ export async function GET(request: NextRequest) {
     )
     if (!res.ok) return Response.json({ items: [], totalItems: 0 })
     const data = await res.json()
-    const items = (data.items || []).map((r: Record<string, unknown>) => {
+    const rawItems = filterAdvertiserProfiles(data.items || []) as Record<string, unknown>[]
+    const items = rawItems.map((r: Record<string, unknown>) => {
       const expand = r.expand as Record<string, unknown> | undefined
       const photos = expand?.photos as Array<{ collectionId?: string; id?: string; file?: string }> | undefined
       const firstPhoto = Array.isArray(photos) && photos.length > 0 ? photos[0] : undefined
@@ -36,6 +38,7 @@ export async function GET(request: NextRequest) {
       return {
         id: r.id,
         user_id: r.user,
+        owner_role: (expand?.user as Record<string, unknown> | undefined)?.role,
         name: r.name,
         city: r.city,
         state: r.state,
@@ -52,7 +55,7 @@ export async function GET(request: NextRequest) {
     })
     return Response.json({
       items,
-      totalItems: data.totalItems ?? items.length,
+      totalItems: rawItems.length === (data.items || []).length ? (data.totalItems ?? items.length) : items.length,
       page,
       perPage,
     })
