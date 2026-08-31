@@ -447,7 +447,7 @@ export default function SiteHeader() {
             {mainNav}
             {isAuthenticated ? (
               <>
-                <Link href="/register?tipo=advertiser" className="rounded-lg border border-primary-500/60 px-4 py-2 text-primary-300 hover:bg-primary-500/10" onClick={closeAll}>Anunciar grátis</Link>
+                <Link href="/register?tipo=advertiser" className="rounded-lg bg-primary-600 px-4 py-2 text-center font-semibold text-white hover:bg-primary-500" onClick={closeAll}>Anunciar grátis</Link>
                 <Link href="/favoritos" className="text-slate-300 hover:text-white" onClick={closeAll}>Favoritos</Link>
                 <Link href="/mensagens" className="text-slate-300 hover:text-white" onClick={closeAll}>Mensagens</Link>
                 <Link href="/notificacoes" className="text-slate-300 hover:text-white" onClick={closeAll}>Notificações</Link>
