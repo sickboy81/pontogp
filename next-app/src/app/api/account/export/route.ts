@@ -1,7 +1,8 @@
 import { NextRequest } from 'next/server'
-import { getAuthCookieFromHeader, getUserIdFromToken } from '@/lib/auth-cookie'
+import { getAuthCookieFromHeader } from '@/lib/auth-cookie'
 import { getAdminToken } from '@/lib/pocketbase-admin'
 import { getClientIp } from '@/lib/rate-limit.mjs'
+import { authorizeSession } from '@/lib/authenticated-session.mjs'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 export const dynamic = 'force-dynamic'
@@ -9,10 +10,9 @@ const q = (field: string, id: string) => encodeURIComponent(`${field} = "${id.re
 
 export async function GET(request: NextRequest) {
   const token = getAuthCookieFromHeader(request.headers.get('cookie'))
-  const userId = token ? getUserIdFromToken(token) : null
-  const adminToken = await getAdminToken()
-  if (!userId) return Response.json({ error: 'Não autorizado' }, { status: 401 })
-  if (!adminToken) return Response.json({ error: 'Serviço indisponível.' }, { status: 503 })
+  const auth = await authorizeSession({ pbUrl: PB_URL, sessionToken: token, getAdminTokenImpl: getAdminToken })
+  if (!auth.ok) return Response.json({ error: auth.error }, { status: auth.status })
+  const { userId, adminToken } = auth
   const headers = { Authorization: `Bearer ${adminToken}` }
   const one = (collection: string, field: string) => fetch(`${PB_URL}/api/collections/${collection}/records?filter=${q(field, userId)}&perPage=500`, { headers, cache: 'no-store' }).then(async r => r.ok ? (await r.json()).items || [] : [])
   const [userRes, profiles, payments, favorites, notifications, sentMessages, receivedMessages] = await Promise.all([

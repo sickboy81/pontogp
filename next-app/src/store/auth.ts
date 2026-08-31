@@ -18,26 +18,6 @@ interface AuthState {
   refresh: () => Promise<void>
 }
 
-export function getLoginErrorMessage(error: unknown): string {
-  const err = error as { status?: number; response?: { message?: string } } | null
-  const status = err?.status
-
-  if (status === 400 || status === 401) {
-    return 'Email ou senha incorretos. Confira seus dados e tente novamente.'
-  }
-  if (status === 403) {
-    return 'Confirme seu email antes de entrar. Se não recebeu a mensagem, solicite um novo email de confirmação.'
-  }
-  if (status === 429) {
-    return 'Muitas tentativas de login. Aguarde alguns minutos e tente novamente.'
-  }
-  if (status === 0 || !status) {
-    return 'Não foi possível conectar ao servidor. Verifique sua internet e tente novamente.'
-  }
-
-  return 'Não foi possível entrar agora. Tente novamente em instantes.'
-}
-
 function mapPbUser(pbUser: Record<string, unknown>): User {
   const name = (pbUser.name as string) || ''
   const parts = name.split(' ')
@@ -148,3 +128,4 @@ export const useAuthStore = create<AuthState>()(
 )
 
 export { isAdminRole } from '@/lib/auth-roles'
+export { getLoginErrorMessage } from '@/lib/login-error.mjs'

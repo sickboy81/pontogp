@@ -10,8 +10,9 @@ import { getAdminToken } from '@/lib/pocketbase-admin'
 import { mapMessage } from '@/lib/api/messages'
 import { enforceUserRateLimit, RATE_LIMIT_POLICIES } from '@/lib/api-rate-limit.mjs'
 import type { Message } from '@/lib/types'
-import { validateMessageInput } from '@/lib/message-input.mjs'
+import { canMessageAccountRoles, validateMessageInput } from '@/lib/message-input.mjs'
 import { sendWebPushToUser } from '@/lib/web-push.mjs'
+import { authorizeSession } from '@/lib/authenticated-session.mjs'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
@@ -67,9 +68,9 @@ function blockKey(a: string, b: string): [string, string] {
 /** POST: envia uma mensagem. Body: { recipient_id, content }. Verifica message_blocks; cria notificação para o destinatário. */
 export async function POST(request: NextRequest) {
   const token = getToken(request)
-  if (!token) return Response.json({ error: 'Não autorizado' }, { status: 401 })
-  const userId = getUserIdFromToken(token)
-  if (!userId) return Response.json({ error: 'Token inválido' }, { status: 401 })
+  const auth = await authorizeSession({ pbUrl: PB_URL, sessionToken: token, getAdminTokenImpl: getAdminToken })
+  if (!auth.ok) return Response.json({ error: auth.error }, { status: auth.status })
+  const { userId, user, adminToken } = auth
   const limited = enforceUserRateLimit(request, 'message-send', userId, RATE_LIMIT_POLICIES.write)
   if (limited) return limited
 
@@ -88,11 +89,20 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: 'Mensagem inválida.' }, { status: 400 })
     }
 
+    const recipientRes = await fetch(
+      `${PB_URL}/api/collections/users/records/${encodeURIComponent(recipientId)}?fields=id,role`,
+      { headers: { Authorization: `Bearer ${adminToken}` }, cache: 'no-store' },
+    )
+    const recipient = recipientRes.ok ? await recipientRes.json() as { role?: string } : null
+    if (!recipient || !canMessageAccountRoles(user.role, recipient.role)) {
+      return Response.json({ error: 'Mensagens são permitidas apenas entre usuários e anunciantes.' }, { status: 403 })
+    }
+
     const [userA, userB] = blockKey(userId, recipientId)
     const blockFilter = `user_a = "${userA}" && user_b = "${userB}" && blocked = true`
     const blockRes = await fetch(
       `${PB_URL}/api/collections/message_blocks/records?perPage=1&filter=${encodeURIComponent(blockFilter)}`,
-      { headers: { Authorization: `Bearer ${await getAdminToken() || token}` }, cache: 'no-store' }
+      { headers: { Authorization: `Bearer ${adminToken}` }, cache: 'no-store' }
     )
     if (blockRes.ok) {
       const blockData = await blockRes.json()
@@ -126,7 +136,6 @@ export async function POST(request: NextRequest) {
     }
     const record = (await res.json()) as Record<string, unknown>
 
-    const adminToken = await getAdminToken()
     if (adminToken) {
       try {
         await fetch(`${PB_URL}/api/collections/notifications/records`, {

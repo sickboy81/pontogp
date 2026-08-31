@@ -1,7 +1,8 @@
 import { NextRequest } from 'next/server'
-import { getAuthCookieFromHeader, getUserIdFromToken } from '@/lib/auth-cookie'
+import { getAuthCookieFromHeader } from '@/lib/auth-cookie'
 import { getAdminToken } from '@/lib/pocketbase-admin'
 import { normalizeNotificationPreferences, selectCurrentPlan } from '@/lib/account-settings.mjs'
+import { authorizeSession } from '@/lib/authenticated-session.mjs'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 export const dynamic = 'force-dynamic'
@@ -10,15 +11,13 @@ function filter(field: string, userId: string) { return encodeURIComponent(`${fi
 
 async function getContext(request: NextRequest) {
   const token = getAuthCookieFromHeader(request.headers.get('cookie'))
-  const userId = token ? getUserIdFromToken(token) : null
-  const adminToken = await getAdminToken()
-  return { userId, adminToken }
+  return authorizeSession({ pbUrl: PB_URL, sessionToken: token, getAdminTokenImpl: getAdminToken })
 }
 
 export async function GET(request: NextRequest) {
-  const { userId, adminToken } = await getContext(request)
-  if (!userId) return Response.json({ error: 'Não autorizado' }, { status: 401 })
-  if (!adminToken) return Response.json({ error: 'Serviço indisponível.' }, { status: 503 })
+  const auth = await getContext(request)
+  if (!auth.ok) return Response.json({ error: auth.error }, { status: auth.status })
+  const { userId, adminToken } = auth
   const headers = { Authorization: `Bearer ${adminToken}` }
   const [profilesRes, paymentsRes, preferencesRes, eventsRes, pushRes] = await Promise.all([
     fetch(`${PB_URL}/api/collections/profiles/records?filter=${filter('user', userId)}&perPage=1&fields=id,plan,search_expires_at,contact_expires_at,status`, { headers, cache: 'no-store' }),
@@ -34,9 +33,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
-  const { userId, adminToken } = await getContext(request)
-  if (!userId) return Response.json({ error: 'Não autorizado' }, { status: 401 })
-  if (!adminToken) return Response.json({ error: 'Serviço indisponível.' }, { status: 503 })
+  const auth = await getContext(request)
+  if (!auth.ok) return Response.json({ error: auth.error }, { status: auth.status })
+  const { userId, adminToken } = auth
   const body = await request.json().catch(() => null)
   const preferences = normalizeNotificationPreferences(body || {})
   const headers = { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' }

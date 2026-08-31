@@ -52,3 +52,10 @@ test('admin API requests use the shared admin policy in the proxy', async () => 
   assertUsesPolicy(content, 'enforceUserRateLimit', 'admin')
   assert.match(content, /pathname\.startsWith\(['"]\/api\/admin\/['"]\)/)
 })
+
+test('account, notifications and payment history require an authenticated page session', async () => {
+  const content = await source('proxy.ts')
+  for (const path of ['/conta', '/notificacoes', '/pagamentos']) {
+    assert.match(content, new RegExp(`['"]${path}['"]`), `${path} deve estar em PROTECTED_PREFIXES`)
+  }
+})

@@ -1,5 +1,5 @@
-export function canViewUserProfile(viewer, profileId, viewerId) {
-  return viewer?.role === 'advertiser' && Boolean(profileId) && profileId !== viewerId
+export function canViewUserProfile(viewer, target, profileId, viewerId) {
+  return viewer?.role === 'advertiser' && target?.role === 'user' && Boolean(profileId) && profileId !== viewerId
 }
 
 export function toPublicUserProfile(user = {}) {

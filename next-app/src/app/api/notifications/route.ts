@@ -1,7 +1,8 @@
 import { NextRequest } from 'next/server'
-import { getAuthCookieFromHeader, getUserIdFromToken } from '@/lib/auth-cookie'
+import { getAuthCookieFromHeader } from '@/lib/auth-cookie'
 import { getAdminToken } from '@/lib/pocketbase-admin'
 import { getPlanLifecycleEvents } from '@/lib/plan-reminder.mjs'
+import { authorizeSession } from '@/lib/authenticated-session.mjs'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
@@ -59,9 +60,9 @@ async function ensureLifecycleNotifications(userId: string, adminToken: string) 
 /** GET: lista notificações do usuário logado. Query: page=1, perPage=20, unreadOnly=false. */
 export async function GET(request: NextRequest) {
   const token = getToken(request)
-  if (!token) return Response.json({ error: 'Não autorizado' }, { status: 401 })
-  const userId = getUserIdFromToken(token)
-  if (!userId) return Response.json({ error: 'Token inválido' }, { status: 401 })
+  const auth = await authorizeSession({ pbUrl: PB_URL, sessionToken: token, getAdminTokenImpl: getAdminToken })
+  if (!auth.ok) return Response.json({ error: auth.error }, { status: auth.status })
+  const { userId, adminToken } = auth
 
   const page = Math.max(1, Number(request.nextUrl.searchParams.get('page')) || 1)
   const perPage = Math.min(50, Math.max(1, Number(request.nextUrl.searchParams.get('perPage')) || 20))
@@ -72,8 +73,7 @@ export async function GET(request: NextRequest) {
     : `recipient = "${userId}"`
 
   try {
-    const adminToken = await getAdminToken()
-    if (adminToken) await ensureLifecycleNotifications(userId, adminToken)
+    await ensureLifecycleNotifications(userId, adminToken)
     const res = await fetch(
       `${PB_URL}/api/collections/notifications/records?page=${page}&perPage=${perPage}&filter=${encodeURIComponent(filter)}`,
       { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' }

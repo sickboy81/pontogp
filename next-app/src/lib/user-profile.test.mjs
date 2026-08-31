@@ -3,9 +3,14 @@ import assert from 'node:assert/strict'
 import { canViewUserProfile, toPublicUserProfile } from './user-profile.mjs'
 
 test('only advertisers can view another users profile', () => {
-  assert.equal(canViewUserProfile({ role: 'advertiser' }, 'other-id', 'viewer-id'), true)
-  assert.equal(canViewUserProfile({ role: 'user' }, 'other-id', 'viewer-id'), false)
-  assert.equal(canViewUserProfile({ role: 'advertiser' }, 'viewer-id', 'viewer-id'), false)
+  assert.equal(canViewUserProfile({ role: 'advertiser' }, { role: 'user' }, 'other-id', 'viewer-id'), true)
+  assert.equal(canViewUserProfile({ role: 'user' }, { role: 'user' }, 'other-id', 'viewer-id'), false)
+  assert.equal(canViewUserProfile({ role: 'advertiser' }, { role: 'user' }, 'viewer-id', 'viewer-id'), false)
+})
+
+test('never exposes advertiser or administrator accounts as regular user profiles', () => {
+  assert.equal(canViewUserProfile({ role: 'advertiser' }, { role: 'advertiser' }, 'other-id', 'viewer-id'), false)
+  assert.equal(canViewUserProfile({ role: 'advertiser' }, { role: 'admin' }, 'other-id', 'viewer-id'), false)
 })
 
 test('public user profile includes optional details but excludes private account fields', () => {

@@ -1,7 +1,9 @@
 import { NextRequest } from 'next/server'
-import { getAuthCookieFromHeader, getUserIdFromToken } from '@/lib/auth-cookie'
+import { getAuthCookieFromHeader } from '@/lib/auth-cookie'
 import { getAdminToken } from '@/lib/pocketbase-admin'
 import { blockKey } from '@/lib/story-moderation.mjs'
+import { authorizeSession } from '@/lib/authenticated-session.mjs'
+import { canMessageAccountRoles } from '@/lib/message-input.mjs'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
@@ -14,15 +16,19 @@ function getToken(request: NextRequest): string | null {
 /** GET: verifica se a conversa está bloqueada. Query: otherUserId= */
 export async function GET(request: NextRequest) {
   const token = getToken(request)
-  if (!token) return Response.json({ error: 'Não autorizado' }, { status: 401 })
-  const userId = getUserIdFromToken(token)
-  if (!userId) return Response.json({ error: 'Token inválido' }, { status: 401 })
+  const auth = await authorizeSession({ pbUrl: PB_URL, sessionToken: token, getAdminTokenImpl: getAdminToken })
+  if (!auth.ok) return Response.json({ error: auth.error }, { status: auth.status })
+  const { userId, adminToken } = auth
 
   const otherUserId = request.nextUrl.searchParams.get('otherUserId')
   if (!otherUserId) return Response.json({ error: 'otherUserId obrigatório' }, { status: 400 })
 
+  const otherRes = await fetch(`${PB_URL}/api/collections/users/records/${encodeURIComponent(otherUserId)}?fields=id,role`, { headers: { Authorization: `Bearer ${adminToken}` }, cache: 'no-store' })
+  const other = otherRes.ok ? await otherRes.json() as { role?: string } : null
+  if (!other || !canMessageAccountRoles(auth.user.role, other.role)) return Response.json({ blocked: false })
+
   const [userA, userB] = blockKey(userId, otherUserId)
-  const authorization = `Bearer ${await getAdminToken() || token}`
+  const authorization = `Bearer ${adminToken}`
   try {
     const filter = `user_a = "${userA}" && user_b = "${userB}"`
     const res = await fetch(
@@ -41,17 +47,21 @@ export async function GET(request: NextRequest) {
 /** POST: bloquear ou desbloquear. Body: { otherUserId, block: boolean } */
 export async function POST(request: NextRequest) {
   const token = getToken(request)
-  if (!token) return Response.json({ error: 'Não autorizado' }, { status: 401 })
-  const userId = getUserIdFromToken(token)
-  if (!userId) return Response.json({ error: 'Token inválido' }, { status: 401 })
+  const auth = await authorizeSession({ pbUrl: PB_URL, sessionToken: token, getAdminTokenImpl: getAdminToken })
+  if (!auth.ok) return Response.json({ error: auth.error }, { status: auth.status })
+  const { userId, adminToken } = auth
 
   const body = (await request.json()) as { otherUserId?: string; block?: boolean }
   const otherUserId = body?.otherUserId
   const block = body?.block === true
   if (!otherUserId) return Response.json({ error: 'otherUserId obrigatório' }, { status: 400 })
 
+  const otherRes = await fetch(`${PB_URL}/api/collections/users/records/${encodeURIComponent(otherUserId)}?fields=id,role`, { headers: { Authorization: `Bearer ${adminToken}` }, cache: 'no-store' })
+  const other = otherRes.ok ? await otherRes.json() as { role?: string } : null
+  if (!other || !canMessageAccountRoles(auth.user.role, other.role)) return Response.json({ error: 'Esta conversa não é permitida para estes tipos de conta.' }, { status: 403 })
+
   const [userA, userB] = blockKey(userId, otherUserId)
-  const authorization = `Bearer ${await getAdminToken() || token}`
+  const authorization = `Bearer ${adminToken}`
   try {
     const filter = `user_a = "${userA}" && user_b = "${userB}"`
     const listRes = await fetch(

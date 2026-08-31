@@ -8,7 +8,16 @@ import {
 } from '@/lib/api-rate-limit.mjs'
 import { resolveHomeRedirectPath } from '@/lib/seo-home'
 
-const PROTECTED_PREFIXES = ['/dashboard', '/mensagens', '/diretrizes-fotos-videos', '/admin', '/favoritos']
+const PROTECTED_PREFIXES = [
+  '/dashboard',
+  '/mensagens',
+  '/diretrizes-fotos-videos',
+  '/admin',
+  '/favoritos',
+  '/conta',
+  '/notificacoes',
+  '/pagamentos',
+]
 
 function isProtected(pathname: string): boolean {
   return PROTECTED_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + '/'))

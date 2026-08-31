@@ -1,7 +1,9 @@
 import { NextRequest } from 'next/server'
-import { getAuthCookieFromHeader, getUserIdFromToken, isAuthTokenExpired } from '@/lib/auth-cookie'
+import { getAuthCookieFromHeader } from '@/lib/auth-cookie'
 import { getProfileByUserId } from '@/lib/api/profiles'
 import { getAdminToken } from '@/lib/pocketbase-admin'
+import { authorizeSession } from '@/lib/authenticated-session.mjs'
+import { isAdvertiserRole } from '@/lib/advertiser-profile-access.mjs'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
@@ -25,14 +27,13 @@ export async function GET(request: NextRequest) {
   const cookieHeader = request.headers.get('cookie')
   const token = getAuthCookieFromHeader(cookieHeader)
   if (!token) return Response.json(null, { headers: NO_STORE })
-  if (isAuthTokenExpired(token)) return Response.json(null, { headers: NO_STORE })
-  const userId = getUserIdFromToken(token)
-  if (!userId) return Response.json(null, { headers: NO_STORE })
-
-  const adminToken = await getAdminToken()
+  const auth = await authorizeSession({ pbUrl: PB_URL, sessionToken: token, getAdminTokenImpl: getAdminToken })
+  if (!auth.ok) return Response.json({ error: auth.error }, { status: auth.status, headers: NO_STORE })
+  if (!isAdvertiserRole(auth.user.role)) return Response.json({ error: 'Esta área é exclusiva para anunciantes.' }, { status: 403, headers: NO_STORE })
+  const { userId, adminToken } = auth
   let profile
   try {
-    profile = await getProfileByUserId(userId, adminToken || token)
+    profile = await getProfileByUserId(userId, adminToken)
   } catch {
     return Response.json({ error: 'Não foi possível consultar seu perfil agora.' }, { status: 503, headers: NO_STORE })
   }

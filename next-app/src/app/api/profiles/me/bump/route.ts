@@ -1,9 +1,11 @@
 import { NextRequest } from 'next/server'
-import { getAuthCookieFromHeader, getUserIdFromToken } from '@/lib/auth-cookie'
+import { getAuthCookieFromHeader } from '@/lib/auth-cookie'
 import { getProfileByUserId } from '@/lib/api/profiles'
 import { getAdminToken } from '@/lib/pocketbase-admin'
 import { isProfileBumpEligible } from '@/lib/profile-bump-eligibility.mjs'
 import { enforceUserRateLimit, RATE_LIMIT_POLICIES } from '@/lib/api-rate-limit.mjs'
+import { authorizeSession } from '@/lib/authenticated-session.mjs'
+import { isAdvertiserRole } from '@/lib/advertiser-profile-access.mjs'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
@@ -27,14 +29,13 @@ function todayBR(): string {
  */
 export async function POST(request: NextRequest) {
   const token = getAuthCookieFromHeader(request.headers.get('cookie'))
-  if (!token) return Response.json({ error: 'Não autorizado' }, { status: 401 })
-  const userId = getUserIdFromToken(token)
-  if (!userId) return Response.json({ error: 'Token inválido' }, { status: 401 })
+  const auth = await authorizeSession({ pbUrl: PB_URL, sessionToken: token, getAdminTokenImpl: getAdminToken })
+  if (!auth.ok) return Response.json({ error: auth.error }, { status: auth.status })
+  if (!isAdvertiserRole(auth.user.role)) return Response.json({ error: 'Esta ação é exclusiva para anunciantes.' }, { status: 403 })
+  const { userId, adminToken: profileLookupToken } = auth
   const limited = enforceUserRateLimit(request, 'profile-bump', userId, RATE_LIMIT_POLICIES.write)
   if (limited) return limited
 
-  const profileLookupToken = await getAdminToken()
-  if (!profileLookupToken) return Response.json({ error: 'Serviço indisponível' }, { status: 503 })
   const profile = await getProfileByUserId(userId, profileLookupToken)
   if (!profile) return Response.json({ error: 'Perfil não encontrado' }, { status: 404 })
   if (!isProfileBumpEligible(profile)) {

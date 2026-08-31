@@ -1,9 +1,11 @@
 import { NextRequest } from 'next/server'
-import { getAuthCookieFromHeader, getUserIdFromToken, isAuthTokenExpired } from '@/lib/auth-cookie'
+import { getAuthCookieFromHeader } from '@/lib/auth-cookie'
 import { getProfileByUserId } from '@/lib/api/profiles'
 import { getAdminToken } from '@/lib/pocketbase-admin'
 import { analyticsLevelForPlan } from '@/lib/plan-entitlements.mjs'
 import { percentageChange, summarizeFullAnalytics } from '@/lib/profile-analytics.mjs'
+import { authorizeSession } from '@/lib/authenticated-session.mjs'
+import { isAdvertiserRole } from '@/lib/advertiser-profile-access.mjs'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
@@ -81,13 +83,10 @@ async function fetchRows<T>(token: string, collection: string, filter: string, f
 
 export async function GET(request: NextRequest) {
   const token = getAuthCookieFromHeader(request.headers.get('cookie'))
-  if (!token) return Response.json({ error: 'Não autorizado' }, { status: 401 })
-  if (isAuthTokenExpired(token)) return Response.json({ error: 'Sessão expirada' }, { status: 401 })
-  const userId = getUserIdFromToken(token)
-  if (!userId) return Response.json({ error: 'Token inválido' }, { status: 401 })
-
-  const adminToken = await getAdminToken()
-  if (!adminToken) return Response.json({ error: 'Serviço indisponível' }, { status: 503 })
+  const auth = await authorizeSession({ pbUrl: PB_URL, sessionToken: token, getAdminTokenImpl: getAdminToken })
+  if (!auth.ok) return Response.json({ error: auth.error }, { status: auth.status })
+  if (!isAdvertiserRole(auth.user.role)) return Response.json({ error: 'Esta área é exclusiva para anunciantes.' }, { status: 403 })
+  const { userId, adminToken } = auth
   const profile = await getProfileByUserId(userId, adminToken)
   if (!profile) return Response.json({ error: 'Perfil não encontrado' }, { status: 404 })
 

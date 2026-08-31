@@ -1,21 +1,23 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { Menu, X, Home, LogOut, LayoutDashboard, User, MessageCircle, CreditCard, Bell, Settings } from 'lucide-react'
+import { Menu, X, Home, LogOut, LayoutDashboard, User, MessageCircle, CreditCard, Bell, Settings, Heart } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
+import { canAccessAccountPath, getAccountNavigation } from '@/lib/account-navigation.mjs'
 
-const DASHBOARD_TABS = [
+const ALL_DASHBOARD_TABS = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/dashboard/perfil', label: 'Perfil', icon: User },
+  { href: '/favoritos', label: 'Favoritos', icon: Heart },
   { href: '/mensagens', label: 'Mensagens', icon: MessageCircle },
   { href: '/planos', label: 'Planos', icon: CreditCard },
   { href: '/notificacoes', label: 'Notificações', icon: Bell },
   { href: '/conta', label: 'Minha conta', icon: Settings },
 ]
 
-function DashboardTabBar() {
+function DashboardTabBar({ tabs }: { tabs: typeof ALL_DASHBOARD_TABS }) {
   const pathname = usePathname()
   const isActive = (href: string) => {
     if (href === '/dashboard') return pathname === '/dashboard'
@@ -24,7 +26,7 @@ function DashboardTabBar() {
   }
   return (
     <nav className="mb-6 flex flex-wrap gap-1 border-b border-slate-700 pb-4">
-      {DASHBOARD_TABS.map((tab) => (
+      {tabs.map((tab) => (
         <Link
           key={tab.href}
           href={tab.href}
@@ -50,7 +52,16 @@ export default function ProtectedLayout({
   const router = useRouter()
   const pathname = usePathname()
   const logout = useAuthStore((s) => s.logout)
+  const user = useAuthStore((s) => s.user)
+  const sessionValidated = useAuthStore((s) => s.sessionValidated)
   const [menuOpen, setMenuOpen] = useState(false)
+  const allowedHrefs = getAccountNavigation(user?.role)
+  const dashboardTabs = ALL_DASHBOARD_TABS.filter((tab) => allowedHrefs.includes(tab.href))
+  const canAccessPath = !sessionValidated || canAccessAccountPath(user?.role, pathname)
+
+  useEffect(() => {
+    if (sessionValidated && !canAccessPath) router.replace('/dashboard')
+  }, [canAccessPath, router, sessionValidated])
 
   const isDashboardArea =
     pathname === '/dashboard' ||
@@ -89,7 +100,7 @@ export default function ProtectedLayout({
               <>
                 <div className="fixed inset-0 z-40" aria-hidden onClick={closeMenu} />
                 <div className="absolute right-0 top-full z-50 mt-1 w-52 rounded-lg border border-slate-700 bg-slate-800 py-1 shadow-xl">
-                  {DASHBOARD_TABS.map((tab) => (
+                  {dashboardTabs.map((tab) => (
                     <Link key={tab.href} href={tab.href} className="flex items-center gap-2 px-4 py-2 text-sm text-slate-200 hover:bg-slate-700 hover:text-white" onClick={closeMenu}>
                       <tab.icon className="h-4 w-4" />
                       {tab.label}
@@ -111,8 +122,8 @@ export default function ProtectedLayout({
         </div>
       </header>
       <main className="mx-auto max-w-6xl px-4 py-8">
-        {isDashboardArea && <DashboardTabBar />}
-        {children}
+        {isDashboardArea && <DashboardTabBar tabs={dashboardTabs} />}
+        {canAccessPath ? children : <p className="text-sm text-slate-400">Redirecionando para sua área...</p>}
       </main>
     </div>
   )

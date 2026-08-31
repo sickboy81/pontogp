@@ -37,6 +37,7 @@ import {
   hasUnsavedProfileContactChanges,
 } from '@/lib/profile-publication.mjs'
 import { resolveProtectedAccess } from '@/lib/protected-access.mjs'
+import { isAdvertiserRole } from '@/lib/advertiser-profile-access.mjs'
 
 type FormData = {
   name: string
@@ -523,6 +524,11 @@ export default function DashboardPerfilForm() {
     if (oversized) {
       setError(`A foto “${oversized.name}” ultrapassa o limite de 15 MB.`)
       e.target.value = ''
+      return
+    }
+    if (!isAdvertiserRole(authUser?.role)) {
+      router.replace('/dashboard')
+      setLoading(false)
       return
     }
     setPhotoUploading(true)

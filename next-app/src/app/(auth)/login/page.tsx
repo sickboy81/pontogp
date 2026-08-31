@@ -3,10 +3,12 @@
 import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { getLoginErrorMessage, useAuthStore, isAdminRole } from '@/store/auth'
+import { getLoginErrorMessage, useAuthStore } from '@/store/auth'
+import { resolveLoginDestination } from '@/lib/login-destination.mjs'
 import { getPb } from '@/lib/pb'
 import { Eye, EyeOff } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { shouldOfferVerificationResend } from '@/lib/login-error.mjs'
 
 function LoginForm() {
   const router = useRouter()
@@ -27,9 +29,7 @@ function LoginForm() {
   useEffect(() => {
     if (isAuthenticated) {
       const { user } = useAuthStore.getState()
-      const role = user?.role
-      const isAdmin = isAdminRole(role)
-      router.replace(isAdmin ? '/admin' : role === 'advertiser' ? '/dashboard' : callbackUrl)
+      router.replace(resolveLoginDestination(user?.role, callbackUrl))
     }
   }, [isAuthenticated, callbackUrl, router])
 
@@ -45,12 +45,10 @@ function LoginForm() {
       await login(email.toLowerCase().trim(), password)
       toast.success('Login realizado com sucesso!')
       const { user } = useAuthStore.getState()
-      const role = user?.role
-      const isAdmin = isAdminRole(role)
-      router.replace(isAdmin ? '/admin' : role === 'advertiser' ? '/dashboard' : callbackUrl)
+      router.replace(resolveLoginDestination(user?.role, callbackUrl))
     } catch (err: unknown) {
       toast.error(getLoginErrorMessage(err))
-      if ((err as { status?: number })?.status === 403) setUnverifiedEmail(email.toLowerCase().trim())
+      if (shouldOfferVerificationResend(err)) setUnverifiedEmail(email.toLowerCase().trim())
     } finally {
       setLoading(false)
     }
