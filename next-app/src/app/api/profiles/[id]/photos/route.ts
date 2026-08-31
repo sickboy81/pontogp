@@ -4,6 +4,7 @@ import { enforceUserRateLimit, RATE_LIMIT_POLICIES } from '@/lib/api-rate-limit.
 import { imageFileToWatermarkedWebp, isRasterImageMime, resolveImageMime } from '@/lib/server/media-upload'
 import { mapProfile } from '@/lib/api/profiles'
 import { canAddMedia } from '@/lib/plan-entitlements.mjs'
+import { getAdminToken } from '@/lib/pocketbase-admin'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
@@ -16,11 +17,12 @@ function getToken(request: NextRequest): string | null {
 /** Verifica se o usuário é dono do perfil. */
 async function verifyProfileOwnership(
   profileId: string,
-  token: string
+  token: string,
+  lookupToken: string = token,
 ): Promise<{ ok: boolean; photos?: string[]; plan?: string }> {
   const res = await fetch(
     `${PB_URL}/api/collections/profiles/records/${profileId}?fields=id,user,photos,plan`,
-    { headers: { Authorization: `Bearer ${token}` } }
+    { headers: { Authorization: `Bearer ${lookupToken}` }, cache: 'no-store' }
   )
   if (!res.ok) return { ok: false }
   const record = (await res.json()) as { user?: string; photos?: string[]; plan?: string }
@@ -53,7 +55,8 @@ export async function POST(
   const { id: profileId } = await params
   if (!profileId) return Response.json({ error: 'ID do perfil obrigatório' }, { status: 400 })
 
-  const ownership = await verifyProfileOwnership(profileId, token)
+  const lookupToken = (await getAdminToken()) || token
+  const ownership = await verifyProfileOwnership(profileId, token, lookupToken)
   if (!ownership.ok) {
     return Response.json({ error: 'Perfil não encontrado ou sem permissão' }, { status: 404 })
   }
@@ -140,7 +143,7 @@ export async function POST(
     const updated = (await patchRes.json()) as Record<string, unknown>
     const expandedRes = await fetch(
       `${PB_URL}/api/collections/profiles/records/${profileId}?expand=photos,videos,audio,plan`,
-      { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' }
+        { headers: { Authorization: `Bearer ${lookupToken}` }, cache: 'no-store' }
     )
     if (expandedRes.ok) {
       const expanded = (await expandedRes.json()) as Record<string, unknown> & {
@@ -165,7 +168,8 @@ export async function PATCH(
   const { id: profileId } = await params
   if (!profileId) return Response.json({ error: 'ID do perfil obrigatório' }, { status: 400 })
 
-  const ownership = await verifyProfileOwnership(profileId, token)
+  const lookupToken = (await getAdminToken()) || token
+  const ownership = await verifyProfileOwnership(profileId, token, lookupToken)
   if (!ownership.ok) return Response.json({ error: 'Perfil não encontrado ou sem permissão' }, { status: 404 })
 
   try {
@@ -186,7 +190,7 @@ export async function PATCH(
 
     const expandedRes = await fetch(
       `${PB_URL}/api/collections/profiles/records/${profileId}?expand=photos,videos,audio,plan`,
-      { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' }
+        { headers: { Authorization: `Bearer ${lookupToken}` }, cache: 'no-store' }
     )
     if (expandedRes.ok) {
       const expanded = (await expandedRes.json()) as Record<string, unknown> & { expand?: Record<string, unknown> }

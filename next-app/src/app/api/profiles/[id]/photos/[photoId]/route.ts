@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { getAuthCookieFromHeader, getUserIdFromToken } from '@/lib/auth-cookie'
 import { canRemoveProfilePhoto, MIN_PROFILE_PHOTOS } from '@/lib/profile-publication.mjs'
+import { getAdminToken } from '@/lib/pocketbase-admin'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
@@ -13,11 +14,12 @@ function getToken(request: NextRequest): string | null {
 /** Verifica se o usuário é dono do perfil e retorna photos. */
 async function verifyProfileOwnership(
   profileId: string,
-  token: string
+  token: string,
+  lookupToken: string = token,
 ): Promise<{ ok: boolean; photos?: string[]; status?: string }> {
   const res = await fetch(
     `${PB_URL}/api/collections/profiles/records/${profileId}?fields=id,user,photos,status`,
-    { headers: { Authorization: `Bearer ${token}` } }
+    { headers: { Authorization: `Bearer ${lookupToken}` }, cache: 'no-store' }
   )
   if (!res.ok) return { ok: false }
   const record = (await res.json()) as { user?: string; photos?: string[]; status?: string }
@@ -55,7 +57,8 @@ export async function DELETE(
 
   const photoId = extractPhotoId(rawPhotoId)
 
-  const ownership = await verifyProfileOwnership(profileId, token)
+  const lookupToken = (await getAdminToken()) || token
+  const ownership = await verifyProfileOwnership(profileId, token, lookupToken)
   if (!ownership.ok) {
     return Response.json({ error: 'Perfil não encontrado ou sem permissão' }, { status: 404 })
   }
