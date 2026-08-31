@@ -1683,7 +1683,7 @@ export default function DashboardPerfilForm() {
             className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
           />
           <p
-            className={`mt-1 text-xs ${bioLength >= MIN_PROFILE_BIO_LENGTH && !bioQualityError ? 'text-slate-500' : 'text-amber-400'}`}
+            className={`mt-1 text-xs ${bioLength >= MIN_PROFILE_BIO_LENGTH && !bioQualityError ? 'text-slate-500' : 'text-amber-800 dark:text-amber-300'}`}
             aria-live="polite"
           >
             {bioLength}/{MIN_PROFILE_BIO_LENGTH} caracteres.
@@ -1723,7 +1723,7 @@ export default function DashboardPerfilForm() {
         <div className="border-t border-slate-700 pt-4">
           <h3 className="mb-1 font-medium text-slate-300">Contato</h3>
           <p
-            className={`mb-3 text-xs ${hasPublicContact ? 'text-slate-500' : 'text-amber-400'}`}
+            className={`mb-3 text-xs ${hasPublicContact ? 'text-slate-500' : 'text-amber-800 dark:text-amber-300'}`}
             aria-live="polite"
           >
             Telefone, WhatsApp ou Telegram público é obrigatório para publicar. O rascunho pode ser salvo antes.
@@ -2071,7 +2071,7 @@ export default function DashboardPerfilForm() {
               Arraste as fotos para ordenar; a primeira será a principal. Selecione uma ou várias fotos. JPG, PNG ou WebP. Máximo 5 MB por foto. <Link href="/diretrizes-fotos-videos" className="text-primary-400 hover:underline">Ver regras de publicação</Link>.
             </p>
             {profile.status === 'active' && !canRemovePhoto && (
-              <p className="mt-2 text-xs text-amber-300">
+              <p className="mt-2 text-xs text-amber-800 dark:text-amber-300">
                 Para trocar uma das três fotos obrigatórias, adicione a nova foto antes de remover a antiga.
               </p>
             )}
@@ -2777,7 +2777,7 @@ export default function DashboardPerfilForm() {
           </Link>
         </div>
         {profile?.status === 'inactive' && !canPublish && (
-          <p className="mt-3 rounded-lg border border-amber-400/40 bg-amber-500/10 px-3 py-2 text-sm leading-6 text-amber-100">
+          <p className="mt-3 rounded-lg border border-amber-400/40 bg-amber-500/10 px-3 py-2 text-sm leading-6 text-amber-900 dark:text-amber-100">
             Para liberar a publicação, falta:{' '}
             {publicationPendingMessages.length > 0
               ? publicationPendingMessages.join('; ')

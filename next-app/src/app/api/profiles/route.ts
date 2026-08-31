@@ -156,13 +156,26 @@ export async function POST(request: NextRequest) {
   if (!userId) return Response.json({ error: 'Token inválido' }, { status: 401 })
 
   try {
-    const roleToken = (await getAdminToken()) || token
-    const ownerRes = await fetch(
-      `${PB_URL}/api/collections/users/records/${encodeURIComponent(userId)}?fields=id,role`,
-      { headers: { Authorization: `Bearer ${roleToken}` }, cache: 'no-store' },
-    )
-    if (!ownerRes.ok) return Response.json({ error: 'Não foi possível validar o tipo da conta.' }, { status: 503 })
-    const owner = (await ownerRes.json()) as { role?: unknown }
+    let owner: { role?: unknown } | null = null
+    const sessionRes = await fetch(`${PB_URL}/api/collections/users/auth-refresh`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      cache: 'no-store',
+    })
+    if (sessionRes.ok) {
+      const sessionData = await sessionRes.json() as { record?: { id?: string; role?: unknown } }
+      if (sessionData.record?.id === userId) owner = sessionData.record
+    }
+    if (!owner) {
+      const adminToken = await getAdminToken()
+      if (!adminToken) return Response.json({ error: 'Não foi possível validar o tipo da conta. A sessão administrativa do servidor está indisponível.' }, { status: 503 })
+      const ownerRes = await fetch(
+        `${PB_URL}/api/collections/users/records/${encodeURIComponent(userId)}?fields=id,role`,
+        { headers: { Authorization: `Bearer ${adminToken}` }, cache: 'no-store' },
+      )
+      if (!ownerRes.ok) return Response.json({ error: 'Não foi possível validar o tipo da conta no serviço de autenticação.' }, { status: 503 })
+      owner = (await ownerRes.json()) as { role?: unknown }
+    }
     if (!isAdvertiserRole(owner.role)) {
       return Response.json({ error: 'Somente contas anunciantes podem criar perfis de anúncio.' }, { status: 403 })
     }

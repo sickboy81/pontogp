@@ -321,6 +321,16 @@ html.light .text-slate-100 {
   color: #1e293b;
 }
 
+/* Alertas devem permanecer legíveis em superfícies claras. */
+html.light .text-amber-400,
+html.light .text-amber-300,
+html.light .text-amber-200,
+html.light .text-amber-100,
+html.light .text-yellow-400,
+html.light .text-yellow-300 {
+  color: #92400e;
+}
+
 /*
  * Texto branco em superfícies escuras vira escuro no tema claro,
  * exceto em botões/chips com fundo de cor forte (mantém branco).
