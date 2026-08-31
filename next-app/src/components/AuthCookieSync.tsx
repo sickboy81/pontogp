@@ -11,6 +11,7 @@ export default function AuthCookieSync() {
   const token = useAuthStore((s) => s.token)
   const user = useAuthStore((s) => s.user)
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const refresh = useAuthStore((s) => s.refresh)
 
   useEffect(() => {
     if (isAuthenticated && token) {
@@ -43,6 +44,10 @@ export default function AuthCookieSync() {
       }
     }
   }, [isAuthenticated, token, user])
+
+  useEffect(() => {
+    if (isAuthenticated && token) void refresh()
+  }, [isAuthenticated, token, refresh])
 
   return null
 }

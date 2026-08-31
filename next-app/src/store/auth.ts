@@ -11,6 +11,7 @@ interface AuthState {
   user: User | null
   token: string | null
   isAuthenticated: boolean
+  sessionValidated: boolean
   login: (email: string, password: string) => Promise<void>
   logout: () => Promise<void>
     register: (email: string, password: string, firstName?: string, lastName?: string, role?: string, details?: { fullName?: string; displayName?: string; age?: number }) => Promise<void>
@@ -64,13 +65,14 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       token: null,
       isAuthenticated: false,
+      sessionValidated: false,
 
       login: async (email: string, password: string) => {
         const pb = getPb()
         const normalizedEmail = email.toLowerCase().trim()
         const authData = await pb.collection('users').authWithPassword(normalizedEmail, password)
         const user = mapPbUser(authData.record as Record<string, unknown>)
-        set({ user, token: authData.token, isAuthenticated: true })
+        set({ user, token: authData.token, isAuthenticated: true, sessionValidated: true })
         setAuthCookie(authData.token)
         // O alerta nativo do PocketBase não expõe IP/data no template; o endpoint
         // customizado envia esses dados reais depois que a sessão foi estabelecida.
@@ -82,7 +84,7 @@ export const useAuthStore = create<AuthState>()(
           getPb().authStore.clear()
         } catch {}
         clearAuthCookie()
-        set({ user: null, token: null, isAuthenticated: false })
+        set({ user: null, token: null, isAuthenticated: false, sessionValidated: false })
       },
 
       register: async (
@@ -123,23 +125,23 @@ export const useAuthStore = create<AuthState>()(
             const model = pb.authStore.model
             if (model) {
               const user = mapPbUser(model as Record<string, unknown>)
-              set({ user, token: pb.authStore.token, isAuthenticated: true })
+              set({ user, token: pb.authStore.token, isAuthenticated: true, sessionValidated: true })
               if (pb.authStore.token) setAuthCookie(pb.authStore.token)
             }
           } else {
             clearAuthCookie()
-            set({ user: null, token: null, isAuthenticated: false })
+            set({ user: null, token: null, isAuthenticated: false, sessionValidated: false })
           }
         } catch (e: unknown) {
           const err = e as { status?: number; message?: string }
           if (err?.status === 0 && err?.message?.includes('autocancelled')) return
           pb.authStore.clear()
           clearAuthCookie()
-          set({ user: null, token: null, isAuthenticated: false })
+          set({ user: null, token: null, isAuthenticated: false, sessionValidated: false })
         }
       },
     }),
-    { name: 'auth-storage-pb' }
+    { name: 'auth-storage-pb', partialize: ({ user, token, isAuthenticated }) => ({ user, token, isAuthenticated }) }
   )
 )
 
