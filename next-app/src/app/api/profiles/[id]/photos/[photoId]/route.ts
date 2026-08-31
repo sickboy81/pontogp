@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { getAuthCookieFromHeader, getUserIdFromToken } from '@/lib/auth-cookie'
 import { canRemoveProfilePhoto, MIN_PROFILE_PHOTOS } from '@/lib/profile-publication.mjs'
 import { getAdminToken } from '@/lib/pocketbase-admin'
+import { authorizeProfileOwner } from '@/lib/profile-owner-record.mjs'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
@@ -9,27 +10,6 @@ export const dynamic = 'force-dynamic'
 
 function getToken(request: NextRequest): string | null {
   return getAuthCookieFromHeader(request.headers.get('cookie'))
-}
-
-/** Verifica se o usuário é dono do perfil e retorna photos. */
-async function verifyProfileOwnership(
-  profileId: string,
-  token: string,
-  lookupToken: string = token,
-): Promise<{ ok: boolean; photos?: string[]; status?: string }> {
-  const res = await fetch(
-    `${PB_URL}/api/collections/profiles/records/${profileId}?fields=id,user,photos,status`,
-    { headers: { Authorization: `Bearer ${lookupToken}` }, cache: 'no-store' }
-  )
-  if (!res.ok) return { ok: false }
-  const record = (await res.json()) as { user?: string; photos?: string[]; status?: string }
-  const userId = getUserIdFromToken(token)
-  if (!userId || record.user !== userId) return { ok: false }
-  return {
-    ok: true,
-    photos: Array.isArray(record.photos) ? record.photos : [],
-    status: record.status,
-  }
 }
 
 function extractPhotoId(urlOrId: string): string {
@@ -57,11 +37,15 @@ export async function DELETE(
 
   const photoId = extractPhotoId(rawPhotoId)
 
-  const lookupToken = (await getAdminToken()) || token
-  const ownership = await verifyProfileOwnership(profileId, token, lookupToken)
-  if (!ownership.ok) {
-    return Response.json({ error: 'Perfil não encontrado ou sem permissão' }, { status: 404 })
-  }
+  const authorization = await authorizeProfileOwner({
+    pbUrl: PB_URL,
+    profileId,
+    sessionToken: token,
+    fields: 'id,user,photos,status',
+    getAdminTokenImpl: getAdminToken,
+  })
+  if (!authorization.ok) return Response.json({ error: authorization.error }, { status: authorization.status })
+  const ownership = authorization.profile as { photos?: string[]; status?: string }
 
   const photos = ownership.photos || []
   if (!photos.includes(photoId)) {

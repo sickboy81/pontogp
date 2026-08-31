@@ -180,7 +180,11 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: 'Somente contas anunciantes podem criar perfis de anúncio.' }, { status: 403 })
     }
 
-    const existing = await getProfileByUserId(userId, token)
+    const profileLookupToken = await getAdminToken()
+    if (!profileLookupToken) {
+      return Response.json({ error: 'Não foi possível consultar seus rascunhos agora. Tente novamente em instantes.' }, { status: 503 })
+    }
+    const existing = await getProfileByUserId(userId, profileLookupToken)
     if (existing) return Response.json(existing)
 
     const body = (await request.json()) as Record<string, unknown>

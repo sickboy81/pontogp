@@ -33,7 +33,9 @@ export async function POST(request: NextRequest) {
   const limited = enforceUserRateLimit(request, 'profile-bump', userId, RATE_LIMIT_POLICIES.write)
   if (limited) return limited
 
-  const profile = await getProfileByUserId(userId, token)
+  const profileLookupToken = await getAdminToken()
+  if (!profileLookupToken) return Response.json({ error: 'Serviço indisponível' }, { status: 503 })
+  const profile = await getProfileByUserId(userId, profileLookupToken)
   if (!profile) return Response.json({ error: 'Perfil não encontrado' }, { status: 404 })
   if (!isProfileBumpEligible(profile)) {
     return Response.json(
@@ -64,7 +66,7 @@ export async function POST(request: NextRequest) {
   }
 
   const today = todayBR()
-  const adminToken = await getAdminToken()
+  const adminToken = profileLookupToken
   if (!adminToken) {
     return Response.json({ error: 'Serviço indisponível' }, { status: 503 })
   }

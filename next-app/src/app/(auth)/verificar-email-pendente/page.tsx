@@ -29,6 +29,7 @@ function VerificarEmailPendenteContent() {
   const searchParams = useSearchParams()
   const email = searchParams.get('email') || ''
   const role = parseRegistrationRole(searchParams.get('tipo'))
+  const initialSendFailed = searchParams.get('envio') === 'erro'
   const [loading, setLoading] = useState(false)
   const nextStep = role ? ROLE_NEXT_STEP[role] : ROLE_NEXT_STEP.default
 
@@ -53,8 +54,9 @@ function VerificarEmailPendenteContent() {
     <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-6">
       <h1 className="text-xl font-bold text-white">Confirme seu email</h1>
       <p className="mt-2 text-slate-400">
-        Enviamos um link de verificação para <strong className="text-white">{email || 'seu email'}</strong>.
-        Acesse sua caixa de entrada e clique no link para ativar sua conta.
+        {initialSendFailed ? 'Sua conta foi criada, mas não foi possível enviar o primeiro email para ' : 'Enviamos um link de verificação para '}
+        <strong className="text-white">{email || 'seu email'}</strong>.
+        {initialSendFailed ? ' Clique abaixo para tentar novamente.' : ' Acesse sua caixa de entrada e clique no link para ativar sua conta.'}
       </p>
       <p className="mt-4 text-sm text-slate-400">
         Não recebeu? Verifique a pasta de spam ou clique abaixo para reenviar.

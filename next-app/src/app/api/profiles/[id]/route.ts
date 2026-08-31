@@ -7,6 +7,7 @@ import { isProfileBumpEligible } from '@/lib/profile-bump-eligibility.mjs'
 import { profileVisualEntitlementPatch } from '@/lib/plan-entitlements.mjs'
 import { normalizePublicProfileSlug } from '@/lib/profile-slug.mjs'
 import type { Profile } from '@/lib/types'
+import { authorizeProfileOwner } from '@/lib/profile-owner-record.mjs'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
@@ -76,15 +77,15 @@ export async function PATCH(
   if (!id) return Response.json({ error: 'id obrigatório' }, { status: 400 })
 
   try {
-    const res = await fetch(
-      `${PB_URL}/api/collections/profiles/records/${id}?fields=id,user,status,whatsapp,telegram,phone,show_whatsapp,show_telegram,show_phone,auto_bump,search_expires_at,contact_expires_at`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    )
-    if (!res.ok) {
-      if (res.status === 404) return Response.json({ error: 'Perfil não encontrado' }, { status: 404 })
-      return Response.json({ error: 'Erro ao carregar perfil' }, { status: res.status })
-    }
-    const record = (await res.json()) as {
+    const authorization = await authorizeProfileOwner({
+      pbUrl: PB_URL,
+      profileId: id,
+      sessionToken: token,
+      fields: 'id,user,status,whatsapp,telegram,phone,show_whatsapp,show_telegram,show_phone,auto_bump,search_expires_at,contact_expires_at',
+      getAdminTokenImpl: getAdminToken,
+    })
+    if (!authorization.ok) return Response.json({ error: authorization.error }, { status: authorization.status })
+    const record = authorization.profile as {
       user?: string
       status?: string
       whatsapp?: string
@@ -96,9 +97,6 @@ export async function PATCH(
       auto_bump?: boolean
       search_expires_at?: string
       contact_expires_at?: string
-    }
-    if (record.user !== userId) {
-      return Response.json({ error: 'Sem permissão para editar este perfil' }, { status: 403 })
     }
 
     const body = (await request.json()) as Record<string, unknown>

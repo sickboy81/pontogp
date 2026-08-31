@@ -14,7 +14,7 @@ interface AuthState {
   sessionValidated: boolean
   login: (email: string, password: string) => Promise<void>
   logout: () => Promise<void>
-    register: (email: string, password: string, firstName?: string, lastName?: string, role?: string, details?: { fullName?: string; displayName?: string; age?: number }) => Promise<void>
+  register: (email: string, password: string, firstName?: string, lastName?: string, role?: string, details?: { fullName?: string; displayName?: string; age?: number }) => Promise<{ verificationSent: boolean }>
   refresh: () => Promise<void>
 }
 
@@ -115,6 +115,8 @@ export const useAuthStore = create<AuthState>()(
           const data = await response.json().catch(() => ({})) as { error?: string }
           throw new Error(data.error || 'Não foi possível criar a conta.')
         }
+        const data = await response.json().catch(() => ({})) as { verificationSent?: boolean }
+        return { verificationSent: data.verificationSent !== false }
       },
 
       refresh: async () => {

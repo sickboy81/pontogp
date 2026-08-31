@@ -86,11 +86,10 @@ export async function GET(request: NextRequest) {
   const userId = getUserIdFromToken(token)
   if (!userId) return Response.json({ error: 'Token inválido' }, { status: 401 })
 
-  const profile = await getProfileByUserId(userId, token)
-  if (!profile) return Response.json({ error: 'Perfil não encontrado' }, { status: 404 })
-
   const adminToken = await getAdminToken()
   if (!adminToken) return Response.json({ error: 'Serviço indisponível' }, { status: 503 })
+  const profile = await getProfileByUserId(userId, adminToken)
+  if (!profile) return Response.json({ error: 'Perfil não encontrado' }, { status: 404 })
 
   let analyticsLevel = analyticsLevelForPlan({ slug: profile.plan_slug ?? profile.plan ?? 'gratis' })
   if (profile.plan) {

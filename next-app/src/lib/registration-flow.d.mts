@@ -1,1 +1,1 @@
-export declare function getRegistrationNextUrl(role: 'user' | 'advertiser', email?: string): string
+export declare function getRegistrationNextUrl(role: 'user' | 'advertiser', email?: string, verificationSent?: boolean): string

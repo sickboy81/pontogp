@@ -3,6 +3,8 @@ import { getAuthCookieFromHeader, getUserIdFromToken } from '@/lib/auth-cookie'
 import { enforceUserRateLimit, RATE_LIMIT_POLICIES } from '@/lib/api-rate-limit.mjs'
 import { maybeAudioToCompactM4a, pocketbaseAcceptsAudioMime, resolveAudioMime } from '@/lib/server/media-upload'
 import { canAddMedia } from '@/lib/plan-entitlements.mjs'
+import { getAdminToken } from '@/lib/pocketbase-admin'
+import { authorizeProfileOwner } from '@/lib/profile-owner-record.mjs'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
@@ -11,21 +13,6 @@ export const maxDuration = 180
 
 function getToken(request: NextRequest): string | null {
   return getAuthCookieFromHeader(request.headers.get('cookie'))
-}
-
-async function verifyProfileOwnership(
-  profileId: string,
-  token: string
-): Promise<{ ok: boolean; plan?: string }> {
-  const res = await fetch(
-    `${PB_URL}/api/collections/profiles/records/${profileId}?fields=id,user,plan`,
-    { headers: { Authorization: `Bearer ${token}` } }
-  )
-  if (!res.ok) return { ok: false }
-  const record = (await res.json()) as { user?: string; plan?: string }
-  const userId = getUserIdFromToken(token)
-  if (!userId || record.user !== userId) return { ok: false }
-  return { ok: true, plan: record.plan }
 }
 
 async function loadPlan(planRef?: string) {
@@ -52,10 +39,15 @@ export async function POST(
   const { id: profileId } = await params
   if (!profileId) return Response.json({ error: 'ID do perfil obrigatório' }, { status: 400 })
 
-  const ownership = await verifyProfileOwnership(profileId, token)
-  if (!ownership.ok) {
-    return Response.json({ error: 'Perfil não encontrado ou sem permissão' }, { status: 404 })
-  }
+  const authorization = await authorizeProfileOwner({
+    pbUrl: PB_URL,
+    profileId,
+    sessionToken: token,
+    fields: 'id,user,plan',
+    getAdminTokenImpl: getAdminToken,
+  })
+  if (!authorization.ok) return Response.json({ error: authorization.error }, { status: authorization.status })
+  const ownership = authorization.profile as { plan?: string }
 
   const plan = await loadPlan(ownership.plan)
   if (!canAddMedia(plan, 'audio', 0)) {
@@ -161,10 +153,14 @@ export async function DELETE(
   const { id: profileId } = await params
   if (!profileId) return Response.json({ error: 'ID do perfil obrigatório' }, { status: 400 })
 
-  const ownership = await verifyProfileOwnership(profileId, token)
-  if (!ownership.ok) {
-    return Response.json({ error: 'Perfil não encontrado ou sem permissão' }, { status: 404 })
-  }
+  const authorization = await authorizeProfileOwner({
+    pbUrl: PB_URL,
+    profileId,
+    sessionToken: token,
+    fields: 'id,user,plan',
+    getAdminTokenImpl: getAdminToken,
+  })
+  if (!authorization.ok) return Response.json({ error: authorization.error }, { status: authorization.status })
 
   try {
     const patchRes = await fetch(`${PB_URL}/api/collections/profiles/records/${profileId}`, {

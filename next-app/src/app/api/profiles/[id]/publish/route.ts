@@ -9,6 +9,7 @@ import {
 } from '@/lib/profile-publication.mjs'
 import { enforceUserRateLimit, RATE_LIMIT_POLICIES } from '@/lib/api-rate-limit.mjs'
 import { getAdminToken } from '@/lib/pocketbase-admin'
+import { authorizeProfileOwner } from '@/lib/profile-owner-record.mjs'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
@@ -39,19 +40,15 @@ export async function POST(
   if (!profileId) return Response.json({ error: 'ID do perfil obrigatório' }, { status: 400 })
 
   try {
-    const profileRes = await fetch(
-      `${PB_URL}/api/collections/profiles/records/${profileId}?fields=id,user,status,photos,bio,whatsapp,telegram,phone,show_whatsapp,show_telegram,show_phone`,
-      { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' }
-    )
-
-    if (!profileRes.ok) {
-      if (profileRes.status === 404) {
-        return Response.json({ error: 'Perfil não encontrado' }, { status: 404 })
-      }
-      return Response.json({ error: 'Erro ao carregar perfil' }, { status: profileRes.status })
-    }
-
-    const profile = (await profileRes.json()) as {
+    const authorization = await authorizeProfileOwner({
+      pbUrl: PB_URL,
+      profileId,
+      sessionToken: token,
+      fields: 'id,user,status,photos,bio,whatsapp,telegram,phone,show_whatsapp,show_telegram,show_phone',
+      getAdminTokenImpl: getAdminToken,
+    })
+    if (!authorization.ok) return Response.json({ error: authorization.error }, { status: authorization.status })
+    const profile = authorization.profile as {
       user?: string
       status?: string
       photos?: string[]
@@ -63,10 +60,7 @@ export async function POST(
       show_telegram?: boolean
       show_phone?: boolean
     }
-
-    if (profile.user !== userId) {
-      return Response.json({ error: 'Sem permissão para publicar este perfil' }, { status: 403 })
-    }
+    const adminToken = authorization.adminToken as string
 
     const bioLength = String(profile.bio ?? '').trim().length
     const bioQualityError = bioLength >= MIN_PROFILE_BIO_LENGTH && !hasPublishableProfileBio(profile.bio)
@@ -107,14 +101,6 @@ export async function POST(
 
     if (profile.status === 'active') {
       return Response.json({ status: 'active' })
-    }
-
-    const adminToken = await getAdminToken()
-    if (!adminToken) {
-      return Response.json(
-        { error: 'Serviço de publicação indisponível. Tente novamente em instantes.' },
-        { status: 503 }
-      )
     }
 
     const patchRes = await fetch(`${PB_URL}/api/collections/profiles/records/${profileId}`, {

@@ -72,12 +72,12 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: detail.message || 'Não foi possível criar a conta.', data: detail.data }, { status: res.status })
     }
 
-    await fetch(`${PB_URL}/api/collections/users/request-verification`, {
+    const verificationRes = await fetch(`${PB_URL}/api/collections/users/request-verification`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
       body: JSON.stringify({ email }),
-    }).catch(() => undefined)
-    return Response.json({ ok: true })
+    }).catch(() => null)
+    return Response.json({ ok: true, verificationSent: verificationRes?.ok === true })
   } catch {
     return Response.json({ error: 'Não foi possível criar a conta agora.' }, { status: 502 })
   }

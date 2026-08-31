@@ -15,3 +15,10 @@ test('sends clients to the confirmation screen with their email and role', () =>
     '/verificar-email-pendente?tipo=user&email=cliente%40example.com'
   )
 })
+
+test('marks the confirmation screen when the first verification email was not sent', () => {
+  assert.equal(
+    registrationFlow.getRegistrationNextUrl?.('advertiser', 'acompanhar@example.com', false),
+    '/verificar-email-pendente?tipo=advertiser&email=acompanhar%40example.com&envio=erro'
+  )
+})

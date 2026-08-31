@@ -3,6 +3,8 @@ import { getAuthCookieFromHeader, getUserIdFromToken } from '@/lib/auth-cookie'
 import { enforceUserRateLimit, RATE_LIMIT_POLICIES } from '@/lib/api-rate-limit.mjs'
 import { maybeVideoToCompactMp4, resolveVideoMime } from '@/lib/server/media-upload'
 import { canAddMedia } from '@/lib/plan-entitlements.mjs'
+import { getAdminToken } from '@/lib/pocketbase-admin'
+import { authorizeProfileOwner } from '@/lib/profile-owner-record.mjs'
 
 export const maxDuration = 300
 
@@ -12,21 +14,6 @@ export const dynamic = 'force-dynamic'
 
 function getToken(request: NextRequest): string | null {
   return getAuthCookieFromHeader(request.headers.get('cookie'))
-}
-
-async function verifyProfileOwnership(
-  profileId: string,
-  token: string
-): Promise<{ ok: boolean; videos?: string[]; plan?: string }> {
-  const res = await fetch(
-    `${PB_URL}/api/collections/profiles/records/${profileId}?fields=id,user,videos,plan`,
-    { headers: { Authorization: `Bearer ${token}` } }
-  )
-  if (!res.ok) return { ok: false }
-  const record = (await res.json()) as { user?: string; videos?: string[]; plan?: string }
-  const userId = getUserIdFromToken(token)
-  if (!userId || record.user !== userId) return { ok: false }
-  return { ok: true, videos: Array.isArray(record.videos) ? record.videos : [], plan: record.plan }
 }
 
 async function loadPlan(planRef?: string) {
@@ -53,10 +40,15 @@ export async function POST(
   const { id: profileId } = await params
   if (!profileId) return Response.json({ error: 'ID do perfil obrigatório' }, { status: 400 })
 
-  const ownership = await verifyProfileOwnership(profileId, token)
-  if (!ownership.ok) {
-    return Response.json({ error: 'Perfil não encontrado ou sem permissão' }, { status: 404 })
-  }
+  const authorization = await authorizeProfileOwner({
+    pbUrl: PB_URL,
+    profileId,
+    sessionToken: token,
+    fields: 'id,user,videos,plan',
+    getAdminTokenImpl: getAdminToken,
+  })
+  if (!authorization.ok) return Response.json({ error: authorization.error }, { status: authorization.status })
+  const ownership = authorization.profile as { videos?: string[]; plan?: string }
 
   const plan = await loadPlan(ownership.plan)
   if (!canAddMedia(plan, 'videos', ownership.videos?.length || 0)) {

@@ -1,5 +1,7 @@
 import { NextRequest } from 'next/server'
 import { getAuthCookieFromHeader, getUserIdFromToken } from '@/lib/auth-cookie'
+import { getAdminToken } from '@/lib/pocketbase-admin'
+import { authorizeProfileOwner } from '@/lib/profile-owner-record.mjs'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
@@ -7,21 +9,6 @@ export const dynamic = 'force-dynamic'
 
 function getToken(request: NextRequest): string | null {
   return getAuthCookieFromHeader(request.headers.get('cookie'))
-}
-
-async function verifyProfileOwnership(
-  profileId: string,
-  token: string
-): Promise<{ ok: boolean; videos?: string[] }> {
-  const res = await fetch(
-    `${PB_URL}/api/collections/profiles/records/${profileId}?fields=id,user,videos`,
-    { headers: { Authorization: `Bearer ${token}` } }
-  )
-  if (!res.ok) return { ok: false }
-  const record = (await res.json()) as { user?: string; videos?: string[] }
-  const userId = getUserIdFromToken(token)
-  if (!userId || record.user !== userId) return { ok: false }
-  return { ok: true, videos: Array.isArray(record.videos) ? record.videos : [] }
 }
 
 function extractId(urlOrId: string): string {
@@ -47,10 +34,15 @@ export async function DELETE(
 
   const videoId = extractId(rawVideoId)
 
-  const ownership = await verifyProfileOwnership(profileId, token)
-  if (!ownership.ok) {
-    return Response.json({ error: 'Perfil não encontrado ou sem permissão' }, { status: 404 })
-  }
+  const authorization = await authorizeProfileOwner({
+    pbUrl: PB_URL,
+    profileId,
+    sessionToken: token,
+    fields: 'id,user,videos',
+    getAdminTokenImpl: getAdminToken,
+  })
+  if (!authorization.ok) return Response.json({ error: authorization.error }, { status: authorization.status })
+  const ownership = authorization.profile as { videos?: string[] }
 
   const videos = ownership.videos || []
   if (!videos.some((v) => extractId(v) === videoId)) {

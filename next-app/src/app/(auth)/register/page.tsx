@@ -101,9 +101,10 @@ function RegisterPageContent() {
     }
     try {
       setLoading(true)
-      await register(email.trim().toLowerCase(), password, '', '', role)
-      toast.success('Conta criada! Confirme seu email para ativá-la.')
-      router.push(getRegistrationNextUrl(role, email.trim().toLowerCase()))
+      const result = await register(email.trim().toLowerCase(), password, '', '', role)
+      if (result.verificationSent) toast.success('Conta criada! Confirme seu email para ativá-la.')
+      else toast.error('Conta criada, mas o primeiro email não foi enviado. Use o botão de reenvio na próxima tela.')
+      router.push(getRegistrationNextUrl(role, email.trim().toLowerCase(), result.verificationSent))
     } catch (err: unknown) {
       const message = getRegistrationErrorMessage(err)
       setSubmitError(message)
