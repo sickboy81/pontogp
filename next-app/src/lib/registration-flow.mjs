@@ -1,4 +1,5 @@
-export function getRegistrationNextUrl(role) {
-  const destination = role === 'advertiser' ? '/dashboard/perfil' : '/dashboard'
-  return `/login?callbackUrl=${encodeURIComponent(destination)}`
+export function getRegistrationNextUrl(role, email) {
+  const params = new URLSearchParams({ tipo: role })
+  if (email) params.set('email', email)
+  return `/verificar-email-pendente?${params.toString()}`
 }

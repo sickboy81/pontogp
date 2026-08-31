@@ -102,8 +102,8 @@ function RegisterPageContent() {
     try {
       setLoading(true)
       await register(email.trim().toLowerCase(), password, '', '', role)
-      toast.success('Conta criada! Entre para continuar.')
-      router.push(getRegistrationNextUrl(role))
+      toast.success('Conta criada! Confirme seu email para ativá-la.')
+      router.push(getRegistrationNextUrl(role, email.trim().toLowerCase()))
     } catch (err: unknown) {
       const message = getRegistrationErrorMessage(err)
       setSubmitError(message)
