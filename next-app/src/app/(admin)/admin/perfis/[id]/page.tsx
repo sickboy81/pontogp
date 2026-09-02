@@ -5,11 +5,13 @@ import Link from 'next/link'
 import { ArrowLeft, Loader2 } from 'lucide-react'
 import { useParams } from 'next/navigation'
 import type { Profile } from '@/lib/types'
+import { getAdminProfilePhotoLabel } from '@/lib/admin-profile-preview.mjs'
 
 export default function AdminProfilePreviewPage() {
   const params = useParams<{ id: string }>()
   const [profile, setProfile] = useState<Profile | null>(null)
   const [error, setError] = useState('')
+  const [selectedPhoto, setSelectedPhoto] = useState<number | null>(null)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -41,14 +43,25 @@ export default function AdminProfilePreviewPage() {
       <Link href="/admin/perfis" className="inline-flex items-center gap-2 text-slate-400 hover:text-white">
         <ArrowLeft className="h-4 w-4" /> Voltar aos perfis
       </Link>
-      <div className="mt-6 rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 text-amber-100">
+      <div className="mt-6 rounded-xl border border-amber-300 bg-amber-50 p-4 text-slate-900">
         <p className="font-semibold">Prévia administrativa — {profile.status === 'inactive' ? 'Rascunho' : 'Perfil não público'}</p>
-        <p className="mt-1 text-sm text-amber-200/80">Esta visualização é exclusiva do admin e não publica o anúncio.</p>
+        <p className="mt-1 text-sm text-slate-700">Esta visualização é exclusiva do admin e não publica o anúncio.</p>
       </div>
       <div className="mt-6 grid gap-6 lg:grid-cols-[280px_1fr]">
         <section className="rounded-xl border border-slate-700 bg-slate-800/40 p-5">
           <div className="grid grid-cols-2 gap-3">
-            {photos.length ? photos.map((photo, index) => <img key={photo} src={photo} alt={`Foto ${index + 1} de ${profile.name}`} className="aspect-[2/3] w-full rounded-lg object-cover" />) : <p className="col-span-2 rounded-lg bg-slate-800 p-6 text-center text-sm text-slate-400">Sem fotos enviadas.</p>}
+            {photos.length ? photos.map((photo, index) => (
+              <button
+                key={photo}
+                type="button"
+                onClick={() => setSelectedPhoto(index)}
+                className="group relative overflow-hidden rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-400"
+                aria-label={getAdminProfilePhotoLabel(profile.name, index)}
+              >
+                <img src={photo} alt={`Foto ${index + 1} de ${profile.name}`} className="aspect-[2/3] w-full object-cover transition group-hover:scale-105" />
+                <span className="absolute inset-x-0 bottom-0 bg-slate-950/75 px-2 py-1 text-xs text-white opacity-0 transition group-hover:opacity-100">Clique para ampliar</span>
+              </button>
+            )) : <p className="col-span-2 rounded-lg bg-slate-800 p-6 text-center text-sm text-slate-400">Sem fotos enviadas.</p>}
           </div>
         </section>
         <section className="rounded-xl border border-slate-700 bg-slate-800/40 p-6">
@@ -63,6 +76,12 @@ export default function AdminProfilePreviewPage() {
           </dl>
         </section>
       </div>
+      {selectedPhoto !== null && photos[selectedPhoto] && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 p-4" role="dialog" aria-modal="true" aria-label="Foto ampliada" onClick={() => setSelectedPhoto(null)}>
+          <button type="button" className="absolute right-5 top-5 rounded-lg bg-white px-3 py-2 text-sm font-semibold text-slate-900" onClick={() => setSelectedPhoto(null)}>Fechar</button>
+          <img src={photos[selectedPhoto]} alt={`Foto ${selectedPhoto + 1} de ${profile.name}`} className="max-h-[90vh] max-w-[92vw] rounded-lg object-contain" onClick={(event) => event.stopPropagation()} />
+        </div>
+      )}
     </div>
   )
 }
