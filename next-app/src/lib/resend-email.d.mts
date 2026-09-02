@@ -27,6 +27,11 @@ export declare function sendResendEmail(
   apiKey: string,
   fetchImpl?: typeof fetch,
 ): Promise<unknown>
+export declare function getResendEmailStatus(
+  emailId: string,
+  apiKey: string,
+  fetchImpl?: typeof fetch,
+): Promise<{ id: string; last_event: string | null }>
 export declare function buildPocketBaseResendSettings(input: {
   apiKey: string
   appUrl?: string

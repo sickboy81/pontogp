@@ -108,6 +108,16 @@ export async function sendResendEmail(payload, apiKey, fetchImpl = fetch) {
   return result
 }
 
+export async function getResendEmailStatus(emailId, apiKey, fetchImpl = fetch) {
+  const response = await fetchImpl(`https://api.resend.com/emails/${encodeURIComponent(emailId)}`, {
+    method: 'GET',
+    headers: { Authorization: `Bearer ${apiKey}` },
+  })
+  const result = await response.json().catch(() => ({}))
+  if (!response.ok) throw new Error(String(result?.message || result?.error || 'Não foi possível consultar a entrega do email.'))
+  return { id: result?.id || emailId, last_event: result?.last_event || null }
+}
+
 export function buildPocketBaseResendSettings({ apiKey, appUrl }) {
   const normalizedUrl = String(appUrl || 'https://cerejavip.com').replace(/\/$/, '')
   const localName = new URL(normalizedUrl).hostname

@@ -8,7 +8,17 @@ import {
   buildPocketBaseResendSettings,
   getResendEmailConfig,
   getResendTransactionalConfig,
+  getResendEmailStatus,
 } from './resend-email.mjs'
+
+test('retrieves the delivery status of an accepted Resend email', async () => {
+  const status = await getResendEmailStatus('email-id-123', 're_test', async (url, options) => {
+    assert.equal(url, 'https://api.resend.com/emails/email-id-123')
+    assert.equal(options.headers.Authorization, 'Bearer re_test')
+    return new Response(JSON.stringify({ id: 'email-id-123', last_event: 'delivered' }), { status: 200 })
+  })
+  assert.deepEqual(status, { id: 'email-id-123', last_event: 'delivered' })
+})
 
 test('builds a login alert with the real IP and timestamp', () => {
   const email = buildLoginAlertEmail(

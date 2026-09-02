@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Loader2, Mail, MoreVertical } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { getAdminProfilePreviewPath } from '@/lib/admin-profile-preview.mjs'
 
 interface ProfileRow {
   id: string
@@ -157,9 +158,9 @@ export default function AdminPerfisPage() {
                           {p.status === 'active' ? (
                             <Link href={`/perfil/${p.id}`} className="text-primary-500 hover:underline">Ver perfil</Link>
                           ) : (
-                            <span className="rounded bg-amber-500/10 px-2 py-1 text-xs font-semibold text-amber-300" title={p.publication_reasons?.join(' ')}>
-                              Rascunho
-                            </span>
+                            <Link href={getAdminProfilePreviewPath(p) || '/admin/perfis'} className="rounded bg-amber-500/10 px-2 py-1 text-xs font-semibold text-amber-300 hover:bg-amber-500/20" title="Abrir prévia administrativa do rascunho">
+                              Abrir rascunho
+                            </Link>
                           )}
                           {p.status === 'inactive' && (
                             <Link href={`/admin/emails?profile=${encodeURIComponent(p.id)}&template=profile-completion`} className="inline-flex items-center gap-1 rounded border border-amber-500/50 px-2 py-1 text-xs text-amber-300 hover:bg-amber-500/10" title="Revisar email na central de emails">

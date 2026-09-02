@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { requireAdmin } from '@/lib/api/admin-auth'
 import { getAdminToken } from '@/lib/pocketbase-admin'
-import { buildProfileCompletionReminderEmail, getResendTransactionalConfig, sendResendEmail } from '@/lib/resend-email.mjs'
+import { buildProfileCompletionReminderEmail, getResendEmailStatus, getResendTransactionalConfig, sendResendEmail } from '@/lib/resend-email.mjs'
 import * as resendEmail from '@/lib/resend-email.mjs'
 import { getEmailTemplate, getResendCooldownState } from '@/lib/email-center.mjs'
 import { applyEmailTemplateOverride, normalizeEmailTemplateOverrides } from '@/lib/email-template-settings.mjs'
@@ -128,8 +128,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       await createSendLog({ template, recipient_email: loaded.user.email, profile: id, recipient_user: loaded.profile.user, sender_admin: auth.userId, subject: email.subject, status: 'failed', error: error instanceof Error ? error.message.slice(0, 500) : 'Falha no provedor de email' }, token).catch(() => null)
       return Response.json({ error: 'O provedor recusou o envio do email. Consulte o histórico para mais detalhes.' }, { status: 502 })
     }
+    const providerStatus = providerResult?.id ? await getResendEmailStatus(providerResult.id, config.apiKey).catch(() => null) : null
     const logRes = await createSendLog({ template, recipient_email: loaded.user.email, profile: id, recipient_user: loaded.profile.user, sender_admin: auth.userId, subject: email.subject, status: 'sent', provider_id: providerResult?.id || '' }, token).catch(() => null)
-    return Response.json({ ok: true, message: logRes?.ok === false ? 'Email enviado, mas não foi possível registrar o histórico.' : 'Email enviado individualmente.' })
+    const historyLogged = Boolean(logRes?.ok)
+    return Response.json({ ok: true, historyLogged, providerId: providerResult?.id || null, providerStatus: providerStatus?.last_event || 'accepted', message: historyLogged ? 'Email aceito pelo Resend.' : 'Email aceito pelo Resend, mas não foi possível registrar o histórico.' })
   } catch {
     return Response.json({ error: 'Não foi possível enviar o lembrete.' }, { status: 502 })
   }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Eye, Loader2, Mail, Send } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -46,6 +46,7 @@ export default function AdminEmailsPage() {
   const [historyTotal, setHistoryTotal] = useState(0)
   const [historyStatus, setHistoryStatus] = useState('')
   const [historyTemplate, setHistoryTemplate] = useState('')
+  const [historyError, setHistoryError] = useState('')
 
   useEffect(() => { setNowMs(Date.now()) }, [])
 
@@ -79,12 +80,14 @@ export default function AdminEmailsPage() {
       .finally(() => setLoading(false))
   }, [recipientPage, search])
 
-  useEffect(() => {
-    fetch(`/api/admin/emails?page=${historyPage}&perPage=10${historyStatus ? `&status=${historyStatus}` : ''}${historyTemplate ? `&template=${historyTemplate}` : ''}`, { credentials: 'include', cache: 'no-store' })
-      .then((response) => response.json())
-      .then((data: { items?: HistoryItem[]; totalItems?: number; configured?: boolean; resendConfigured?: boolean }) => { setHistory(data.items || []); setHistoryTotal(data.totalItems || 0); setLogsConfigured(data.configured !== false); setResendConfigured(data.resendConfigured !== false) })
-      .catch(() => setLogsConfigured(false))
+  const loadHistory = useCallback(async (page = historyPage) => {
+    const response = await fetch(`/api/admin/emails?page=${page}&perPage=10${historyStatus ? `&status=${historyStatus}` : ''}${historyTemplate ? `&template=${historyTemplate}` : ''}`, { credentials: 'include', cache: 'no-store' })
+    const data = await response.json().catch(() => ({})) as { items?: HistoryItem[]; totalItems?: number; configured?: boolean; resendConfigured?: boolean; error?: string }
+    if (!response.ok) throw new Error(data.error || 'Não foi possível carregar o histórico de emails.')
+    setHistory(data.items || []); setHistoryTotal(data.totalItems || 0); setLogsConfigured(data.configured !== false); setResendConfigured(data.resendConfigured !== false); setHistoryError('')
   }, [historyPage, historyStatus, historyTemplate])
+
+  useEffect(() => { loadHistory().catch((error: unknown) => { setHistory([]); setHistoryTotal(0); setLogsConfigured(false); setHistoryError(error instanceof Error ? error.message : 'Não foi possível carregar o histórico de emails.') }) }, [loadHistory])
 
   useEffect(() => {
     fetch('/api/admin/email-templates', { credentials: 'include', cache: 'no-store' }).then((response) => response.ok ? response.json() : null).then((data: { templates?: Record<string, TemplateOverride>; versions?: TemplateVersion[] } | null) => { if (data) { setTemplateOverrides(data.templates || {}); setTemplateVersions(data.versions || []) } }).catch(() => toast.error('Não foi possível carregar os templates salvos.'))
@@ -119,15 +122,17 @@ export default function AdminEmailsPage() {
     setSending(true)
     try {
       const response = await fetch(`/api/admin/profiles/${encodeURIComponent(profileId)}/reminder?template=${encodeURIComponent(template)}`, { method: 'POST', credentials: 'include' })
-      const data = await response.json().catch(() => ({})) as { message?: string; error?: string }
+      const data = await response.json().catch(() => ({})) as { message?: string; error?: string; historyLogged?: boolean; providerId?: string | null; providerStatus?: string }
       if (!response.ok) throw new Error(data.error || 'Não foi possível enviar o email.')
-      toast.success(data.message || 'Email enviado individualmente.')
+      const deliveryMessage = data.providerStatus === 'delivered' ? ' Entregue ao servidor do destinatário.' : data.providerStatus === 'bounced' || data.providerStatus === 'failed' ? ' O Resend informou que não foi entregue.' : ' Aceito pelo Resend; a entrega ainda está pendente.'
+      if (data.historyLogged === false) toast.error(`${data.message || 'Email aceito, mas não foi possível registrar o histórico.'}${deliveryMessage}`)
+      else toast.success(`${data.message || 'Email aceito pelo Resend.'}${deliveryMessage}${data.providerId ? ` ID: ${data.providerId}` : ''}`)
       const [updatedPreview, updatedHistory] = await Promise.all([
         fetch(`/api/admin/profiles/${encodeURIComponent(profileId)}/reminder?template=${encodeURIComponent(template)}`, { credentials: 'include', cache: 'no-store' }).then((response) => response.ok ? response.json() : null),
-        fetch('/api/admin/emails?page=1&perPage=10', { credentials: 'include', cache: 'no-store' }).then((response) => response.json()),
+        loadHistory(1).then(() => null),
       ])
       if (updatedPreview) setPreview(updatedPreview)
-      setHistory(updatedHistory.items || [])
+      void updatedHistory
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Não foi possível enviar o email.')
     } finally { setSending(false) }
@@ -176,7 +181,7 @@ export default function AdminEmailsPage() {
           {recipientTotal > 20 && <div className="mt-4 flex items-center justify-between text-sm text-slate-400"><button type="button" disabled={recipientPage <= 1} onClick={() => setRecipientPage((page) => page - 1)} className="rounded border border-slate-600 px-3 py-2 disabled:opacity-40">Anterior</button><span>Página {recipientPage} de {Math.max(1, Math.ceil(recipientTotal / 20))}</span><button type="button" disabled={recipientPage >= Math.ceil(recipientTotal / 20)} onClick={() => setRecipientPage((page) => page + 1)} className="rounded border border-slate-600 px-3 py-2 disabled:opacity-40">Próxima</button></div>}
         </section>
       </div>
-      <section className="mt-6 rounded-xl border border-slate-700 bg-slate-800/40 p-5"><div className="mb-3 flex flex-wrap items-center justify-between gap-3"><h2 className="text-lg font-semibold text-white">Histórico de envios</h2><div className="flex gap-2"><select aria-label="Filtrar histórico por template" value={historyTemplate} onChange={(event) => setHistoryTemplate(event.target.value)} className="rounded border border-slate-600 bg-slate-900 px-2 py-1 text-xs text-white"><option value="">Todos os templates</option>{TEMPLATES.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select><select aria-label="Filtrar histórico por status" value={historyStatus} onChange={(event) => setHistoryStatus(event.target.value)} className="rounded border border-slate-600 bg-slate-900 px-2 py-1 text-xs text-white"><option value="">Todos os status</option><option value="sent">Enviados</option><option value="failed">Falhos</option></select></div></div>{!logsConfigured && <p className="mb-3 text-xs text-amber-300">Histórico ainda não configurado</p>}{history.length === 0 ? <p className="text-sm text-slate-500">Nenhum envio registrado.</p> : <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead><tr className="border-b border-slate-700 text-slate-400"><th className="p-2">Data</th><th className="p-2">Template</th><th className="p-2">Destinatária</th><th className="p-2">Admin</th><th className="p-2">Status</th></tr></thead><tbody>{history.map((item) => <tr key={item.id} className="border-b border-slate-800"><td className="p-2 text-slate-400">{item.created ? new Date(item.created).toLocaleString('pt-BR') : '-'}</td><td className="p-2 text-slate-300">{item.template || '-'}</td><td className="p-2 text-slate-300">{item.recipient_email || '-'}</td><td className="p-2 text-slate-400">{item.expand?.sender_admin?.email || '-'}</td><td className={`p-2 ${item.status === 'sent' ? 'text-emerald-300' : 'text-red-300'}`}>{item.status === 'sent' ? 'Enviado' : item.status === 'failed' ? 'Falhou' : item.status || '-'}</td></tr>)}</tbody></table></div>}{historyTotal > 10 && <div className="mt-4 flex items-center justify-between text-sm text-slate-400"><button type="button" disabled={historyPage <= 1} onClick={() => setHistoryPage((page) => page - 1)} className="rounded border border-slate-600 px-3 py-2 disabled:opacity-40">Anterior</button><span>Página {historyPage} de {Math.ceil(historyTotal / 10)}</span><button type="button" disabled={historyPage >= Math.ceil(historyTotal / 10)} onClick={() => setHistoryPage((page) => page + 1)} className="rounded border border-slate-600 px-3 py-2 disabled:opacity-40">Próxima</button></div>}</section>
+      <section className="mt-6 rounded-xl border border-slate-700 bg-slate-800/40 p-5"><div className="mb-3 flex flex-wrap items-center justify-between gap-3"><h2 className="text-lg font-semibold text-white">Histórico de envios</h2><div className="flex gap-2"><select aria-label="Filtrar histórico por template" value={historyTemplate} onChange={(event) => setHistoryTemplate(event.target.value)} className="rounded border border-slate-600 bg-slate-900 px-2 py-1 text-xs text-white"><option value="">Todos os templates</option>{TEMPLATES.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select><select aria-label="Filtrar histórico por status" value={historyStatus} onChange={(event) => setHistoryStatus(event.target.value)} className="rounded border border-slate-600 bg-slate-900 px-2 py-1 text-xs text-white"><option value="">Todos os status</option><option value="sent">Enviados</option><option value="failed">Falhos</option></select><button type="button" onClick={() => loadHistory().catch((error: unknown) => setHistoryError(error instanceof Error ? error.message : 'Não foi possível carregar o histórico de emails.'))} className="rounded border border-slate-600 px-2 py-1 text-xs text-slate-300 hover:bg-slate-700">Atualizar</button></div></div>{historyError && <p role="alert" className="mb-3 rounded border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">{historyError}</p>}{!historyError && !logsConfigured && <p className="mb-3 text-xs text-amber-300">Histórico ainda não configurado</p>}{!historyError && history.length === 0 ? <p className="text-sm text-slate-500">Nenhum envio registrado.</p> : !historyError && <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead><tr className="border-b border-slate-700 text-slate-400"><th className="p-2">Data</th><th className="p-2">Template</th><th className="p-2">Destinatária</th><th className="p-2">Admin</th><th className="p-2">Status</th></tr></thead><tbody>{history.map((item) => <tr key={item.id} className="border-b border-slate-800"><td className="p-2 text-slate-400">{item.created ? new Date(item.created).toLocaleString('pt-BR') : '-'}</td><td className="p-2 text-slate-300">{item.template || '-'}</td><td className="p-2 text-slate-300">{item.recipient_email || '-'}</td><td className="p-2 text-slate-400">{item.expand?.sender_admin?.email || '-'}</td><td className={`p-2 ${item.status === 'sent' ? 'text-emerald-300' : 'text-red-300'}`}>{item.status === 'sent' ? 'Enviado' : item.status === 'failed' ? 'Falhou' : item.status || '-'}</td></tr>)}</tbody></table></div>}{historyTotal > 10 && <div className="mt-4 flex items-center justify-between text-sm text-slate-400"><button type="button" disabled={historyPage <= 1} onClick={() => setHistoryPage((page) => page - 1)} className="rounded border border-slate-600 px-3 py-2 disabled:opacity-40">Anterior</button><span>Página {historyPage} de {Math.ceil(historyTotal / 10)}</span><button type="button" disabled={historyPage >= Math.ceil(historyTotal / 10)} onClick={() => setHistoryPage((page) => page + 1)} className="rounded border border-slate-600 px-3 py-2 disabled:opacity-40">Próxima</button></div>}</section>
       {confirmOpen && preview && <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4" role="dialog" aria-modal="true" aria-labelledby="confirm-email-title"><div className="w-full max-w-lg rounded-xl border border-slate-600 bg-slate-900 p-6 shadow-2xl"><h2 id="confirm-email-title" className="text-lg font-semibold text-white">Confirmar envio individual</h2><p className="mt-3 text-sm leading-6 text-slate-300">Você está prestes a enviar o template <strong>{TEMPLATES.find((item) => item.id === template)?.label}</strong> para <strong>{preview.recipient}</strong>.</p><p className="mt-2 text-sm text-amber-300">Esse envio será registrado no histórico e não poderá ser desfeito.</p><div className="mt-6 flex justify-end gap-3"><button ref={cancelButtonRef} type="button" onClick={() => setConfirmOpen(false)} className="rounded-lg border border-slate-600 px-4 py-2 text-sm text-slate-300">Cancelar</button><button type="button" onClick={confirmSendEmail} className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white">Confirmar e enviar</button></div></div></div>}
     </div>
   )
