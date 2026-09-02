@@ -69,10 +69,10 @@ test('reports the first missing field required to create a profile draft', () =>
   )
 })
 
-test('requires 300 characters in the saved bio before publication', () => {
-  assert.equal(profilePublication.hasPublishableProfileBio?.('a'.repeat(299)), false)
-  assert.equal(profilePublication.hasPublishableProfileBio?.(naturalBio), true)
-  assert.equal(profilePublication.getMissingProfileBioCharacters?.('a'.repeat(50)), 250)
+test('requires 150 meaningful characters in the saved bio before publication', () => {
+  assert.equal(profilePublication.hasPublishableProfileBio?.(naturalBio.slice(0, 149)), false)
+  assert.equal(profilePublication.hasPublishableProfileBio?.(naturalBio.slice(0, 150)), true)
+  assert.equal(profilePublication.getMissingProfileBioCharacters?.(naturalBio.slice(0, 50)), 100)
 })
 
 test('detects contact changes that must be saved before publication', () => {

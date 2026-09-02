@@ -29,7 +29,7 @@ import type { Profile } from '@/lib/types'
 import { formatPrice, parsePocketBaseDateInput } from '@/utils/format'
 import toast from 'react-hot-toast'
 import { useAuthStore } from '@/store/auth'
-import { MIN_PROFILE_PHOTOS, getMissingProfilePhotos } from '@/lib/profile-publication.mjs'
+import { getProfileOnboardingState } from '@/lib/profile-onboarding.mjs'
 import { isProfileBumpEligible } from '@/lib/profile-bump-eligibility.mjs'
 import { CEREJA_STORIES_DURATION_HOURS } from '@/lib/cereja-stories.mjs'
 import { resolveProtectedAccess } from '@/lib/protected-access.mjs'
@@ -419,8 +419,7 @@ export default function DashboardClient() {
   }
 
   if (profile.status === 'inactive') {
-    const photoCount = profile.photos?.length || 0
-    const missingPhotos = getMissingProfilePhotos(photoCount)
+    const onboardingState = getProfileOnboardingState(profile)
     return (
       <div className="mx-auto max-w-2xl">
         <h1 className="mb-6 text-2xl font-bold text-white">Dashboard</h1>
@@ -430,21 +429,21 @@ export default function DashboardClient() {
             <div className="min-w-0">
               <h2 className="text-lg font-semibold text-white">Seu perfil está em rascunho</h2>
               <p className="mt-2 text-sm leading-relaxed text-slate-200">
-                Envie pelo menos {MIN_PROFILE_PHOTOS} fotos e use o botão Publicar perfil para
-                colocar o anúncio nas buscas.
+                Conclua o próximo passo abaixo. O anúncio só aparecerá nas buscas depois da revisão e publicação.
               </p>
-              <p className="mt-3 text-sm font-medium text-amber-200">
-                {photoCount}/{MIN_PROFILE_PHOTOS} fotos adicionadas
-                {missingPhotos > 0
-                  ? ` · faltam ${missingPhotos} ${missingPhotos === 1 ? 'foto' : 'fotos'}`
-                  : ' · pronto para publicar'}
-              </p>
+              {onboardingState.pendingLabels.length > 0 ? (
+                <ul className="mt-3 space-y-1 text-sm text-slate-200">
+                  {onboardingState.pendingLabels.map((label) => <li key={label}>• Falta {label}</li>)}
+                </ul>
+              ) : (
+                <p className="mt-3 text-sm font-medium text-emerald-300">Tudo preenchido. Revise e publique seu anúncio.</p>
+              )}
               <Link
-                href="/dashboard/perfil?tab=midia"
+                href={onboardingState.href}
                 className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-lg bg-primary-600 px-5 py-2.5 font-semibold text-white transition hover:bg-primary-500"
               >
-                <ImagePlus className="h-5 w-5" />
-                {missingPhotos > 0 ? 'Adicionar fotos' : 'Publicar perfil'}
+                {onboardingState.firstPending === 'photos' ? <ImagePlus className="h-5 w-5" /> : <Edit className="h-5 w-5" />}
+                {onboardingState.actionLabel}
               </Link>
             </div>
           </div>

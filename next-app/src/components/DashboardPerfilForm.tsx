@@ -26,18 +26,24 @@ import {
 import {
   MIN_PROFILE_BIO_LENGTH,
   MIN_PROFILE_PHOTOS,
-  canPublishProfileDraft,
   canRemoveProfilePhoto,
   canSaveProfileContacts,
-  hasPublishableProfileBio,
-  getMissingProfileBioCharacters,
-  getMissingProfilePhotos,
   getProfileDraftValidationError,
-  hasPublicProfileContact,
   hasUnsavedProfileContactChanges,
 } from '@/lib/profile-publication.mjs'
 import { resolveProtectedAccess } from '@/lib/protected-access.mjs'
 import { isAdvertiserRole } from '@/lib/advertiser-profile-access.mjs'
+import { getProfileOnboardingState, type ProfileOnboardingState } from '@/lib/profile-onboarding.mjs'
+import type { ProfileOnboardingEvent, ProfileOnboardingStep } from '@/lib/profile-onboarding-event.mjs'
+
+function sendProfileOnboardingEvent(event: ProfileOnboardingEvent, step: ProfileOnboardingStep) {
+  void fetch('/api/profiles/onboarding-event', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ event, step }),
+  }).catch(() => undefined)
+}
 
 type FormData = {
   name: string
@@ -352,6 +358,7 @@ export default function DashboardPerfilForm() {
   const audioStreamRef = useRef<MediaStream | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
   const audioTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const onboardingViewedStepsRef = useRef(new Set<ProfileOnboardingStep>())
   const [schedule, setSchedule] = useState<Schedule[]>([])
   const [stats, setStats] = useState<ProfileStats | null>(null)
   const [statsLoading, setStatsLoading] = useState(false)
@@ -444,29 +451,36 @@ export default function DashboardPerfilForm() {
   const mapLat = parseCoordinate(form.location_lat, -90, 90)
   const mapLng = parseCoordinate(form.location_lng, -180, 180)
   const photoCount = profile?.photos?.length || 0
-  const missingPhotoCount = getMissingProfilePhotos(photoCount)
   const bioLength = form.bio.trim().length
   const bioQualityError = /([^\p{L}\p{N}\s])\1{5,}/u.test(form.bio.trim()) || /([\p{L}\p{N}])\1{11,}/iu.test(form.bio.trim())
     ? 'Remova sequências repetidas de caracteres da bio.'
     : null
   const persistedBio = profile?.bio ?? ''
-  const missingBioCharacters = getMissingProfileBioCharacters(form.bio)
   const hasUnsavedBioChanges = Boolean(profile) && form.bio.trim() !== persistedBio.trim()
-  const hasPublicContact = hasPublicProfileContact(form)
   const hasUnsavedContactChanges = profile
     ? hasUnsavedProfileContactChanges(profile, form)
     : false
-  const canPublish = canPublishProfileDraft(photoCount, form.bio, form)
-  const publicationPendingMessages = [
-    missingPhotoCount > 0
-      ? `${missingPhotoCount} ${missingPhotoCount === 1 ? 'foto' : 'fotos'}`
-      : null,
-    missingBioCharacters > 0
-      ? `${missingBioCharacters} ${missingBioCharacters === 1 ? 'caractere na bio' : 'caracteres na bio'}`
-      : null,
-    bioQualityError,
-    !hasPublicContact ? 'um contato público' : null,
-  ].filter((message): message is string => Boolean(message))
+  const onboardingState = getProfileOnboardingState({
+    ...form,
+    photos: profile?.photos || [],
+  })
+  const hasPublicContact = onboardingState.completionItems.some(
+    (item) => item.id === 'contact' && item.done,
+  )
+  const canPublish = onboardingState.canPublish
+  const publicationPendingMessages = onboardingState.pendingLabels
+
+  useEffect(() => {
+    if (!authHydrated || !isAuthenticated || loading || profile === undefined) return
+    if (!isAdvertiserRole(authUser?.role)) return
+    if (profile?.status === 'active' || activeTab === 'stats' || activeTab === 'bio') return
+    const step: ProfileOnboardingStep = activeTab === 'midia'
+      ? (onboardingState.canPublish ? 'review' : 'photos')
+      : 'details'
+    if (onboardingViewedStepsRef.current.has(step)) return
+    onboardingViewedStepsRef.current.add(step)
+    sendProfileOnboardingEvent('step_viewed', step)
+  }, [activeTab, authHydrated, authUser?.role, isAuthenticated, loading, onboardingState.canPublish, profile])
   const canRemovePhoto = profile
     ? canRemoveProfilePhoto(profile.status, photoCount)
     : false
@@ -501,6 +515,18 @@ export default function DashboardPerfilForm() {
     const urlMatch = value.match(/\/([a-z0-9]{15})\/[^/]+(?:\?.*)?$/i)
     if (urlMatch) return urlMatch[1]
     return /^[a-z0-9]{15}$/i.test(value) ? value : ''
+  }
+
+  const continueOnboarding = (state: ProfileOnboardingState) => {
+    const tab: TabId = state.href.includes('tab=midia') ? 'midia' : 'dados'
+    setActiveTab(tab)
+    router.replace(state.href, { scroll: false })
+    const anchor = state.href.split('#')[1]
+    if (anchor) {
+      window.setTimeout(() => {
+        document.getElementById(anchor)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }, 0)
+    }
   }
 
   const preparePhoto = async (file: File): Promise<File> => {
@@ -554,7 +580,9 @@ export default function DashboardPerfilForm() {
         if (uploadedProfile?.id) setProfile(uploadedProfile)
         setPhotoUploadProgress({ current: index + 1, total: files.length })
       }
+      sendProfileOnboardingEvent('photo_uploaded', 'photos')
     } catch (err) {
+      sendProfileOnboardingEvent('onboarding_error', 'photos')
       setError(err instanceof Error ? err.message : 'Não foi possível enviar a foto. Verifique o formato e tente novamente.')
     } finally {
       setPhotoUploading(false)
@@ -653,9 +681,11 @@ export default function DashboardPerfilForm() {
         throw new Error((data as { error?: string }).error || 'Erro ao publicar perfil')
       }
       setProfile((current) => current ? { ...current, status: 'active' } : current)
+      sendProfileOnboardingEvent('publish_succeeded', 'review')
       toast.success('Perfil publicado com sucesso.')
       router.refresh()
     } catch (err) {
+      sendProfileOnboardingEvent('onboarding_error', 'review')
       setError(err instanceof Error ? err.message : 'Erro ao publicar perfil')
     } finally {
       setPublishing(false)
@@ -1012,8 +1042,10 @@ export default function DashboardPerfilForm() {
         const created = (await res.json()) as Profile
         setProfile(created)
         setForm(profileToForm(created))
-        setTab('midia')
-        toast.success('Perfil salvo como rascunho. Adicione pelo menos 3 fotos para publicar.')
+        const nextState = getProfileOnboardingState(created)
+        sendProfileOnboardingEvent('draft_saved', 'details')
+        continueOnboarding(nextState)
+        toast.success(`Rascunho salvo. Próximo passo: ${nextState.actionLabel.toLowerCase()}.`)
         return
       }
       const refreshed = await fetch('/api/profiles/me', { credentials: 'include', cache: 'no-store' })
@@ -1021,8 +1053,16 @@ export default function DashboardPerfilForm() {
       if (!updated?.id) throw new Error('O perfil foi salvo, mas não foi possível recarregá-lo. Atualize a página antes de sair.')
       setProfile(updated)
       setForm(profileToForm(updated))
-      toast.success('Alterações salvas com sucesso.')
+      if (updated.status === 'inactive') {
+        const nextState = getProfileOnboardingState(updated)
+        sendProfileOnboardingEvent('draft_saved', activeTab === 'midia' ? 'photos' : 'details')
+        continueOnboarding(nextState)
+        toast.success(`Alterações salvas. Próximo passo: ${nextState.actionLabel.toLowerCase()}.`)
+      } else {
+        toast.success('Alterações salvas com sucesso.')
+      }
     } catch (err) {
+      sendProfileOnboardingEvent('onboarding_error', activeTab === 'midia' ? 'photos' : 'details')
       setError(err instanceof Error ? err.message : 'Erro ao salvar')
     } finally {
       setSaving(false)
@@ -1062,14 +1102,8 @@ export default function DashboardPerfilForm() {
     )
   }
 
-  const completionItems = [
-    { label: 'Nome e localização', done: Boolean(form.name.trim() && form.city && form.state) },
-    { label: 'Descrição mínima', done: form.bio.trim().length >= MIN_PROFILE_BIO_LENGTH },
-    { label: 'Pelo menos 3 fotos', done: (profile?.photos?.length || 0) >= MIN_PROFILE_PHOTOS },
-    { label: 'Contato público', done: Boolean(form.whatsapp || form.telegram || form.phone) },
-    { label: 'Preços informados', done: form.price_rows.some((row) => row.price.trim().length > 0) },
-  ]
-  const completionPercent = Math.round((completionItems.filter((item) => item.done).length / completionItems.length) * 100)
+  const completionItems = onboardingState.completionItems
+  const completionPercent = onboardingState.completionPercent
 
   return (
     <div className="advertiser-profile-editor mx-auto max-w-2xl">
@@ -1083,12 +1117,11 @@ export default function DashboardPerfilForm() {
       <h1 className="mb-2 text-2xl font-bold text-white">
         {profile ? 'Editar perfil' : 'Criar perfil'}
       </h1>
-      {profile && (
-        <section aria-labelledby="profile-completion-title" className="mb-6 rounded-xl border border-slate-700 bg-slate-800/50 p-4">
+      <section aria-labelledby="profile-completion-title" className="mb-6 rounded-xl border border-slate-700 bg-slate-800/50 p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <h2 id="profile-completion-title" className="font-semibold text-white">Completude do perfil</h2>
-              <p className="text-sm text-slate-400">Complete estes itens para publicar e converter melhor.</p>
+              <p className="text-sm text-slate-400">Estes quatro itens são necessários para colocar o anúncio no ar.</p>
             </div>
             <span className="text-lg font-bold text-primary-400">{completionPercent}%</span>
           </div>
@@ -1098,7 +1131,15 @@ export default function DashboardPerfilForm() {
           <ul className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
             {completionItems.map((item) => <li key={item.label} className={item.done ? 'text-emerald-300' : 'text-slate-400'}><CheckCircle2 className="mr-2 inline h-4 w-4" />{item.label}</li>)}
           </ul>
+          <p className="mt-3 text-xs text-slate-500">Preços ajudam a receber contatos mais qualificados, mas são opcionais para publicar.</p>
         </section>
+
+      {(!profile || profile.status === 'inactive') && (
+        <ol className="mb-6 grid gap-2 text-sm sm:grid-cols-3" aria-label="Etapas para publicar">
+          <li className={`rounded-lg border p-3 ${onboardingState.firstPending === 'identity' || onboardingState.firstPending === 'bio' || onboardingState.firstPending === 'contact' ? 'border-primary-500 bg-primary-500/10 text-white' : 'border-slate-700 text-slate-400'}`}><strong>1. Dados e descrição</strong></li>
+          <li className={`rounded-lg border p-3 ${onboardingState.firstPending === 'photos' ? 'border-primary-500 bg-primary-500/10 text-white' : 'border-slate-700 text-slate-400'}`}><strong>2. Fotos</strong></li>
+          <li className={`rounded-lg border p-3 ${onboardingState.firstPending === null ? 'border-emerald-500 bg-emerald-500/10 text-white' : 'border-slate-700 text-slate-400'}`}><strong>3. Revisar e publicar</strong></li>
+        </ol>
       )}
 
       {profile?.status === 'inactive' && (
@@ -1132,7 +1173,7 @@ export default function DashboardPerfilForm() {
             { id: 'dados' as const, label: 'Dados', icon: Settings },
             { id: 'midia' as const, label: 'Mídia', icon: ImagePlus },
             { id: 'stats' as const, label: 'Stats', icon: BarChart3 },
-            { id: 'bio' as const, label: 'Bio', icon: Link2 },
+            { id: 'bio' as const, label: 'Link na bio', icon: Link2 },
           ].map(({ id, label, icon: Icon }) => (
             <button
               key={id}
@@ -1158,7 +1199,7 @@ export default function DashboardPerfilForm() {
 
         {(!profile || activeTab === 'dados') && (
           <>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div id="profile-identity" className="grid scroll-mt-24 gap-4 sm:grid-cols-2">
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-300">Nome público *</label>
             <input
@@ -1680,8 +1721,11 @@ export default function DashboardPerfilForm() {
             className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
           />
         </div>
-        <div>
+        <div id="profile-description" className="scroll-mt-24">
           <label className="mb-1 block text-sm font-medium text-slate-300">Descrição do perfil</label>
+          <p className="mb-2 text-sm leading-6 text-slate-400">
+            Escreva pelo menos {MIN_PROFILE_BIO_LENGTH} caracteres. Conte como é o atendimento, a região, os horários e seus diferenciais. Não informe endereço exato.
+          </p>
           <textarea
             rows={8}
             value={form.bio}
@@ -1726,7 +1770,7 @@ export default function DashboardPerfilForm() {
           )}
         </div>
 
-        <div className="border-t border-slate-700 pt-4">
+        <div id="profile-contact" className="scroll-mt-24 border-t border-slate-700 pt-4">
           <h3 className="mb-1 font-medium text-slate-300">Contato</h3>
           <p
             className={`mb-3 text-xs ${hasPublicContact ? 'text-slate-500' : 'text-amber-800 dark:text-amber-300'}`}
@@ -1991,15 +2035,25 @@ export default function DashboardPerfilForm() {
                 </p>
               </div>
               {profile.status === 'inactive' && (
-                <button
-                  type="button"
-                  onClick={handlePublish}
-                  disabled={!canPublish || publishing}
-                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-500 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {publishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
-                  {publishing ? 'Publicando...' : 'Publicar perfil'}
-                </button>
+                canPublish ? (
+                  <button
+                    type="button"
+                    onClick={handlePublish}
+                    disabled={publishing}
+                    className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:opacity-50"
+                  >
+                    {publishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                    {publishing ? 'Publicando...' : 'Publicar perfil'}
+                  </button>
+                ) : onboardingState.firstPending !== 'photos' ? (
+                  <button
+                    type="button"
+                    onClick={() => continueOnboarding(onboardingState)}
+                    className="inline-flex min-h-10 items-center justify-center rounded-lg border border-primary-500 px-4 py-2 text-sm font-semibold text-primary-300 hover:bg-primary-500/10"
+                  >
+                    {onboardingState.actionLabel}
+                  </button>
+                ) : null
               )}
             </div>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
@@ -2761,9 +2815,9 @@ export default function DashboardPerfilForm() {
             className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-6 py-2.5 font-semibold text-white transition hover:bg-primary-500 disabled:opacity-50"
           >
             <Save className="h-4 w-4" />
-            {saving ? 'Salvando...' : 'Salvar como rascunho'}
+            {saving ? 'Salvando...' : profile?.status === 'active' ? 'Salvar alterações' : 'Salvar e continuar'}
           </button>
-          {profile && (
+          {profile?.status === 'inactive' && (
             <button
               type="button"
               onClick={handlePublish}
@@ -2788,6 +2842,7 @@ export default function DashboardPerfilForm() {
             {publicationPendingMessages.length > 0
               ? publicationPendingMessages.join('; ')
               : 'salvar as alterações pendentes do perfil'}.
+            <button type="button" onClick={() => continueOnboarding(onboardingState)} className="ml-2 font-semibold underline underline-offset-2">{onboardingState.actionLabel}</button>
           </p>
         )}
       </form>
