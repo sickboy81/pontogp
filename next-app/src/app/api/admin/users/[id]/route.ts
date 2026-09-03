@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { requireAdmin } from '@/lib/api/admin-auth'
 import { getAdminToken } from '@/lib/pocketbase-admin'
 import { isAdminRole } from '@/lib/auth-roles'
+import { getDocumentVerificationState } from '@/lib/verification-document-status.mjs'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
@@ -25,7 +26,7 @@ async function countAdminUsers(admToken: string): Promise<number> {
   }
 }
 
-function mapUserPublic(r: Record<string, unknown>) {
+function mapUserPublic(r: Record<string, unknown>, documentVerified = !!(r.document_verified as boolean)) {
   return {
     id: r.id as string,
     email: r.email as string,
@@ -39,34 +40,53 @@ function mapUserPublic(r: Record<string, unknown>) {
     role: (r.role as string) || 'user',
     status: (r.status as string) || 'active',
     verified: !!(r.verified as boolean),
-    document_verified: !!(r.document_verified as boolean),
+    document_verified: documentVerified,
     created: (r.created as string) || null,
     plan: (r.plan as string) || 'gratis',
   }
 }
 
 async function getProfileSummary(token: string, userId: string) {
-  const filter = encodeURIComponent(`user = "${userId}"`)
-  const res = await fetch(`${PB_URL}/api/collections/profiles/records?filter=${filter}&perPage=1&fields=id,name,status,category,city,state,plan,bio,created&expand=photos`, {
-    headers: { Authorization: `Bearer ${token}` },
-    cache: 'no-store',
-  })
-  if (!res.ok) return null
-  const data = await res.json() as { items?: Record<string, unknown>[] }
-  const profile = data.items?.[0]
-  if (!profile) return null
-  const expanded = profile.expand as { photos?: unknown[] } | undefined
-  return {
-    id: String(profile.id || ''),
-    name: String(profile.name || ''),
-    status: String(profile.status || 'inactive'),
-    category: String(profile.category || ''),
-    city: String(profile.city || ''),
-    state: String(profile.state || ''),
-    plan: String(profile.plan || 'gratis'),
-    bioLength: String(profile.bio || '').trim().length,
-    photoCount: Array.isArray(expanded?.photos) ? expanded.photos.length : 0,
-    created: String(profile.created || ''),
+  try {
+    const filter = encodeURIComponent(`user = "${userId}"`)
+    const res = await fetch(`${PB_URL}/api/collections/profiles/records?filter=${filter}&perPage=1&fields=id,name,status,category,city,state,plan,bio,created&expand=photos`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: 'no-store',
+    })
+    if (!res.ok) return null
+    const data = await res.json() as { items?: Record<string, unknown>[] }
+    const profile = data.items?.[0]
+    if (!profile) return null
+    const expanded = profile.expand as { photos?: unknown[] } | undefined
+    return {
+      id: String(profile.id || ''),
+      name: String(profile.name || ''),
+      status: String(profile.status || 'inactive'),
+      category: String(profile.category || ''),
+      city: String(profile.city || ''),
+      state: String(profile.state || ''),
+      plan: String(profile.plan || 'gratis'),
+      bioLength: String(profile.bio || '').trim().length,
+      photoCount: Array.isArray(expanded?.photos) ? expanded.photos.length : 0,
+      created: String(profile.created || ''),
+    }
+  } catch {
+    return null
+  }
+}
+
+async function getDocumentReviews(token: string, userId: string) {
+  try {
+    const filter = encodeURIComponent(`user = "${userId}" && (status = "approved" || status = "rejected")`)
+    const res = await fetch(
+      `${PB_URL}/api/collections/verification_requests/records?filter=${filter}&perPage=500&fields=status,reviewed_at,created`,
+      { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' }
+    )
+    if (!res.ok) return []
+    const data = (await res.json()) as { items?: Record<string, unknown>[] }
+    return data.items || []
+  } catch {
+    return []
   }
 }
 
@@ -105,7 +125,9 @@ export async function GET(
       return Response.json({ error: 'Erro ao carregar' }, { status: res.status })
     }
     const r = (await res.json()) as Record<string, unknown>
-    return Response.json({ ...mapUserPublic(r), profile: await getProfileSummary(token, id) })
+    const [documentReviews, profile] = await Promise.all([getDocumentReviews(token, id), getProfileSummary(token, id)])
+    const documentVerified = getDocumentVerificationState(r.document_verified === true, documentReviews)
+    return Response.json({ ...mapUserPublic(r, documentVerified), profile })
   } catch {
     return Response.json({ error: 'Erro ao carregar utilizador' }, { status: 500 })
   }

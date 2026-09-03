@@ -110,7 +110,7 @@ function rowToForm(u: UserRow, detail?: Record<string, unknown> | null): EditFor
     role: u.role || 'user',
     status: u.status || 'active',
     verified: !!u.verified,
-    document_verified: false,
+    document_verified: !!u.document_verified,
   }
 }
 

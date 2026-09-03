@@ -562,6 +562,9 @@ html.light .profile-detail-page .text-slate-500 {
 html.light .profile-detail-page .text-slate-600 {
   color: #475569 !important;
 }
+html.light .profile-detail-page .text-green-300 {
+  color: #15803d !important;
+}
 html.light .profile-detail-page .bg-primary-600.text-white,
 html.light .profile-detail-page .bg-green-600.text-white,
 html.light .profile-detail-page .bg-sky-600.text-white,

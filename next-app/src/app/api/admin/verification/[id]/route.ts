@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server'
 import { requireAdmin } from '@/lib/api/admin-auth'
+import { getVerificationReviewSubjectUpdates } from '@/lib/verification-review-sync.mjs'
 
 const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pocketbase.cerejavip.com'
 
@@ -49,26 +50,30 @@ export async function PATCH(
       )
     }
 
-    const record = (await res.json()) as { profile?: string; id?: string }
-    if (status === 'approved' && record.profile) {
-      await fetch(`${PB_URL}/api/collections/profiles/records/${record.profile}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${auth.token}`,
-        },
-        body: JSON.stringify({ verified: true }),
-      }).catch(() => {})
-    }
-    if (status === 'rejected' && record.profile) {
-      await fetch(`${PB_URL}/api/collections/profiles/records/${record.profile}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${auth.token}`,
-        },
-        body: JSON.stringify({ verified: false }),
-      }).catch(() => {})
+    const record = (await res.json()) as { profile?: string; user?: string; id?: string }
+    const subjectUpdates = getVerificationReviewSubjectUpdates(status)
+    if (subjectUpdates) {
+      const updates = [
+        record.profile
+          ? fetch(`${PB_URL}/api/collections/profiles/records/${record.profile}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${auth.token}` },
+              body: JSON.stringify(subjectUpdates.profile),
+            })
+          : null,
+        record.user
+          ? fetch(`${PB_URL}/api/collections/users/records/${record.user}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${auth.token}` },
+              body: JSON.stringify(subjectUpdates.user),
+            })
+          : null,
+      ].filter((update): update is Promise<Response> => update !== null)
+
+      const results = await Promise.all(updates)
+      if (results.some((result) => !result.ok)) {
+        return Response.json({ error: 'A decisão foi registrada, mas não foi possível sincronizar o selo de documento da conta.' }, { status: 502 })
+      }
     }
 
     return Response.json(record)
