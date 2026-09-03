@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { Heart, MessageCircle, Phone, Share2 } from 'lucide-react'
 import type { Profile } from '@/lib/types'
 import { socialProfileHref } from '@/lib/social-links'
-import { telegramContactHref, whatsAppContactHref } from '@/lib/contact-prefill'
+import { phoneContactHref, telegramContactHref, whatsAppContactHref } from '@/lib/contact-prefill'
 
 type TrackableContactType =
   | 'whatsapp'
@@ -53,6 +53,9 @@ export default function ProfileActions({
   onToggleFavorite,
   onTrackClick,
 }: ProfileActionsProps) {
+  const whatsappHref = whatsAppContactHref(visibleWhatsapp, profileUrl)
+  const telegramHref = telegramContactHref(visibleTelegram, profileUrl)
+  const phoneHref = phoneContactHref(visiblePhone)
   const hasNetworks =
     !contactExpired &&
     (socialProfileHref(profile.instagram, 'instagram') ||
@@ -122,9 +125,9 @@ export default function ProfileActions({
                   </button>
                 )
               )}
-              {visibleWhatsapp && (
+              {whatsappHref && (
                 <a
-                  href={whatsAppContactHref(visibleWhatsapp, profileUrl)}
+                  href={whatsappHref}
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() => onTrackClick('whatsapp')}
@@ -134,9 +137,9 @@ export default function ProfileActions({
                   WhatsApp
                 </a>
               )}
-              {visibleTelegram && (
+              {telegramHref && (
                 <a
-                  href={telegramContactHref(visibleTelegram, profileUrl)}
+                  href={telegramHref}
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() => onTrackClick('telegram')}
@@ -145,9 +148,9 @@ export default function ProfileActions({
                   Telegram
                 </a>
               )}
-              {visiblePhone && (
+              {phoneHref && (
                 <a
-                  href={`tel:${visiblePhone}`}
+                  href={phoneHref}
                   onClick={() => onTrackClick('phone')}
                   className="flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-slate-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-500"
                 >

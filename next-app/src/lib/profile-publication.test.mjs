@@ -171,6 +171,23 @@ test('requires a filled and public contact channel', () => {
   )
 })
 
+test('does not treat malformed phone contacts as publishable', () => {
+  assert.equal(
+    hasPublicProfileContact({
+      whatsapp: '99999-9999',
+      show_whatsapp: true,
+    }),
+    false
+  )
+  assert.equal(
+    hasPublicProfileContact({
+      phone: '123',
+      show_phone: true,
+    }),
+    false
+  )
+})
+
 test('does not treat missing visibility fields as unsaved private contacts', () => {
   assert.equal(
     profilePublication.hasUnsavedProfileContactChanges?.(
@@ -227,7 +244,7 @@ test('allows an active profile to switch its public contact channel', () => {
     canSaveProfileContacts('active', {
       whatsapp: '',
       show_whatsapp: false,
-      telegram: '@novo-contato',
+      telegram: '@novo_contato',
       show_telegram: true,
     }),
     true

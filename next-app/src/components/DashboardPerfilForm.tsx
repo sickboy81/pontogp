@@ -35,6 +35,7 @@ import { resolveProtectedAccess } from '@/lib/protected-access.mjs'
 import { isAdvertiserRole } from '@/lib/advertiser-profile-access.mjs'
 import { getProfileOnboardingState, type ProfileOnboardingState } from '@/lib/profile-onboarding.mjs'
 import type { ProfileOnboardingEvent, ProfileOnboardingStep } from '@/lib/profile-onboarding-event.mjs'
+import { phoneContactHref, telegramBaseHref, whatsAppBaseHref } from '@/lib/contact-prefill'
 
 function sendProfileOnboardingEvent(event: ProfileOnboardingEvent, step: ProfileOnboardingStep) {
   void fetch('/api/profiles/onboarding-event', {
@@ -106,28 +107,15 @@ type FormData = {
   location_approximate: boolean
 }
 
-function telegramHref(raw: string): string {
-  const value = raw.trim()
-  if (!value) return ''
-  if (/^https?:\/\//i.test(value)) return value
-  const username = value.replace(/^@+/, '').replace(/^t(elegram)?\.me\/?/i, '').split('/')[0]
-  return username ? `https://t.me/${username}` : ''
-}
-
-function whatsappHref(raw: string): string {
-  const digits = raw.replace(/\D/g, '')
-  return digits ? `https://wa.me/${digits}` : ''
-}
-
 function buildSuggestedBioLinks(form: FormData): Array<{ label: string; url: string; type: string; enabled: boolean }> {
   const links: Array<{ label: string; url: string; type: string; enabled: boolean }> = []
   const add = (type: string, label: string, url: string | null | undefined) => {
     const clean = (url || '').trim()
     if (clean) links.push({ type, label, url: clean, enabled: true })
   }
-  if (form.show_whatsapp) add('whatsapp', 'WhatsApp', whatsappHref(form.whatsapp))
-  if (form.show_telegram) add('telegram', 'Telegram', telegramHref(form.telegram))
-  if (form.show_phone) add('phone', 'Ligar agora', form.phone ? `tel:${form.phone.trim()}` : '')
+  if (form.show_whatsapp) add('whatsapp', 'WhatsApp', whatsAppBaseHref(form.whatsapp))
+  if (form.show_telegram) add('telegram', 'Telegram', telegramBaseHref(form.telegram))
+  if (form.show_phone) add('phone', 'Ligar agora', phoneContactHref(form.phone))
   add('instagram', 'Instagram', socialProfileHref(form.instagram, 'instagram'))
   add('twitter', 'X', socialProfileHref(form.twitter, 'twitter'))
   add('privacy', 'Privacy', socialProfileHref(form.privacy, 'privacy'))
@@ -1785,8 +1773,11 @@ export default function DashboardPerfilForm() {
                 type="text"
                 value={form.whatsapp}
                 onChange={(e) => setForm((f) => ({ ...f, whatsapp: e.target.value }))}
+                placeholder="(11) 99999-9999"
+                inputMode="tel"
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
               />
+              <p className="mt-1 text-[11px] leading-snug text-slate-500">Informe DDD e número. O link acrescenta o DDI +55 automaticamente.</p>
               <label className="mt-2 flex cursor-pointer items-center gap-2 text-xs text-slate-400">
                 <input
                   type="checkbox"
@@ -1803,8 +1794,10 @@ export default function DashboardPerfilForm() {
                 type="text"
                 value={form.telegram}
                 onChange={(e) => setForm((f) => ({ ...f, telegram: e.target.value }))}
+                placeholder="@seu_usuario"
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
               />
+              <p className="mt-1 text-[11px] leading-snug text-slate-500">Use @usuário ou o link t.me/usuário.</p>
               <label className="mt-2 flex cursor-pointer items-center gap-2 text-xs text-slate-400">
                 <input
                   type="checkbox"
@@ -1821,8 +1814,11 @@ export default function DashboardPerfilForm() {
                 type="text"
                 value={form.phone}
                 onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+                placeholder="(21) 3333-4444"
+                inputMode="tel"
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
               />
+              <p className="mt-1 text-[11px] leading-snug text-slate-500">Informe DDD e número. O botão Ligar acrescenta o DDI +55 automaticamente.</p>
               <label className="mt-2 flex cursor-pointer items-center gap-2 text-xs text-slate-400">
                 <input
                   type="checkbox"
@@ -2743,9 +2739,9 @@ export default function DashboardPerfilForm() {
                     return normalized ? previewLinkUrls.has(normalized) : false
                   }
                   const contactLinks = [
-                    { label: 'WhatsApp', url: form.show_whatsapp ? whatsappHref(form.whatsapp) : '' },
-                    { label: 'Telegram', url: form.show_telegram ? telegramHref(form.telegram) : '' },
-                    { label: 'Ligar', url: form.show_phone && form.phone ? `tel:${form.phone.trim()}` : '' },
+                    { label: 'WhatsApp', url: form.show_whatsapp ? whatsAppBaseHref(form.whatsapp) : '' },
+                    { label: 'Telegram', url: form.show_telegram ? telegramBaseHref(form.telegram) : '' },
+                    { label: 'Ligar', url: form.show_phone ? phoneContactHref(form.phone) : '' },
                   ].filter((l) => l.url && !hasPreviewLink(l.url))
                   const socialLinks = [
                     { label: 'Instagram', url: socialProfileHref(form.instagram, 'instagram') },

@@ -8,7 +8,7 @@ import { MessageCircle } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
 import type { Profile } from '@/lib/types'
 import { socialProfileHref } from '@/lib/social-links'
-import { buildContactPrefillMessage, telegramContactHref, whatsAppContactHref } from '@/lib/contact-prefill'
+import { buildContactPrefillMessage, phoneContactHref, telegramContactHref, whatsAppContactHref } from '@/lib/contact-prefill'
 import { getProfileContactVisibilityState } from '@/lib/profile-contact-visibility.mjs'
 import { DEFAULT_INTERNAL_MESSAGES_NOTICE } from '@/lib/internal-messages-settings.mjs'
 
@@ -140,7 +140,7 @@ export default function LinkBioView({ profile, profileUrl }: LinkBioViewProps) {
   const visiblePhone = profile.show_phone !== false ? profile.phone : ''
   const whatsappHref = visibleWhatsapp ? whatsAppContactHref(visibleWhatsapp, profileUrl) : ''
   const telegramHref = visibleTelegram ? telegramContactHref(visibleTelegram, profileUrl) : ''
-  const phoneHref = visiblePhone ? `tel:${visiblePhone}` : ''
+  const phoneHref = phoneContactHref(visiblePhone)
   const instagramHref = socialProfileHref(profile.instagram, 'instagram')
   const twitterHref = socialProfileHref(profile.twitter, 'twitter')
   const privacyHref = socialProfileHref(profile.privacy, 'privacy')
@@ -307,7 +307,7 @@ export default function LinkBioView({ profile, profileUrl }: LinkBioViewProps) {
                   </button>
                 )
               )}
-              {visibleWhatsapp && !hasBioLink(whatsappHref) && (
+              {whatsappHref && !hasBioLink(whatsappHref) && (
                 <a
                   href={whatsappHref}
                   target="_blank"
@@ -320,7 +320,7 @@ export default function LinkBioView({ profile, profileUrl }: LinkBioViewProps) {
                   WhatsApp
                 </a>
               )}
-              {visibleTelegram && !hasBioLink(telegramHref) && (
+              {telegramHref && !hasBioLink(telegramHref) && (
                 <a
                   href={telegramHref}
                   target="_blank"
@@ -332,7 +332,7 @@ export default function LinkBioView({ profile, profileUrl }: LinkBioViewProps) {
                   Telegram
                 </a>
               )}
-              {visiblePhone && !hasBioLink(phoneHref) && (
+              {phoneHref && !hasBioLink(phoneHref) && (
                 <a
                   href={phoneHref}
                   onClick={() => trackClick('phone')}

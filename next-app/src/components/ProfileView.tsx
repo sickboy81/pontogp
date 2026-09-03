@@ -11,7 +11,7 @@ import { formatPrice } from '@/utils/format'
 import Lightbox from '@/components/Lightbox'
 import StoryViewer, { type StoryItem } from '@/components/StoryViewer'
 import toast from 'react-hot-toast'
-import { telegramContactHref, whatsAppContactHref } from '@/lib/contact-prefill'
+import { phoneContactHref, telegramContactHref, whatsAppContactHref } from '@/lib/contact-prefill'
 import { getProfileContactVisibilityState } from '@/lib/profile-contact-visibility.mjs'
 import { DEFAULT_INTERNAL_MESSAGES_NOTICE } from '@/lib/internal-messages-settings.mjs'
 import ProfileHero from '@/components/profile/ProfileHero'
@@ -181,6 +181,9 @@ export default function ProfileView({
   const visibleWhatsapp = profile.show_whatsapp !== false ? (profile.whatsapp ?? '') : ''
   const visibleTelegram = profile.show_telegram !== false ? (profile.telegram ?? '') : ''
   const visiblePhone = profile.show_phone !== false ? (profile.phone ?? '') : ''
+  const whatsappHref = whatsAppContactHref(visibleWhatsapp, profileUrl)
+  const telegramHref = telegramContactHref(visibleTelegram, profileUrl)
+  const phoneHref = phoneContactHref(visiblePhone)
 
   const priceItems: { label: string; value: number }[] = []
   if (profile.price_30min) priceItems.push({ label: '30 min', value: profile.price_30min })
@@ -191,7 +194,7 @@ export default function ProfileView({
     profile.prices.forEach((p) => priceItems.push({ label: p.description, value: p.price }))
   }
 
-  const hasMobileContactBar = !contactExpired && !!(visibleWhatsapp || visibleTelegram || visiblePhone)
+  const hasMobileContactBar = !contactExpired && !!(whatsappHref || telegramHref || phoneHref)
   const shouldLoadMessagesSettings = Boolean(canMessage && canStartMessage && !contactExpired)
   const canOpenMessageThread =
     shouldLoadMessagesSettings &&
@@ -428,9 +431,9 @@ export default function ProfileView({
       {hasMobileContactBar && (
         <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-700 bg-slate-900/95 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur md:hidden">
           <div className="mx-auto grid max-w-4xl grid-cols-3 gap-2 rounded-[1.35rem] border border-slate-700 bg-slate-950/40 p-2">
-            {visibleWhatsapp ? (
+            {whatsappHref ? (
               <a
-                href={whatsAppContactHref(visibleWhatsapp, profileUrl)}
+                href={whatsappHref}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => trackClick('whatsapp')}
@@ -447,9 +450,9 @@ export default function ProfileView({
                 <MessageCircle aria-hidden="true" className="h-5 w-5 opacity-60" />
               </span>
             )}
-            {visibleTelegram ? (
+            {telegramHref ? (
               <a
-                href={telegramContactHref(visibleTelegram, profileUrl)}
+                href={telegramHref}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => trackClick('telegram')}
@@ -466,9 +469,9 @@ export default function ProfileView({
                 <Send aria-hidden="true" className="h-5 w-5 opacity-60" />
               </span>
             )}
-            {visiblePhone ? (
+            {phoneHref ? (
               <a
-                href={`tel:${visiblePhone}`}
+                href={phoneHref}
                 onClick={() => trackClick('phone')}
                 className="flex min-h-12 items-center justify-center rounded-xl bg-slate-600 px-2 py-2 text-xs font-semibold text-white"
               >

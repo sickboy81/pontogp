@@ -1,3 +1,5 @@
+import { phoneContactHref, telegramBaseHref, whatsAppBaseHref } from './contact-prefill.mjs'
+
 export const MIN_PROFILE_BIO_LENGTH = 150
 export const MIN_PROFILE_PHOTOS = 3
 
@@ -49,10 +51,10 @@ export function canRemoveProfilePhoto(status, currentPhotoCount) {
 
 export function hasPublicProfileContact(profile) {
   return [
-    [profile?.whatsapp, profile?.show_whatsapp],
-    [profile?.telegram, profile?.show_telegram],
-    [profile?.phone, profile?.show_phone],
-  ].some(([value, visible]) => visible !== false && String(value ?? '').trim().length > 0)
+    [profile?.whatsapp, profile?.show_whatsapp, whatsAppBaseHref],
+    [profile?.telegram, profile?.show_telegram, telegramBaseHref],
+    [profile?.phone, profile?.show_phone, phoneContactHref],
+  ].some(([value, visible, toHref]) => visible !== false && Boolean(toHref(value)))
 }
 
 export function canPublishProfileDraft(photoCount, bio, profile) {
