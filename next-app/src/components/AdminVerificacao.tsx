@@ -23,7 +23,7 @@ interface VerificationRequest {
 export default function AdminVerificacao() {
   const [requests, setRequests] = useState<VerificationRequest[]>([])
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState<'pending' | 'all'>('pending')
+  const [filter, setFilter] = useState<'pending' | 'approved' | 'rejected' | 'all'>('pending')
   const [updating, setUpdating] = useState<string | null>(null)
 
   const load = useCallback(async () => {
@@ -76,7 +76,11 @@ export default function AdminVerificacao() {
     }
   }
 
-  const displayed = filter === 'all' ? requests : requests
+  const statusLabel: Record<string, string> = {
+    pending: 'Pendente',
+    approved: 'Aprovado',
+    rejected: 'Não aprovado',
+  }
 
   return (
     <div>
@@ -89,7 +93,7 @@ export default function AdminVerificacao() {
       </Link>
       <h1 className="mb-6 text-2xl font-bold text-white">Solicitações de Verificação</h1>
 
-      <div className="mb-6 flex gap-2">
+      <div className="mb-6 flex flex-wrap gap-2" role="tablist" aria-label="Filtrar verificações">
         <button
           onClick={() => setFilter('pending')}
           className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
@@ -99,6 +103,26 @@ export default function AdminVerificacao() {
           }`}
         >
           Pendentes
+        </button>
+        <button
+          onClick={() => setFilter('approved')}
+          className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+            filter === 'approved'
+              ? 'bg-primary-500 text-white'
+              : 'bg-slate-700 text-slate-400 hover:bg-slate-600 hover:text-white'
+          }`}
+        >
+          Aprovados
+        </button>
+        <button
+          onClick={() => setFilter('rejected')}
+          className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+            filter === 'rejected'
+              ? 'bg-primary-500 text-white'
+              : 'bg-slate-700 text-slate-400 hover:bg-slate-600 hover:text-white'
+          }`}
+        >
+          Não aprovados
         </button>
         <button
           onClick={() => setFilter('all')}
@@ -117,13 +141,19 @@ export default function AdminVerificacao() {
           <Loader2 className="h-6 w-6 animate-spin" />
           Carregando...
         </div>
-      ) : displayed.length === 0 ? (
+      ) : requests.length === 0 ? (
         <p className="py-12 text-center text-slate-400">
-          {filter === 'pending' ? 'Nenhuma solicitação pendente' : 'Nenhuma solicitação encontrada'}
+          {filter === 'pending'
+            ? 'Nenhuma solicitação pendente'
+            : filter === 'approved'
+              ? 'Nenhuma solicitação aprovada'
+              : filter === 'rejected'
+                ? 'Nenhuma solicitação não aprovada'
+                : 'Nenhuma solicitação encontrada'}
         </p>
       ) : (
         <div className="space-y-6">
-          {displayed.map((r) => (
+          {requests.map((r) => (
             <div
               key={r.id}
               className="rounded-xl border border-slate-700 bg-slate-800/50 p-4"
@@ -152,7 +182,7 @@ export default function AdminVerificacao() {
                         : 'bg-red-500/20 text-red-300'
                   }`}
                 >
-                  {r.status}
+                  {statusLabel[r.status] || r.status}
                 </span>
               </div>
               <div className="mb-4 grid grid-cols-3 gap-4">
